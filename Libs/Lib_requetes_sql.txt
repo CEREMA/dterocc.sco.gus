@@ -1,0 +1,87 @@
+########################################################################
+############### LIBRAIRIE DES REQUÊTES PGSQL/POSTGIS ###################
+########################################################################
+
+###
+#0# Initialisation de la classification
+###
+
+# Transformation de l'ensemble des multipolygones en simples polygones et une correction des geométries ##
+
+CREATE TABLE sgts_veg AS
+    SELECT ST_MAKEVALID((ST_DUMP(segmentation_veg.geom)).geom::geometry(Polygon,2154)) as geom, segmentation_veg._mnh1media as mnh1, segmentation_veg._mnh2media as mnh2, segmentation_veg._txtmedian as txt
+    FROM segmentation_veg;
+
+# Ajout de l'attribut STRATE ##
+
+ALTER TABLE sgts_veg ADD strate varchar(100);
+
+###
+#1# Première étape de classification avec des règles de texture et de hauteur
+###
+
+#classification v1 en prenant en classant aussi avec la hauteur la strate arbustive
+UPDATE sgts_veg SET strate = 'arbore' WHERE sgts_veg.txt  < 11 AND sgts_veg.mnh1  > 3;
+UPDATE sgts_veg SET strate = 'arbustive' WHERE sgts_veg.txt  < 11 AND  sgts_veg.mnh1 > 1 AND sgts_veg.mnh1 <= 3;
+UPDATE sgts_veg SET strate = 'herbace' WHERE sgts_veg.txt  < 11 AND  sgts_veg.mnh1  <= 1;
+UPDATE sgts_veg SET strate = 'herbace' WHERE sgts_veg.txt  >= 11;
+
+#classification v2 en ne prenant pas en compte la hauteur pour la strate herbace
+UPDATE sgts_veg SET strate = 'arbore' WHERE sgts_veg.txt  < 11 AND sgts_veg.mnh1  > 3;
+UPDATE sgts_veg SET strate = 'arbustive' WHERE sgts_veg.txt  < 11 AND sgts_veg.mnh1 <= 3;
+UPDATE sgts_veg SET strate = 'herbace' WHERE sgts_veg.txt  >= 11;
+
+#creation d'un nouvel identifiant unique pour chaque entité
+ALTER TABLE sgts_veg ADD COLUMN fid SERIAL PRIMARY key;
+
+#creation d'un index spatial sur l'attribut GEOM
+CREATE INDEX idx_sgts_veg ON sgts_veg USING gist(geom);
+
+###
+#2# Traitement des segments arbustifs
+###
+
+# 0 # Extraction des segments arbustes ne touchant pas d'autres arbustes
+je me suis arrêtée ici
+CREATE TABLE rgpt_arbuste AS
+    SELECT ST_MAKEVALID((ST_DUMP(ST_UNION(t_arbu.geom))).geom) AS geom
+    FROM (SELECT geom FROM sgts_veg WHERE strate='arbuste') AS t_arbu);
+
+ALTER TABLE rgpt_arbuste ADD COLUMN fid serial PRIMARY key;
+
+CREATE INDEX idx_rgpt_arbuste ON rgpt_arbuste USING gist(geom);
+
+ALTER TABLE rgpt_arbuste ADD COLUMN nb_sgt int;
+
+UPDATE rgpt_arbuste SET nb_sgt = sgt_dans_rgpt.compteur FROM (SELECT rgpt_arbuste.fid , count(*) AS compteur
+                                                              FROM rgpt_arbuste, (SELECT sgts_veg.fid AS fid, sgts_veg.geom AS geom FROM sgts_veg WHERE strate='arbuste') AS t_arbu
+                                                            WHERE ST_COVEREDBY(t_arbu.geom, ST_BUFFER(rgpt_arbuste.geom,0.5))
+                                                            GROUP BY rgpt_arbuste.fid) AS sgt_dans_rgpt
+                                                            WHERE rgpt_arbuste.fid = sgt_dans_rgpt.fid;
+
+CREATE TABLE arbuste_de_rgpt AS
+    SELECT DISTINCT rgpt_arbuste.fid AS fid_rgpt, t_arbu.fid as fid_arbu
+    FROM rgpt_arbuste, (SELECT sgts_veg.fid, sgts_veg.geom FROM sgts_veg WHERE strate='arbuste') AS t_arbu
+    WHERE ST_COVEREDBY(t_arbu.geom, st_buffer(rgpt_arbuste.geom,0.5)));
+
+CREATE INDEX idx_arbuste_de_rgpt ON arbuste_de_rgpt USING gist(geom);
+
+
+CREATE TABLE arbuste_uniq AS
+    SELECT t_arbu.fid, t_arbu.geom, arbu_rgpt.fid_rgpt_arbu as fid_rgpt_arbu
+                        from (select sgts_veg2.fid as fid, sgts_veg2.geom as geom from sgts_veg2 where strate='arbuste') as t_arbu,
+                            (select arbuste_de_rgpt.fid_rgpt_arbu, arbuste_de_rgpt.fid_arbu
+                            from (select rgpt_arbuste.fid from rgpt_arbuste where rgpt_arbuste.nb_sgt<=1) as rgpt, arbuste_de_rgpt
+                            where arbuste_de_rgpt.fid_rgpt_arbu = rgpt.fid) as arbu_rgpt
+                        where t_arbu.fid = arbu_rgpt.fid_arbu);
+
+CREATE INDEX idx_arbusteseuls2 on arbuste_seuls2 using gist(geom);
+
+
+-- 00'. Extraction des segments d'arbustes touchant d'autres arbustes
+create table sgts_arbu_rgpt as (select t_arbu.fid as fid, t_arbu.geom as geom, arbu_rgpt.fid_rgpt_arbu as fid_rgpt_arbu
+                        from (select sgts_veg2.fid as fid, sgts_veg2.geom as geom from sgts_veg2 where strate='arbuste') as t_arbu,
+                            (select arbuste_de_rgpt.fid_rgpt_arbu, arbuste_de_rgpt.fid_arbu
+                            from (select rgpt_arbuste.fid from rgpt_arbuste where rgpt_arbuste.nb_sgt>1) as rgpt, arbuste_de_rgpt
+                            where arbuste_de_rgpt.fid_rgpt_arbu = rgpt.fid) as arbu_rgpt
+                        where t_arbu.fid = arbu_rgpt.fid_arbu);
