@@ -28,31 +28,34 @@ from osgeo.gdalconst import *
 from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
 from Lib_operator import getExtensionApplication
 from Lib_vector import getEmpriseFile, createEmpriseShapeReduced
-from Lib_raster import getPixelWidthXYImage, changeDataValueToOtherValue, getProjectionImage, updateReferenceProjection, roundPixelEmpriseSize, cutImageByVector, getNodataValueImage, getDataTypeImage
+from Lib_raster import getPixelWidthXYImage, changeDataValueToOtherValue, getProjectionImage, updateReferenceProjection, roundPixelEmpriseSize, cutImageByVector, getNodataValueImage, getDataTypeImage, getEmpriseImage
 from Lib_file import removeVectorFile, removeFile
 from Lib_text import appendTextFileCR
 debug = 3
 #########################################################################
 # FONCTION assembleRasters()                                            #
 #########################################################################
-def assembleRasters(empriseVector, repRasterAssemblyList, rasterAssembly, ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True):
+def assembleRasters(empriseVector, repRasterAssemblyList, rasterAssembly, format_raster = 'GTiff', format_vector = 'GPKG', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = False):
     """
     # ROLE:
     #     Rechercher dans un repertoire toutes les images qui sont contenues ou qui intersectent l'emprise
     #
     # ENTREES DE LA FONCTION :
-    #    empriseVector         : Fichier vecteur de l'emprise de la zone d'étude
-    #    repRasterAssemblyList : Repertoire de recherche des images
-    #    ext_list              : Liste des extensions d'images, par défaut : ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC']
-    #    rasterAssembly        : Chemin de sauvegarde du fichier image assemblé
-    #    rewrite               : Ré-écriture ou pas, par défaut True ie ré-ecriture
+    #    empriseVector            : Fichier vecteur de l'emprise de la zone d'étude
+    #    repRasterAssemblyList    : Repertoire de recherche des images
+    #    rasterAssembly           : Fichier de l'image assemblée
+    #    format_raster            : Format du fichier image, par défaut : GTiff
+    #    format_vector            : Format du fichier vecteur, par défaut : GPKG
+    #    ext_list                 : Liste des extensions d'images, par défaut : ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC']
+    #    rewrite                  : Ré-écriture ou pas, par défaut True ie ré-ecriture
+    #    qave_result_intermediate : True si on sauvegarde les résultats intermédiaire, sinon False, par défaut : False
     #
     # SORTIES DE LA FONCTION :
     #    0
     #
     """
     # Emprise de la zone selectionnée
-    empr_xmin,empr_xmax,empr_ymin,empr_ymax = getEmpriseFile(empriseVector, format_vector='GPKG')
+    empr_xmin,empr_xmax,empr_ymin,empr_ymax = getEmpriseFile(empriseVector, format_vector=format_vector)
 
     repRasterAssembly_str = ""
 
@@ -83,7 +86,7 @@ def assembleRasters(empriseVector, repRasterAssemblyList, rasterAssembly, ext_li
         os.remove(merge_file_tmp)
 
     if len(images_find_list) > 0 and os.path.isfile(images_find_list[0]) :
-        epsg = getProjectionImage(images_find_list[0])
+        epsg = getProjectionImage(images_find_list[0])[0]
         no_data_value = getNodataValueImage(images_find_list[0])
         data_type = getDataTypeImage(images_find_list[0])
         if no_data_value == None :
@@ -93,18 +96,22 @@ def assembleRasters(empriseVector, repRasterAssemblyList, rasterAssembly, ext_li
         return -1
 
     # Assembler les images trouvées
-    assemblyImages(images_find_list, merge_file_tmp, file_out_suffix_merge, no_data_value, epsg)
+    assemblyImages(images_find_list, merge_file_tmp, no_data_value , epsg , save_results_intermediate, format_raster = format_raster)
+
 
     # Découpage du fichier image assemblé par l'emprise
+    print(merge_file_tmp)
     if os.path.exists(merge_file_tmp) :
-        cutImageByVector( empriseVector, merge_file_tmp, rasterAssembly, no_data_value, epsg, format_vector= 'GPKG')
+        cutImageByVector(empriseVector, merge_file_tmp, rasterAssembly, no_data_value = no_data_value, epsg= epsg, format_vector= format_vector)
     else :
         print(bold + red + "Erreur il n'y a pas de fichier assemblé %s à découper !!!" %(rasterAssembly) + endC)
         return -1
 
     # Suppression du fichier temporaire
-    if os.path.exists(merge_file_tmp):
-        os.remove(merge_file_tmp)
+    if not save_results_intermediate:
+        if os.path.exists(merge_file_tmp):
+            removeFile(merge_file_tmp)
+
 
     return 0
 
@@ -181,7 +188,7 @@ def findImagesFile(repertory, extension_list, empr_xmin, empr_xmax, empr_ymin, e
 ###########################################################################################################################################
 # FONCTION assemblyImages()                                                                                                               #
 ###########################################################################################################################################
-def assemblyImages(images_list, output_file, file_out_suffix_merge, no_data_value, epsg, ext_txt = '.txt',  format_raster = 'GTiff', save_results_intermediate = False):
+def assemblyImages(images_list, output_file, no_data_value, epsg, save_results_intermediate, ext_txt = '.txt',  format_raster = 'GTiff'):
     """
     # ROLE:
     #     Assembler une liste d'image selectionnées
@@ -189,7 +196,6 @@ def assemblyImages(images_list, output_file, file_out_suffix_merge, no_data_valu
     # ENTREES DE LA FONCTION :
     #    images_list : Liste des images à fusionnées
     #    output_file  : L'image de sortie fusionnée et découpé
-    #    file_out_suffix_merge : suffix fichier merge
     #    no_data_value: La valeur du no data de l'image de sortie
     #    epsg   : L'EPSG de projection demandé pour l'image de sortie
     #    format_raster   : Format de l'image de sortie (GTiff, HFA...), par défaut GTiff
@@ -207,8 +213,7 @@ def assemblyImages(images_list, output_file, file_out_suffix_merge, no_data_valu
     # Fichier temporaire mergé
     repertory_output = os.path.dirname(output_file)
     file_name = os.path.splitext(os.path.basename(output_file))[0]
-    extension = os.path.splitext(output_file)[1]
-    merge_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_merge + extension
+    merge_file_tmp = output_file
 
     if os.path.exists(merge_file_tmp):
         removeFile(merge_file_tmp)
@@ -217,7 +222,7 @@ def assemblyImages(images_list, output_file, file_out_suffix_merge, no_data_valu
         removeFile(output_file)
 
     # Fichier txt temporaire liste des fichiers a merger
-    list_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_merge + ext_txt
+    list_file_tmp = repertory_output + os.sep + file_name + ext_txt
     for imagefile in images_list:
         appendTextFileCR(list_file_tmp, imagefile)
 
@@ -237,15 +242,14 @@ def assemblyImages(images_list, output_file, file_out_suffix_merge, no_data_valu
         print(cyan + "assemblyImages : Fin de l'assemblage des images" + endC)
 
     # Si le fichier de sortie mergé a perdu sa projection on force la projection à la valeur par defaut
-    prj = getProjectionImage(output_file)[0]
+    epsg_ima, _ = getProjectionImage(merge_file_tmp)
+    if epsg_ima == None or epsg_ima == 0:
+        if epsg != 0 :
+            updateReferenceProjection(None, merge_file_tmp, int(epsg))
+        else :
+            raise NameError (bold + red + "!!! Erreur les fichiers images d'entrée non pas de projection défini et vous n'avez pas défini de projection (EPSG) en parametre d'entrée."  + endC)
 
-    if (prj == None or prj == 0) and (epsg != 0):
-        updateReferenceProjection(output_file, int(epsg))
-
-    # Supression des fichiers temporaires
     if not save_results_intermediate:
-        if os.path.exists(merge_file_tmp):
-            removeFile(merge_file_tmp)
         if os.path.exists(list_file_tmp):
             removeFile(list_file_tmp)
     return
@@ -284,6 +288,7 @@ def cutImageByVector(cut_shape_file ,input_image, output_image, pixel_size_x=Non
     if pixel_size_x == None or pixel_size_y == None :
         pixel_size_x, pixel_size_y = getPixelWidthXYImage(input_image)
 
+
     if debug >= 5:
         print("Taille des pixels : ")
         print("pixel_size_x = " + str(pixel_size_x))
@@ -314,7 +319,6 @@ def cutImageByVector(cut_shape_file ,input_image, output_image, pixel_size_x=Non
 
     # Identification de l'emprise de vecteur de découpe
     empr_xmin, empr_xmax, empr_ymin, empr_ymax = getEmpriseFile(cut_shape_file, format_vector)
-
     if debug >= 5:
         print("Emprise vector : ")
         print("empr_xmin = " + str(empr_xmin))
