@@ -155,7 +155,7 @@ DELETE FROM sgts_veg USING (SELECT arbuste.fid FROM (SELECT sgts_veg.*
 
 # Table contenant les identifiants des segments arbustifs isolés, la longueur de sa frontière et la longueur de sa frontière en contact avec segments herbacés
 CREATE TABLE arbu_isole_touch_herb AS 
-	SELECT arbuste_uniq.fid, arbuste_uniq.geom, st_perimeter(arbuste_uniq.geom) AS long_bound_arbu, long_arbu_front_herb.long_bound_inters_arbo AS long_bound_inters_arbo
+	SELECT arbuste_uniq.fid, arbuste_uniq.geom, st_perimeter(arbuste_uniq.geom) AS long_bound_arbu, long_arbu_front_herb.long_bound_inters_arbo AS long_bound_inters_herb
 	FROM (SELECT bound.fid, SUM(ST_LENGHT(bound.geom_bound_inters_arbo)) AS long_bound_inters_arbo 
 			FROM (SELECT arbuste.fid, arbuste.geom, herbe.fid_herbe, ST_INTERSECTION(ST_BOUNDARY(arbuste.geom),ST_INTERSECTION(arbuste.geom, herbe.geom)) AS geom_bound_inters_herbe 
 					FROM (SELECT DISTINCT arbuste_uniq.fid, arbuste_uniq.geom
