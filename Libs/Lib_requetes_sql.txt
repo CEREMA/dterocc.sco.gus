@@ -102,18 +102,17 @@ CREATE TABLE arbu_de_rgpt AS
 
 # Table contenant les identifiants des segments arbustifs isolés, la longueur de sa frontière et la longueur de sa frontière en contact avec segments arborés
 CREATE TABLE arbu_isole_touch_arbo AS
-    SELECT arbuste_uniq.fid, arbuste_uniq.geom, st_perimeter(arbuste_uniq.geom) AS long_bound_arbu, long_arbu_front_arbo.long_bound_inters_arbo AS long_bound_inters_arbo
+    SELECT arbuste_uniq.fid, arbuste_uniq.geom, st_perimeter(arbuste_uniq.geom) AS long_bound_arbu, long_arbu_front_arbre.long_bound_inters_arbo AS long_bound_inters_arbo
     FROM (SELECT bound.fid, SUM(ST_LENGTH(bound.geom_bound_inters_arbo)) AS long_bound_inters_arbo
-            FROM (SELECT arbuste.fid, arbuste.geom, arbre.fid as fid_arbo, ST_INTERSECTION(ST_BOUNDARY(arbuste.geom),ST_INTERSECTION(arbuste.geom, arbre.geom)) AS geom_bound_inters_arbo
-                    FROM (SELECT DISTINCT arbuste_uniq.fid, arbuste_uniq.geom
-                            FROM (SELECT DISTINCT arbuste_uniq.fid
-                                    FROM (SELECT geom FROM sgts_veg WHERE strate = 'herbace') AS herbe, arbuste_uniq
-                                    WHERE ST_INTERSECTS(herbe.geom, arbuste_uniq.geom)) AS arbuste_touch_herbe, arbuste_uniq
-                            WHERE arbuste_uniq.fid != arbuste_touch_herbe.fid) AS arbuste,
-                         (SELECT fid, geom FROM sgts_veg WHERE strate='arbore') AS arbre
-                     WHERE ST_INTERSECTS(arbuste.geom, arbre.geom)) AS bound
-            GROUP BY bound.fid) AS long_arbu_front_arbo, arbuste_uniq
-    WHERE arbuste_uniq.fid = long_arbu_front_arbo.fid;
+            FROM (SELECT arbuste_uniq.fid, arbuste_uniq.geom, arbre.fid as fid_arbo, ST_INTERSECTION(ST_BOUNDARY(arbuste_uniq.geom),ST_INTERSECTION(arbuste_uniq.geom, arbre.geom)) AS geom_bound_inters_arbo
+                    FROM  donneepleiades.arbuste_uniq as arbuste_uniq,
+                          (SELECT fid, geom FROM donneepleiades.sgts_veg8 AS sgts_veg8 WHERE strate = 'arbore') as arbre
+                    WHERE ST_INTERSECTS(arbuste_uniq.geom,arbre.geom) and arbuste_uniq.fid not in (SELECT arbuste_uniq.fid
+                                                                                                    FROM (SELECT geom FROM donneepleiades.sgts_veg8 as sgts_veg8 WHERE strate = 'herbace') AS herbe, donneepleiades.arbuste_uniq as arbuste_uniq
+                                                                                                    WHERE ST_INTERSECTS(herbe.geom, arbuste_uniq.geom)
+                                                                                                    group BY arbuste_uniq.fid)) AS bound
+            GROUP BY bound.fid) AS long_arbu_front_arbre, arbuste_uniq
+    WHERE arbuste_uniq.fid = long_arbu_front_arbre.fid;
 
 # Reclassification des segments "arbustifs" en classe "arbore" entourés UNIQUEMENT d'arboré (frontière en contact avec arboré = frontière totale du segment)
 UPDATE sgts_veg SET strate = 'arbore' FROM (
@@ -154,17 +153,16 @@ DELETE FROM sgts_veg USING (SELECT arbuste.fid FROM (SELECT sgts_veg.*
 ##B. Reclassification de tous les segments arbustifs isolés entourés de segments arborés ET herbacés
 
 # Table contenant les identifiants des segments arbustifs isolés, la longueur de sa frontière et la longueur de sa frontière en contact avec segments herbacés
-CREATE TABLE arbu_isole_touch_herb AS
+CREATE TABLE donneepleiades.arbu_isole_touch_herbe AS
     SELECT arbuste_uniq.fid, arbuste_uniq.geom, st_perimeter(arbuste_uniq.geom) AS long_bound_arbu, long_arbu_front_herbe.long_bound_inters_herbe AS long_bound_inters_herbe
     FROM (SELECT bound.fid, SUM(ST_LENGTH(bound.geom_bound_inters_herbe)) AS long_bound_inters_herbe
-            FROM (SELECT arbuste.fid, arbuste.geom, herbe.fid as fid_herbe, ST_INTERSECTION(ST_BOUNDARY(arbuste.geom),ST_INTERSECTION(arbuste.geom, herbe.geom)) AS geom_bound_inters_herbe
-                    FROM (SELECT DISTINCT arbuste_uniq.fid, arbuste_uniq.geom
-                            FROM (SELECT DISTINCT arbuste_uniq.fid
-                                    FROM (SELECT geom FROM sgts_veg WHERE strate = 'arbore') AS arbre, arbuste_uniq
-                                    WHERE ST_INTERSECTS(arbre.geom, arbuste_uniq.geom)) AS arbuste_touch_arbre, arbuste_uniq
-                            WHERE arbuste_uniq.fid != arbuste_touch_arbre.fid) AS arbuste,
-                         (SELECT fid,geom FROM sgts_veg WHERE strate='herbace') AS herbe
-                     WHERE ST_INTERSECTS(arbuste.geom, herbe.geom)) AS bound
+            FROM (SELECT arbuste_uniq.fid, arbuste_uniq.geom, herbe.fid as fid_arbo, ST_INTERSECTION(ST_BOUNDARY(arbuste_uniq.geom),ST_INTERSECTION(arbuste_uniq.geom, herbe.geom)) AS geom_bound_inters_herbe
+                    FROM  donneepleiades.arbuste_uniq as arbuste_uniq,
+                          (SELECT fid, geom FROM donneepleiades.sgts_veg8 AS sgts_veg8 WHERE strate = 'herbace') as herbe
+                    WHERE ST_INTERSECTS(arbuste_uniq.geom,herbe.geom) and arbuste_uniq.fid not in (SELECT arbuste_uniq.fid
+                                                                                                    FROM (SELECT geom FROM donneepleiades.sgts_veg8 as sgts_veg8 WHERE strate = 'arbore') AS arbre, donneepleiades.arbuste_uniq as arbuste_uniq
+                                                                                                    WHERE ST_INTERSECTS(arbre.geom, arbuste_uniq.geom)
+                                                                                                    group BY arbuste_uniq.fid)) AS bound
             GROUP BY bound.fid) AS long_arbu_front_herbe, arbuste_uniq
     WHERE arbuste_uniq.fid = long_arbu_front_herbe.fid;
 
@@ -413,9 +411,9 @@ UPDATE rgpt_arbore SET fv='alignement arbore' WHERE  rgpt_arbore.id_conv >= 0.7 
 
 UPDATE rgpt_arbore SET fv='boisement arbore' WHERE rgpt_arbore.id_conv >= 0.7 AND rgpt_arbore.elongation< 2.5 AND ST_AREA(rgpt_arbore.geom)>30;
 
-UPDATE rgpt_arbore SET fv='alignement arbore' WHERE rgpt_arbore.id_conv < 0.7 AND rgpt_arbore.id_comp <= 0.5 AND ST_AREA(rgpt_arbore.geom)>30;
+UPDATE rgpt_arbore SET fv='alignement arbore' WHERE rgpt_arbore.id_conv < 0.7 AND rgpt_arbore.id_comp < 0.5 AND ST_AREA(rgpt_arbore.geom)>30;
 
-UPDATE rgpt_arbore SET fv='boisement arbore' WHERE rgpt_arbore.id_conv < 0.7 AND rgpt_arbore.id_comp > 0.5 AND ST_AREA(rgpt_arbore.geom)>30;
+UPDATE rgpt_arbore SET fv='boisement arbore' WHERE rgpt_arbore.id_conv < 0.7 AND rgpt_arbore.id_comp >= 0.5 AND ST_AREA(rgpt_arbore.geom)>30;
 
 # E. Regroupement de tous les polygones appartennant à la strate arborée
 
@@ -440,7 +438,7 @@ CREATE TABLE strate_arboree AS
     GROUP BY strate_arboree.fv;
 
 
-ALTER TABLE strate_arboree ADD COLUMN id serial PRIMARY KEY;
+ALTER TABLE strate_arboree ADD COLUMN fid serial PRIMARY KEY;
 
 ALTER TABLE strate_arboree ADD COLUMN strate varchar(100);
 
