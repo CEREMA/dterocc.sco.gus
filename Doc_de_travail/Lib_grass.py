@@ -512,43 +512,43 @@ def convertRGBtoHIS(image_input, raster_red_input, raster_green_input, raster_bl
     # Import de l'image Rouge
     importRasterGdal2Grass(raster_red_input, name_raster_red)
     timeexp = time.time()
-    if debug >= 2:
+    if debug >= 20:
         print(cyan + "convertRGBtoHIS() : " + bold + green + "Import raster rouge dans Grass : " + str(timeexp - timevect) + "seconds" + endC)
 
     # Import de l'image Vert
     importRasterGdal2Grass(raster_green_input, name_raster_green)
     timeexp = time.time()
-    if debug >= 2:
+    if debug >= 20:
         print(cyan + "convertRGBtoHIS() : " + bold + green + "Import raster vert dans Grass : " + str(timeexp - timevect) + "seconds" + endC)
 
     # Import del'image Bleu
     importRasterGdal2Grass(raster_blue_input, name_raster_blue)
     timeexp = time.time()
-    if debug >= 2:
+    if debug >= 202:
         print(cyan + "convertRGBtoHIS() : " + bold + green + "Import raster bleu dans Grass : " + str(timeexp - timevect) + "seconds" + endC)
     # LANCEMENT DE LA CONVERSION
     grass.run_command('i.rgb.his', red = name_raster_red, green = name_raster_green, blue = name_raster_blue, hue = name_raster_hue, intensity = name_raster_intensity, saturation = name_raster_saturation)
 
     timeexp = time.time()
-    if debug >= 2:
+    if debug >= 202:
         print(cyan + "convertRGBtoHIS() : " + bold + green + "Conversion de RVB vers HIS terminée " + str(timeexp - timevect) + "seconds" + endC)
     # EXPORT DES IMAGES
     exportRasterGdal2Grass(name_raster_hue, raster_hue_output)
 
     timeexp = time.time()
-    if debug >= 2:
+    if debug >= 202:
         print(cyan + "convertRGBtoHIS() : " + bold + green + "Export raster teinte terminé " + str(timeexp - timevect) + "seconds" + endC)
 
     exportRasterGdal2Grass(name_raster_intensity , raster_intensity_output)
 
     timeexp = time.time()
-    if debug >= 2:
+    if debug >= 202:
         print(cyan + "convertRGBtoHIS() : " + bold + green + "Export raster intensite terminé " + str(timeexp - timevect) + "seconds" + endC)
 
     exportRasterGdal2Grass(name_raster_saturation , raster_saturation_output)
 
     timeexp = time.time()
-    if debug >= 2:
+    if debug >= 202:
         print(cyan + "convertRGBtoHIS() : " + bold + green + "Export raster saturation terminé " + str(timeexp - timevect) + "seconds" + endC)
 
     # SUPPRESSION DES FICHIERS NON UTILES
