@@ -742,7 +742,6 @@ def getProjectionImage(image_raster):
     epsg = 0
     dataset = gdal.Open(image_raster, GA_ReadOnly)
     if dataset is not None:
-
         srs = osr.SpatialReference()
         srs.ImportFromWkt(dataset.GetProjection())
         epsg = srs.GetAttrValue('AUTHORITY',1)
