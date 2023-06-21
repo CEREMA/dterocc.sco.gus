@@ -63,12 +63,12 @@ def neochannelComputation(image_input, image_pan_input, file_output, imagechanne
         os.remove(sfs_file_tmp)
 
     # Calcul du NDVI
-    #createNDVI(image_input, ndvi_file_tmp)
+    createNDVI(image_input, ndvi_file_tmp)
 
     # Calcul du MSAVI2
-    #createMSAVI2(image_input, msavi2_file_tmp)
+    createMSAVI2(image_input, msavi2_file_tmp)
     # Calcul du NDWI2
-    #createNDWI2(image_input, ndwi2_file_tmp)
+    createNDWI2(image_input, ndwi2_file_tmp)
     # Calcul de la teinte
     createHIS(image_input, h_file_tmp, li_choice = ["H"])
     # Calcul de la texture SFS
@@ -78,97 +78,7 @@ def neochannelComputation(image_input, image_pan_input, file_output, imagechanne
 
 
 
-###########################################################################################################################################
-# FONCTION concatenateChannels()                                                                                                          #
-###########################################################################################################################################
-def concatenateChannels(images_input_list, stack_image_output, code="float", save_results_intermediate=False, overwrite=True):
-    """
-    # ROLE:
-    #   Role : ajout de neocanaux (textures et/ou indices) deja calcules ou non a l'image d'origine
-    #     Compléments sur la fonction otbcli_HaralickTextureExtraction : http://www.orfeo-toolbox.org/CookBook/CookBooksu98.html#x130-6310005.6.6
-    #     Compléments sur la fonction otbcli_SplitImage : http://www.orfeo-toolbox.org/CookBook/CookBooksu68.html#x95-2580005.1.10
-    #     Compléments sur la fonction otbcli_BandMath : http://www.orfeo-toolbox.org/CookBook/CookBooksu125.html#x161-9330005.10.1
-    #
-    # ENTREES DE LA FONCTION :
-    #    images_input_list : liste de fichiers a stacker ensemble
-    #    stack_image_output : le nom de l'empilement image de sortie
-    #    path_time_log : le fichier de log de sortie
-    #    code : encodage du fichier de sortie
-    #    save_results_intermediate : fichiers de sorties intermediaires non nettoyees, par defaut = False
-    #    overwrite : boolen si vrai, ecrase les fichiers existants
-    #
-    # SORTIES DE LA FONCTION :
-    #    le nom complet de l'image de sortie
-    #    Elements generes : une image concatenee rangee
-    #
-    """
 
-
-    print(endC)
-    print(bold + green + "## Début : Concaténation des bandes" + endC)
-    print(endC)
-
-    if debug >= 3:
-        print(bold + green + "Variables dans la fonction" + endC)
-        print(cyan + "concatenateChannels() : " + endC + "images_input_list : " + str(images_input_list) + endC)
-        print(cyan + "concatenateChannels() : " + endC + "stack_image_output : " + str(stack_image_output) + endC)
-        print(cyan + "concatenateChannels() : " + endC + "code : " + str(code) + endC)
-        print(cyan + "concatenateChannels() : " + endC + "path_time_log : " + str(path_time_log) + endC)
-        print(cyan + "concatenateChannels() : " + endC + "save_results_intermediate : " + str(save_results_intermediate) + endC)
-        print(cyan + "concatenateChannels() : " + endC + "overwrite : " + str(overwrite) + endC)
-
-    check = os.path.isfile(stack_image_output)
-    if check and not overwrite: # Si l'empilement existe deja et que overwrite n'est pas activé
-        print(bold + yellow + "Le fichier " + stack_image_output + " existe déjà et ne sera pas recalculé." + endC)
-    else:
-        if check:
-            try:
-                removeFile(stack_image_output)
-            except Exception:
-                pass # si le fichier n'existe pas, il ne peut pas être supprimé : cette étape est ignorée
-
-        print(bold + green + "Recherche de bandes à ajouter..." + endC)
-
-        elements_to_stack_list_str = ""    # Initialisation de la liste des fichiers autres a empiler
-
-        # Gestion des fichiers a ajouter
-        for image_name_other in images_input_list:
-
-            if debug >= 3:
-                print(cyan + "concatenateChannels() : " + endC + "image_name_other : " + str(image_name_other) + endC)
-
-            # Verification de l'existence de image_name_other
-            if not os.path.isfile(image_name_other) :
-                # Si image_name_other n'existe pas, message d'erreur
-                raise NameError(cyan + "concatenateChannels() : " + bold + red + "Le fichier %s n'existe pas !"%(image_name_other) + endC)
-
-            # Ajouter l'indice a la liste des indices a empiler
-            elements_to_stack_list_str += " " + image_name_other
-
-            if debug >= 1:
-                print(cyan + "concatenateChannels() : " + endC + "elements_to_stack_list_str : " + str(elements_to_stack_list_str) + endC)
-
-        # Stack de l'image avec les images additionnelles
-        if len(elements_to_stack_list_str) > 0:
-
-            # Assemble la liste d'image en une liste globale de fichiers d'entree
-            print(bold + green + "concatenateChannels() : Assemblage des bandes %s ... "%(elements_to_stack_list_str) + endC)
-
-            command = "otbcli_ConcatenateImages -progress true -il %s -out %s %s" %(elements_to_stack_list_str,stack_image_output,code)
-            if debug >= 3:
-                print(command)
-            exitCode = os.system(command)
-            if exitCode != 0:
-                print(command)
-                raise NameError(cyan + "concatenateChannels() : " + bold + red + "An error occured during otbcli_ConcatenateImages command. See error message above." + endC)
-            print(bold + green + "concatenateChannels() : Channels successfully assembled" + endC)
-
-    print(endC)
-    print(bold + green + "## Fin : Concaténation des bandes " + endC)
-    print(endC)
-
-
-    return
 
 #########################################################################
 # FONCTION createNDVI()                                                 #
