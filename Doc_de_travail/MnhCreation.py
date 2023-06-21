@@ -174,7 +174,7 @@ def MnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_entree, eps
 
     print(cyan + "MnhCreation : Création du MNH terminée" + endC)
 
-    return 0
+    return file_out_mnh
 
 
 def MnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 'GTiff', save_results_intermediate = False):
