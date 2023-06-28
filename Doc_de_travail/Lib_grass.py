@@ -465,7 +465,7 @@ def sampleRasterUnderPoints(vector_input, raster_input, column, overwrite=True):
 #########################################################################
 # FONCTION convertRGBtoHIS()                                            #
 #########################################################################
-def convertRGBtoHIS(image_input, raster_red_input, raster_green_input, raster_blue_input):
+def convertRGBtoHIS(image_input, image_output, raster_red_input, raster_green_input, raster_blue_input):
     """
     #   Rôle : convertit une image RGB en HIS avec GRASS
     #   Paramètres :
@@ -489,7 +489,7 @@ def convertRGBtoHIS(image_input, raster_red_input, raster_green_input, raster_bl
     xmin, xmax, ymin, ymax = getEmpriseImage(raster_red_input)          # Recuperation de l'emprise du rasteur d'entrée
 
     # PARAMETRAGE DES IMAGES TEINTE, SATURATION, INTENSITE
-    filename = os.path.splitext(os.path.basename(image_input))[0]
+    filename = os.path.splitext(os.path.basename(image_output))[0]
     raster_hue_output = repository + filename + "_H.tif"
     raster_intensity_output = repository + filename + "_I.tif"
     raster_saturation_output = repository + filename + "_S.tif"

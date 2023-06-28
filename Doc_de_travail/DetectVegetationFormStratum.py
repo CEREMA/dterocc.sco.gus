@@ -16,8 +16,7 @@ def createCompactnessIndicator(connexion, tablename, buffer_value):
     query = """
     ALTER TABLE %s ADD id_comp float;
 
-    UPDATE %s SET id_comp = (4*PI()*public.ST_AREA(public.ST_BUFFER(geom,%s)))/(public.ST_PERIMETER(public.ST_BUFFER(geom,%s))*public.ST_PERIMETER(public.ST_BUFFER(geom,%s)))
-                        WHERE fid = fid AND public.ST_PERIMETER(public.ST_BUFFER(geom,%s)) <> 0;
+    UPDATE %s AS t SET id_comp = (4*PI()*public.ST_AREA(public.ST_BUFFER(t.geom,%s)))/(public.ST_PERIMETER(public.ST_BUFFER(t.geom,%s))*public.ST_PERIMETER(public.ST_BUFFER(t.geom,%s))) WHERE t.fid = t.fid AND public.ST_PERIMETER(public.ST_BUFFER(t.geom,%s)) <> 0;
     """ %(tablename, tablename, buffer_value, buffer_value, buffer_value, buffer_value)
 
     #Exécution de la requête SQL
@@ -93,8 +92,8 @@ def createExtensionIndicator(connexion, tablename):
     #Création et implémentation de l'indicateur de convexité (id_conv)
     addColumn(connexion, tablename, 'id_elong', 'float')
     query = """
-    UPDATE %s SET id_elong = (longueur/largeur)
-                        WHERE fid = fid AND largeur <> 0;
+    UPDATE %s AS t SET id_elong = (t.longueur/t.largeur)
+                        WHERE t.fid = t.fid AND t.largeur <> 0;
     """ %(tablename)
 
     #Exécution de la requête SQL
@@ -206,7 +205,6 @@ def firstClassification(connexion, tablename, compacthreshold = 0.7, areathresho
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
         tablename : nom de la table dans laquelle on calcule l'indicateur de compacité
-        name_col_comp : nom de la colonne correspondant à l'indice de compacité
         compacthreshold : valeur du seuil de compacité, par défaut : 0.7
         areathreshold : valeur du seuil de surface, par défaut : 30
         typeclass : type de classification : 'arboree' ou 'arbustive', par défaut : 'arboree'
@@ -275,9 +273,12 @@ def getCoordRectEnglValue(connexion, tablename, attributname):
 
 def classWoodStrictWooded(connexion, tablename, thresholdTreeLine):
     """
-    Rôle
+    Rôle :
 
     Paramètres :
+        connexion :
+        tablename :
+        thresholdTreeLine : valeur seuil de largeur d'un alignement d'arbres
 
     """
 
@@ -339,8 +340,13 @@ def classRemainsWooded(connexion, tablename, convexthreshold, extensiontreshold,
     Rôle :
 
     Paramètres :
-
-    Sortie :
+        connexion :
+        tablename :
+        convexthreshold :
+        extensionthreshold :
+        areathreshold :
+        compacthreshold :
+        compacthreshold_V2 :
 
     """
 
@@ -367,8 +373,6 @@ def classRemainsWooded(connexion, tablename, convexthreshold, extensiontreshold,
 
     #Ajout de l'attribut fv
     addColumn(connexion, tablename, 'fv', 'varchar(100)')
-
-
 
     #Suppression des polygones trop petits (artefacts)
     query = """
@@ -444,8 +448,8 @@ def detectInTreeStratum(connexion, tablename):
     strate arborée
 
     Paramètres :
-        connexion :
-        tablename :
+        connexion : connexion à la base donnée et au schéma correspondant
+        tablename : nom de la table correspondant aux segments de végétation
 
     """
     #Récupération de la table composée uniquement des segments arborés
@@ -459,7 +463,7 @@ def detectInTreeStratum(connexion, tablename):
     #Exécution de la requête SQL
     if debug >= 1:
         print(query)
-    executeQuery(connexion, query)
+    #executeQuery(connexion, query)
 
     # Regroupement et lissage des segments arborés
     query = """
@@ -467,47 +471,45 @@ def detectInTreeStratum(connexion, tablename):
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom) AS geom
         FROM arbore_ini;
     """
-    #Création index spatial
-    query += """
-    CREATE INDEX idx_arbore ON arbore USING gist(geom);
-    """
     #Suppression de la table arbore_ini (n'est plus utile)
     query += """
     DROP TABLE IF EXISTS arbore_ini;
     """
-    tablename = 'arbore'
+
     #Exécution de la requête SQL
     if debug >= 1:
         print(query)
-    executeQuery(connexion, query)
+    #executeQuery(connexion, query)
+
+    tablename = 'arbore'
 
     #Création d'un identifiant unique
-    addUniqId(connexion, tablename)
+    #addUniqId(connexion, tablename)
 
     #Création d'un index spatial
-    addSpatialIndex(connexion, tablename)
+    #addSpatialIndex(connexion, tablename)
 
     #Création de la colonne strate qui correspond à 'arboree' pour tous les polygones
-    addColumn(connexion, tablename, 'strate', 'varchar(100)')
+    #addColumn(connexion, tablename, 'strate', 'varchar(100)')
 
     #Création de la colonne fv
-    addColumn(connexion, tablename, 'fv', 'varchar(100)')
+    #addColumn(connexion, tablename, 'fv', 'varchar(100)')
 
     #Création et calcul de l'indicateur de forme : compacité
-    createCompactnessIndicator(connexion, tablename, 2)
+    #createCompactnessIndicator(connexion, tablename, 2)
 
     #Classement des segments en "arbre isole", "tache arboree" et "regroupement arbore"
     #basé sur un critère de surface et de seuil sur l'indice de compacité
-    firstClassification(connexion, tablename)
+    #firstClassification(connexion, tablename)
 
     #Travaux sur les "regroupements arborés"
-
     #Extraction des polygones correspondants aux boisements strictes ET tous les petits segments en contact avec les boisements strictes
-    classWoodStrictWooded(connexion, tablename, 7)
+    #classWoodStrictWooded(connexion, tablename, 7)
 
     #Travaux sur des autres polygones de regroupements arborés qui ne sont pas des boisements strictes
     classRemainsWooded(connexion, tablename, 0.7, 2.5, 30, 0.7, 0.5)
 
+    #Concatenation de l'ensemble des polygones de la strate arborée
     query = """
     ALTER TABLE rgpt_arbore DROP COLUMN IF EXISTS id_comp, DROP COLUMN IF EXISTS id, DROP COLUMN IF EXISTS id_conv, DROP COLUMN IF EXISTS id_elong;
 
@@ -539,7 +541,7 @@ def detectInTreeStratum(connexion, tablename):
     #Exécution de la requête SQL
     if debug >= 1:
         print(query)
-    executeQuery(connexion, query)
+    #executeQuery(connexion, query)
 
     return
 

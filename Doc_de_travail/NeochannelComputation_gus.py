@@ -11,13 +11,15 @@ from Lib_file import removeVectorFile, removeFile
 from Lib_text import appendTextFileCR
 from Lib_grass import convertRGBtoHIS
 
+from ImagesAssemblyGUS_ok import cutImageByVector
+
 debug = 2
 PRECISION = 0.0000001
 
 #########################################################################
-# FONCTION createNDVI()                                                 #
+# FONCTION neochannelComputation()                                      #
 #########################################################################
-def neochannelComputation(image_input, image_pan_input, file_output, imagechannel_order = ["Red","Green","Blue","NIR"], codage="float"):
+def neochannelComputation(image_input, image_pan_input, file_output, empriseVector, imagechannel_order = ["Red","Green","Blue","NIR"], codage="float",save_results_intermediate = False):
     """
     #   Rôle : Cette fonction permet de créer l'ensemble des indices radiométriques
     #   Paramètres :
@@ -32,49 +34,117 @@ def neochannelComputation(image_input, image_pan_input, file_output, imagechanne
     file_name = os.path.splitext(os.path.basename(file_output))[0]
     extension = os.path.splitext(file_output)[1]
 
-    file_out_suffix_ndvi = "_ndvi"
+    #Fichiers intermédiaires MSAVI2
+    file_out_suffix_ndvi = "_tmp_ndvi"
     ndvi_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_ndvi + extension
 
     if os.path.exists(ndvi_file_tmp):
         os.remove(ndvi_file_tmp)
 
-    file_out_suffix_msavi2 = "_msavi2"
+    file_out_suffix_cut_ndvi = "_ndvi"
+    ndvi_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_ndvi + extension
+
+    if os.path.exists(ndvi_out_file):
+        os.remove(ndvi_out_file)
+
+    #Fichiers intermédiaires MSAVI2
+    file_out_suffix_msavi2 = "_tmp_msavi2"
     msavi2_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_msavi2 + extension
 
     if os.path.exists(msavi2_file_tmp):
         os.remove(msavi2_file_tmp)
 
-    file_out_suffix_ndwi2 = "_ndwi2"
+    file_out_suffix_cut_msavi2 = "_msavi2"
+    msavi2_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_msavi2 + extension
+
+    if os.path.exists(msavi2_out_file):
+        os.remove(msavi2_out_file)
+
+    #Fichiers intermédiaires NDWI2
+    file_out_suffix_ndwi2 = "_tmp_ndwi2"
     ndwi2_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_ndwi2 + extension
 
     if os.path.exists(ndwi2_file_tmp):
         os.remove(ndwi2_file_tmp)
 
-    file_out_suffix_h = "_h"
+    file_out_suffix_cut_ndwi2 = "_ndwi2"
+    ndwi2_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_ndwi2 + extension
+
+    if os.path.exists(ndwi2_out_file):
+        os.remove(ndwi2_out_file)
+
+    #Fichiers intermédiaires teinte Hue
+    file_out_suffix_h = "_tmp_hue"
     h_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_h + extension
 
     if os.path.exists(h_file_tmp):
         os.remove(h_file_tmp)
 
-    file_out_suffix_sfs = "_txtSFS"
+    file_out_suffix_cut_hue = "_hue"
+    hue_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_hue + extension
+
+    if os.path.exists(hue_out_file):
+        os.remove(hue_out_file)
+
+
+    #Fichiers intermédiaire texture SFS
+    file_out_suffix_sfs = "_tmp_txtSFS"
     sfs_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_sfs + extension
 
     if os.path.exists(sfs_file_tmp):
         os.remove(sfs_file_tmp)
 
-    # Calcul du NDVI
+    file_out_suffix_cut_sfs = "_txtSFS"
+    sfs_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_sfs + extension
+
+    if os.path.exists(sfs_out_file):
+        os.remove(sfs_out_file)
+
+
+    #Calcul du NDVI
     createNDVI(image_input, ndvi_file_tmp)
+    #Decoupe sur la zone d'étude
+    cutImageByVector(empriseVector ,ndvi_file_tmp, ndvi_out_file)
 
-    # Calcul du MSAVI2
+    #Calcul du MSAVI2
     createMSAVI2(image_input, msavi2_file_tmp)
-    # Calcul du NDWI2
-    createNDWI2(image_input, ndwi2_file_tmp)
-    # Calcul de la teinte
-    createHIS(image_input, h_file_tmp, li_choice = ["H"])
-    # Calcul de la texture SFS
-    createSFS(image_pan_input, sfs_file_tmp)
+    #Decoupe sur la zone d'étude
+    cutImageByVector(empriseVector ,msavi2_file_tmp, msavi2_out_file)
 
-    return ndvi_file_tmp, msavi2_file_tmp, ndwi2_file_tmp, h_file_tmp, sfs_file_tmp
+    #Calcul du NDWI2
+    createNDWI2(image_input, ndwi2_file_tmp)
+    #Decoupe sur la zone d'étude
+    cutImageByVector(empriseVector ,ndwi2_file_tmp, ndwi2_out_file)
+
+    #Calcul de la teinte
+    h_file_tmp = createHIS(image_input, h_file_tmp, li_choice = ["H"])[0]
+    #Decoupe sur la zone d'étude
+    cutImageByVector(empriseVector ,h_file_tmp, hue_out_file)
+
+    #Calcul de la texture SFS
+    createSFS(image_pan_input, sfs_file_tmp)
+    #Decoupe sur la zone d'étude
+    cutImageByVector(empriseVector ,sfs_file_tmp, sfs_out_file)
+
+    # Suppression du fichier temporaire
+    if not save_results_intermediate:
+        if os.path.exists(ndvi_file_tmp):
+            removeFile(ndvi_file_tmp)
+
+        if os.path.exists(msavi2_file_tmp):
+            removeFile(msavi2_file_tmp)
+
+        if os.path.exists(ndwi2_file_tmp):
+            removeFile(ndwi2_file_tmp)
+
+        if os.path.exists(h_file_tmp):
+            removeFile(h_file_tmp)
+
+        if os.path.exists(sfs_file_tmp):
+            removeFile(sfs_file_tmp)
+
+
+    return ndvi_out_file, msavi2_out_file, ndwi2_out_file, hue_out_file, sfs_out_file
 
 
 
@@ -268,23 +338,27 @@ def createHIS(image_input, image_HIS_output, li_choice = ["H","I","S"], channel_
     os.system(command_blue)
 
     # Bandmath pour creer l'indice ISI
-    img_H, img_I, img_S = convertRGBtoHIS(image_input, fp_red, fp_green, fp_blue)
+    img_H, img_I, img_S = convertRGBtoHIS(image_input, image_HIS_output, fp_red, fp_green, fp_blue)
 
+    l = [img_H, img_I, img_S]
     ##une ligne est à rajouter pour produire l'image HIS contenant les 3 bandes H, I et S (concatenation de bandes)
     #suppression de une ou plusieurs images produites suivant le choix de sortie li_choice
     if "H" not in li_choice:
         if os.path.exists(img_H):
             removeFile(img_H)
+        l.remove(img_H)
     if "I" not in li_choice:
         if os.path.exists(img_I):
             removeFile(img_I)
+        l.remove(img_I)
     if "S" not in li_choice:
         if os.path.exists(img_S):
             removeFile(img_S)
+        l.remove(img_S)
 
     print(cyan + "createHIS() : " + bold + green + "Create HIS file %s complete!" %(image_HIS_output) + endC)
 
-    return
+    return l
 
 #########################################################################
 # FONCTION createSFS()                                                  #
@@ -302,7 +376,7 @@ def createSFS(image_pan_input, image_SFS_output, li_choice = [4], codage="float"
     """
 
     print(cyan + "createSFS() : " + bold + green + "Début du calcul de texture SFS" + endC)
-
+    print(len(li_choice))
     if len(li_choice) == 6 :
         cmd_sfs = "otbcli_SFSTextureExtraction -in %s -channel 1 -out %s" %(image_pan_input, image_SFS_output)
         exitCode = os.system(cmd_sfs)
@@ -315,23 +389,23 @@ def createSFS(image_pan_input, image_SFS_output, li_choice = [4], codage="float"
         repertory_output = os.path.dirname(image_SFS_output)
         file_name = os.path.splitext(os.path.basename(image_SFS_output))[0]
         extension = os.path.splitext(image_SFS_output)[1]
-        file_out_suffix_his = "_his"
-        his_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_his + extension
+        file_out_suffix_l = "_u"
+        l_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_l + extension
 
-        cmd_sfs = "otbcli_SFSTextureExtraction -in %s -channel 1 -out %s" %(image_pan_input, his_file_tmp)
+        cmd_sfs = "otbcli_SFSTextureExtraction -in %s -channel 1 -out %s" %(image_pan_input, l_file_tmp)
         exitCode = os.system(cmd_sfs)
         if exitCode != 0:
-            print(command)
+            print(cmd_sfs)
             raise NameError(bold + red + "createSFS() : An error occured during otbcli_SFSTextureExtraction command. See error message above." + endC)
 
         # Préparation des bandes et donc des paramètres SFS à garder
         cmd_export = "gdal_translate "
         for el in li_choice :
             cmd_export += " -b " + str(el)
-        cmd_export += " " + his_file_tmp + " " + image_SFS_output
-        exitCode = os.system(cmd_sfs)
+        cmd_export += " " + l_file_tmp + " " + image_SFS_output
+        exitCode = os.system(cmd_export)
         if exitCode != 0:
-            print(command)
+            print(cmd_export)
             raise NameError(bold + red + "createSFS() : An error occured during gdal_translate command. See error message above." + endC)
 
     print(cyan + "createSFS() : " + bold + green + "Calcul de la texture SFS est terminé"  + endC)
