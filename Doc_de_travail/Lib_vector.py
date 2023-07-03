@@ -267,12 +267,12 @@ def getGeometryType(vector_input, format_vector='ESRI Shapefile'):
     if data_source_input is not None:
         # Recuperer la couche
         layer_input = data_source_input.GetLayer(0)
-
         # Get the input Feature
         if layer_input.GetFeatureCount() > 0 :
 
             try :
-                feature_input = layer_input.GetFeature(0)
+                feature_input = layer_input.GetFeature(7)
+                print(feature_input)
             except:
                 print(cyan + "getGeometryType() : " + endC + bold + yellow + "Could not open  feature : " + str(layer_input.GetFeature(0)) + "  du fichier %s : " %(vector_input) + endC)
                 geom_type_input = layer_input.GetGeomType()
@@ -286,6 +286,7 @@ def getGeometryType(vector_input, format_vector='ESRI Shapefile'):
             if geometry != None :
                 geometry_type = geometry.GetGeometryName()
             elif layer_input.GetFeatureCount() > 1 :
+                print(layer_input.GetFeatureCount())
                 for idFeature in range(1,layer_input.GetFeatureCount()) :
                     feature_input = layer_input.GetFeature(idFeature)
                     geometry = feature_input.GetGeometryRef()
@@ -3453,8 +3454,8 @@ def cutVectorAll(vector_cut, vector_input, vector_output, overwrite=True, format
         overwrite_str = "-overwrite"
 
     # Récuperer la géometry du fichier
-    geom_type = getGeometryType(vector_input, format_vector)
-
+    #geom_type = getGeometryType(vector_input, format_vector)
+    geom_type = 'POLYGON'
     # Fonction de découpage de la bibli OGR
     command = "ogr2ogr -clipsrc %s %s %s -nlt %s %s -f \"%s\" -skipfailures" %(vector_cut, vector_output, vector_input, geom_type, overwrite_str, format_vector)
     if debug >=2:
