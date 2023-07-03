@@ -1,13 +1,14 @@
 from MnhCreation import MnhCreation
 from NeochannelComputation_gus import neochannelComputation
 from DataConcatenation import concatenateData
-from ImagesAssemblyGUS_ok import cutImageByVector
+#from ImagesAssemblyGUS_ok import cutImageByVector
 from Lib_postgis import *
 from DetectVegetationFormStratum import *
-from MacroSampleCreation import *
 from Lib_vector import *
 import sys,os,glob
 from osgeo import ogr ,osr
+from MacroSampleCreation import *
+from VerticalStratumDetection import segmentationImageVegetetation
 
 if __name__ == "__main__":
 
@@ -29,7 +30,7 @@ if __name__ == "__main__":
 
 
     #3# Calcul des néocanaux
-    #neochannels = neochannelComputation(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/ORT_P1AP_MGN.tif', r'/mnt/RAM_disk/img_origine.tif', r'/mnt/RAM_disk/MGN_contours.shp')
+    #neochannels = neochannelComputation(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/ORT_P1AP_MGN.tif', r'/mnt/RAM_disk/img_origine.tif', r'/mnt/RAM_disk/MGN_contours.shp', save_results_intermediate = False)
 
     #for el in neochannels:
     #    images_input_list.append(el)
@@ -47,10 +48,17 @@ if __name__ == "__main__":
     vegetation = ''
 
 
-    #getGeometryType('/mnt/RAM_disk/bati.gpkg', format_vector='GPKG')
+    #6# Préparation des échantillons d'apprentissage
+    #macroSamplesPrepare(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', bati, r'/mnt/RAM_disk/output_vector.tif', r'/mnt/RAM_disk/MGN_contours.shp', erosionoption = True, format_vector='GPKG')
 
-    #6# Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
-    macroSamplePrepare(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN.tif', bati, r'/mnt/RAM_disk/output_vector.tif', r'/mnt/RAM_disk/MGN_contours.shp', erosionoption = True, format_vector='GPKG')
+    #7# Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
+    corr_bati = {"ndvi" : [r'/mnt/RAM_disk/img_origine_ndvi.tif', 0.25, 1]}
+    macroSamplesClean(r'/mnt/RAM_disk/output_vector.tif', r'/mnt/RAM_disk/output_vector_clean.tif', corr_bati)
+
+
+
+    # # Segmentation de l'image
+    #segmentationImageVegetetation(r'/mnt/RAM_disk/ORT_ZE.tif',r'/mnt/RAM_disk/ZE_segmentation.tif', r'/mnt/RAM_disk/ZE_out_segmentation.gpkg')
 
     # # Classification en strates verticales
     ## INITIALISATION POUR CONNEXION AU SERVEUR
