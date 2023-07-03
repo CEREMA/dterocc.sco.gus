@@ -2,6 +2,12 @@ from MnhCreation import MnhCreation
 from NeochannelComputation_gus import neochannelComputation
 from DataConcatenation import concatenateData
 from ImagesAssemblyGUS_ok import cutImageByVector
+from Lib_postgis import *
+from DetectVegetationFormStratum import *
+from MacroSampleCreation import *
+from Lib_vector import *
+import sys,os,glob
+from osgeo import ogr ,osr
 
 if __name__ == "__main__":
 
@@ -17,28 +23,84 @@ if __name__ == "__main__":
     #Soit elles doivent êtres assemblées
 
     #images_input_list = [r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/MNHtest.tif', r'/mnt/RAM_disk/img_origine_hue.tif', r'/mnt/RAM_disk/img_origine_msavi2.tif', r'/mnt/RAM_disk/img_origine_ndvi.tif', r'/mnt/RAM_disk/img_origine_ndwi2.tif', r'/mnt/RAM_disk/img_origine_tmp_txtSFS_u.tif']
-    images_input_list = [r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/MNHtest.tif']
+    #images_input_list = [r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/MNHtest.tif']
     #2# Calcul du MNH
     #mnh = MnhCreation(r'/mnt/RAM_disk/DSM_PRODUITS_RGE.tif', r'/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNT/2021/NANCY/MNT_RGEALTI/MNT_RGEALTI_1M_ZONE_DE_NANCY.tif', r'/mnt/RAM_disk/MNHtest.tif', r'/mnt/RAM_disk/MGN_contours.shp', r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN.tif',  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  rewrite = True, save_results_intermediate = True)
 
 
     #3# Calcul des néocanaux
-    neochannels = neochannelComputation(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/ORT_P1AP_MGN.tif', r'/mnt/RAM_disk/img_origine.tif', r'/mnt/RAM_disk/MGN_contours.shp')
+    #neochannels = neochannelComputation(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/ORT_P1AP_MGN.tif', r'/mnt/RAM_disk/img_origine.tif', r'/mnt/RAM_disk/MGN_contours.shp')
 
-    for el in neochannels:
-        images_input_list.append(el)
+    #for el in neochannels:
+    #    images_input_list.append(el)
     # Phase de test si les emprises correspondent bien
 
     #4# Concatnéation des néocanaux
-    concatenateData(images_input_list, r'/mnt/RAM_disk/final.tif')
+    #concatenateData(images_input_list, r'/mnt/RAM_disk/final.tif')
 
     #5# Création des échantillons d'apprentissage
     #Fournir 5 couches vectorielles
-    bati = ''
+    bati = r'/mnt/RAM_disk/bati.gpkg'
     route = ''
     solnu = ''
     eau = ''
     vegetation = ''
 
-    #6# Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
 
+    #getGeometryType('/mnt/RAM_disk/bati.gpkg', format_vector='GPKG')
+
+    #6# Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
+    macroSamplePrepare(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN.tif', bati, r'/mnt/RAM_disk/output_vector.tif', r'/mnt/RAM_disk/MGN_contours.shp', erosionoption = True, format_vector='GPKG')
+
+    # # Classification en strates verticales
+    ## INITIALISATION POUR CONNEXION AU SERVEUR
+
+    dbname = 'projetgus'
+    user_db = 'postgres'
+    password_db = ''
+    server_db = 'localhost'
+    port_number = '5432'
+    schema = ''
+
+    connexion_ini_dic = {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : '', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
+
+    connexion_stratev_dic = connexion_ini_dic
+    connexion_stratev_dic["schema"] = 'classification_stratev'
+
+    connexion_fv_dic = connexion_ini_dic
+    connexion_fv_dic["schema"] = 'classification_fv'
+
+    #Création d'une base de donnée
+    #createDatabase(dbname, user_name=user_db, password=password_db, ip_host=server_db, num_port=port_number, schema_name=schema)
+
+    #Connexion à la base de donnée
+    #connexion = openConnection(dbname, user_name=user_db, password=password_db, ip_host=server_db, num_port=port_number, schema_name=schema)
+
+    #Création d'un schema pour la partie classification en strates verticales
+    #createSchema(connexion, 'classification_stratev')
+
+    #Connexion au schema de classification en strates verticales
+
+    # #Test la version de postgres
+    # postgresversion = versionPostgreSQL(database_name='postgres', user_name='postgres', password='postgres', ip_host='localhost', num_port='5432', schema_name='')
+
+    # #Test la version de postgis
+    # postgisvesrion = versionPostGIS(database_name='template_postgis', user_name='postgres', password='postgres', ip_host='localhost', num_port='5432', schema_name='')
+
+
+    # # # Classification en formes végétales horizontales
+
+    #Création d'un schema pour la partie classification en formes végétales horizontales
+    #createSchema(connexion, 'classification_fv')
+
+    #Connexion au schema de classification en strates verticales
+
+    #Strate arborée
+    #connexion = openConnection('etape2', user_name='postgres', password="", ip_host='localhost', num_port='5432', schema_name='donneelidar')
+
+    # #Initialisation du dictionnaire contenant les valeurs seuils pour la classification des entités de la strate arborée
+    #treethresholds = {"seuil_surface" : 5, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.5, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 5, "val_buffer" : 1}
+
+    #detectInTreeStratum(connexion, tablename, treethresholds, output_tree_layer, connexion_fv_dic, save_results_as_layer = False, save_results_intermediate = False)
+    #connexion_fv_dic = {"dbname" : 'etape2', "user_db" : 'postgres', "password_db" : "", "server_db" : 'localhost', "port_number" : '5432', "schema" : 'donneelidar'}
+    #detectInShrubStratum(connexion, 'sgts_veg4',  r'/mnt/RAM_disk/output_vectorshrub.gpkg', connexion_fv_dic = connexion_fv_dic, thresholds = treethresholds, save_results_as_layer = True, save_results_intermediate = True)
