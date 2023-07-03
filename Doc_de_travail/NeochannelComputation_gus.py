@@ -408,6 +408,10 @@ def createSFS(image_pan_input, image_SFS_output, li_choice = [4], codage="float"
             print(cmd_export)
             raise NameError(bold + red + "createSFS() : An error occured during gdal_translate command. See error message above." + endC)
 
+        # Suppression du fichier temporaire
+        if os.path.exists(l_file_tmp):
+            removeFile(l_file_tmp)
+
     print(cyan + "createSFS() : " + bold + green + "Calcul de la texture SFS est terminé"  + endC)
 
     return
