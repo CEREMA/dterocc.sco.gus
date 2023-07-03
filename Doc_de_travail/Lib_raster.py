@@ -1609,6 +1609,7 @@ def applyMaskAnd(image_input, image_mask_input, image_output, codage="float", ra
 
     # bandmath pour application du masque binaire
     command = "otbcli_BandMath -il %s %s -out %s %s -exp %s" %(image_input,image_mask_input,image_output,codage,expression)
+    print(command)
     if ram_otb > 0 :
         command += " -ram %d " %(ram_otb)
 
