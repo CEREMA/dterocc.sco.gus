@@ -8,7 +8,7 @@ from Lib_vector import *
 import sys,os,glob
 from osgeo import ogr ,osr
 from MacroSampleCreation import *
-from VerticalStratumDetection import segmentationImageVegetetation
+from VerticalStratumDetection import *
 
 if __name__ == "__main__":
 
@@ -52,14 +52,16 @@ if __name__ == "__main__":
     #macroSamplesPrepare(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', bati, r'/mnt/RAM_disk/output_vector.tif', r'/mnt/RAM_disk/MGN_contours.shp', erosionoption = True, format_vector='GPKG')
 
     #7# Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
-    corr_bati = {"ndvi" : [r'/mnt/RAM_disk/img_origine_ndvi.tif', 0.25, 1]}
-    macroSamplesClean(r'/mnt/RAM_disk/output_vector.tif', r'/mnt/RAM_disk/output_vector_clean.tif', corr_bati)
+    #corr_bati = {"ndvi" : [r'/mnt/RAM_disk/img_origine_ndvi.tif', 0.25, 1]}
+    #macroSamplesClean(r'/mnt/RAM_disk/output_vector.tif', r'/mnt/RAM_disk/output_vector_clean.tif', corr_bati)
 
 
 
     # # Segmentation de l'image
     #segmentationImageVegetetation(r'/mnt/RAM_disk/ORT_ZE.tif',r'/mnt/RAM_disk/ZE_segmentation.tif', r'/mnt/RAM_disk/ZE_out_segmentation.gpkg')
 
+    # # Calcul stats
+    calc_statMedian(r'/mnt/RAM_disk/ZELDA.gpkg', r'/mnt/RAM_disk/MNH_14062022_CF.tif', r'/mnt/RAM_disk/MEDIAN_segmentation.gpkg', 'patate')
     # # Classification en strates verticales
     ## INITIALISATION POUR CONNEXION AU SERVEUR
 

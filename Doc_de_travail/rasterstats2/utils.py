@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 from builtins import str
 import json
@@ -148,9 +149,9 @@ def ogr_srs(vector, layer_num):
 def ogr_records(vector, layer_num=0):
     ds = get_ogr_ds(vector)
     layer = ds.GetLayer(layer_num)
-    for i in range(layer.GetFeatureCount()):
+    for feature in layer:
         try:
-            feature = layer.GetFeature(i)
+            feature = feature
         except RuntimeError:
             #print("Le fichier shape est corrompu " )
             continue
