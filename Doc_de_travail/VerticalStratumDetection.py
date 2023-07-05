@@ -6,6 +6,7 @@ from CrossingVectorRaster import *
 import pandas as pd
 import geopandas as gpd
 from rasterstats import *
+from Lib_postgis import *
 
 def vegetationMask(img_input, img_output, num_class = {"bati" : 1, "route" : 2, "sol nu" : 3, "eau" : 4, "vegetation" : 5}, overwrite = True):
     """
@@ -109,14 +110,14 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
 
     #Export de la donnée dans la BD
     tablename_mnh = "table_sgts_mnh"
-    exportVectorByOgr2ogr(connexion_dic["db_name"], file_mnh_out, tablename_mnh, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], format_type=format_type)
+    importVectorByOgr2ogr(connexion_dic["dbname"], file_mnh_out, tablename_mnh, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
     file_txt_out = repertory_output + os.sep + file_name + "TXT" + extension_vecteur
-    calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
+    #calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
 
     #Export de la donnée dans la BD
     tablename_txt = "table_sgts_txt"
-    exportVectorByOgr2ogr(connexion_dic["db_name"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], format_type=format_type)
+    importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
 
 
     #Supprimer le fichier si on ne veut pas le sauvegarder
@@ -127,12 +128,82 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
 
     #Merge des colonnes de statistiques en une seule table "segments_vegetation" : deux tables à merger normalement
     query = """
-    CREATE TABLE segments_vegetation AS
-        SELECT t1.median
+    CREATE TABLE segments_vegetation_ini AS
+        SELECT t1.median as txt
         FROM %s as t1
         JOIN %s as t2 ON fid = fid;
     """ %(tablename_txt, tablename_mnh)
 
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Prétraitements : transformation de l'ensemble des multipolygones en symples polygones
+    query = """
+    CREATE TABLE segments_vegetation AS
+        SELECT public.ST_MAKEVALID((ST_DUMP(t.geom)).geom::geometry(Polygon,2154)) as geom, t.median as mnh, t.txt as txt
+        FROM segments_vegetation_ini as t
+    """
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Ajout de l'attribut "strate"
+    addColumn(connexion, 'segments_vegetation', 'strate', 'varchar(100)')
+
+    #Première phase : classification générale, à partir de règles de hauteur et de texture
+    #pour l'instant, deux méthodes : v1 et v2
+    #v1#
+    query = """
+    UPDATE %s as t SET strate = 'arbore' WHERE sgts_veg5.txt < %s AND sgts_veg5.mnh  > %s;
+    """ %()
+
+    query += """
+    UPDATE %s as t SET strate = 'arbustif' WHERE sgts_veg5.txt < %s AND  sgts_veg5.mnh  > %s AND sgts_veg5.mnh  <= %s;
+    """ %()
+
+    query += """
+    UPDATE %s as t SET strate = 'herbace' WHERE sgts_veg5.txt  < %s AND  sgts_veg5.mnh  <= %s;
+    """ %()
+
+    query += """
+    UPDATE %s as t SET strate = 'herbace' WHERE sgts_veg5.txt  >= %s;
+    """ %()
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    #OU la V2
+     #v2#
+    query = """
+    UPDATE %s as t SET strate = 'arbore' WHERE sgts_veg5.txt < %s AND sgts_veg5.mnh  > %s;
+    """ %()
+
+    query += """
+    UPDATE %s as t SET strate = 'arbustif' WHERE sgts_veg5.txt < %s AND  sgts_veg5.mnh  <= %s;
+    """ %()
+
+    query += """
+    UPDATE %s as t SET strate = 'herbace' WHERE sgts_veg5.txt  >= %s;
+    """ %()
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Création identifiant unique
+    addUniqId(connexion, 'segments_vegetation')
+
+    #Création index spatial
+    addSpatialIndex(connexion, 'segments_vegetation')
+
+    #Deuxième phase : reclassification des segments arbustifs
 
 
     return
@@ -154,8 +225,8 @@ def calc_statMedian(vector_input, image_input, vector_output):
     #med = zonal_stats(vector_input, image_input, stats=['median'])
     #print(med)
     #On utilise rasterStats
-    col_to_add_list = ["median_mnh"]
-    col_to_delete_list = []
+    col_to_add_list = ["median"]
+    col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range"]
     class_label_dico = {}
     statisticsVectorRaster(image_input, vector_input, vector_output, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
     return
