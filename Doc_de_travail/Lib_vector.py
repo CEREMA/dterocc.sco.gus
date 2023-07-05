@@ -271,7 +271,7 @@ def getGeometryType(vector_input, format_vector='ESRI Shapefile'):
         if layer_input.GetFeatureCount() > 0 :
 
             try :
-                feature_input = layer_input.GetFeature(7)
+                feature_input = layer_input
                 print(feature_input)
             except:
                 print(cyan + "getGeometryType() : " + endC + bold + yellow + "Could not open  feature : " + str(layer_input.GetFeature(0)) + "  du fichier %s : " %(vector_input) + endC)
