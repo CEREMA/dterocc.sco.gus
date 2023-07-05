@@ -1,4 +1,4 @@
-from MnhCreation import MnhCreation
+from MnhCreation import mnhCreation
 from NeochannelComputation_gus import neochannelComputation
 from DataConcatenation import concatenateData
 #from ImagesAssemblyGUS_ok import cutImageByVector
@@ -60,8 +60,7 @@ if __name__ == "__main__":
     # # Segmentation de l'image
     #segmentationImageVegetetation(r'/mnt/RAM_disk/ORT_ZE.tif',r'/mnt/RAM_disk/ZE_segmentation.tif', r'/mnt/RAM_disk/ZE_out_segmentation.gpkg')
 
-    # # Calcul stats
-    calc_statMedian(r'/mnt/RAM_disk/ZELDA.gpkg', r'/mnt/RAM_disk/MNH_14062022_CF.tif', r'/mnt/RAM_disk/MEDIAN_segmentation.gpkg', 'patate')
+
     # # Classification en strates verticales
     ## INITIALISATION POUR CONNEXION AU SERVEUR
 
@@ -72,25 +71,28 @@ if __name__ == "__main__":
     port_number = '5432'
     schema = ''
 
-    connexion_ini_dic = {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : '', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
+    connexion_ini_dic = {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : 'postgres', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
 
     connexion_stratev_dic = connexion_ini_dic
     connexion_stratev_dic["schema"] = 'classification_stratev'
 
-    connexion_fv_dic = connexion_ini_dic
-    connexion_fv_dic["schema"] = 'classification_fv'
+    #connexion_fv_dic = connexion_ini_dic
+    #connexion_fv_dic["schema"] = 'classification_fv'
 
     #Création d'une base de donnée
-    #createDatabase(dbname, user_name=user_db, password=password_db, ip_host=server_db, num_port=port_number, schema_name=schema)
+    #createDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
 
     #Connexion à la base de donnée
-    #connexion = openConnection(dbname, user_name=user_db, password=password_db, ip_host=server_db, num_port=port_number, schema_name=schema)
+    #connexion = openConnection(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
 
     #Création d'un schema pour la partie classification en strates verticales
     #createSchema(connexion, 'classification_stratev')
 
     #Connexion au schema de classification en strates verticales
+    connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
 
+    raster_dic = {"MNH" : r'/mnt/RAM_disk/MNH_14062022_CF.tif', "TXT" : r'/mnt/RAM_disk/img_origine_txtSFS.tif'}
+    classificationVerticalStratum(connexion, connexion_stratev_dic, r'/mnt/RAM_disk/ZE_out_segmentation.gpkg', raster_dic, format_type = 'GPKG', save_intermediate_result = True, overwrite = True)
     # #Test la version de postgres
     # postgresversion = versionPostgreSQL(database_name='postgres', user_name='postgres', password='postgres', ip_host='localhost', num_port='5432', schema_name='')
 
