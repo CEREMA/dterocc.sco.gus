@@ -8,7 +8,7 @@ debug = 3
 ###########################################################################################################################################
 # FONCTION concatenateData()                                                                                                          #
 ###########################################################################################################################################
-def concatenateData(images_input_list, stack_image_output, code = "float", save_results_intermediate = False, overwrite = True):
+def concatenateData(images_input_list, stack_image_output, code = "float", save_intermediate_results = False, overwrite = True):
     """
     Rôle : ajout de neocanaux (mnh, textures et/ou indices) deja calcules ou non a l'image d'origine
 
@@ -16,7 +16,7 @@ def concatenateData(images_input_list, stack_image_output, code = "float", save_
         images_input_list : liste de fichiers a stacker ensemble
         stack_image_output : le nom de l'empilement image de sortie
         code : encodage du fichier de sortie, par défaut : float
-        save_results_intermediate : fichiers de sorties intermediaires non nettoyees, par defaut = False
+        save_intermediate_results : fichiers de sorties intermediaires non nettoyees, par defaut = False
         overwrite : si vrai, ecrase les fichiers existants, par défaut True
 
     Sortie :
@@ -34,7 +34,7 @@ def concatenateData(images_input_list, stack_image_output, code = "float", save_
         print(cyan + "concatenateData() : " + endC + "images_input_list : " + str(images_input_list) + endC)
         print(cyan + "concatenateData() : " + endC + "stack_image_output : " + str(stack_image_output) + endC)
         print(cyan + "concatenateData() : " + endC + "code : " + str(code) + endC)
-        print(cyan + "concatenateData() : " + endC + "save_results_intermediate : " + str(save_results_intermediate) + endC)
+        print(cyan + "concatenateData() : " + endC + "save_intermediate_results : " + str(save_intermediate_results) + endC)
         print(cyan + "concatenateData() : " + endC + "overwrite : " + str(overwrite) + endC)
 
     check = os.path.isfile(stack_image_output)

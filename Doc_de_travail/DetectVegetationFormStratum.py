@@ -536,7 +536,7 @@ def detectInTreeStratum(connexion, tablename, output_tree_layer, connexion_fv_di
     if thresholds == 0:
         thresholds = {"seuil_surface" : 30, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.7, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 7, "val_buffer" : 1}
 
-    #print(cyan + "findImagesFile : Fin de la recherche dans le repertoire des images contenues ou intersectant l'emprise" + endC)
+    print(cyan + "findImagesFile : Fin de la recherche dans le repertoire des images contenues ou intersectant l'emprise" + endC)
 
     #1# Récupération de la table composée uniquement des segments arborés
     query = """
@@ -549,7 +549,7 @@ def detectInTreeStratum(connexion, tablename, output_tree_layer, connexion_fv_di
     #Exécution de la requête SQL
     if debug >= 1:
         print(query)
-    #executeQuery(connexion, query)
+    executeQuery(connexion, query)
 
     #2# Regroupement et lissage des segments arborés
     query = """
@@ -861,7 +861,7 @@ def detectInShrubStratum(connexion, tablename, output_shrub_layer, connexion_fv_
     if thresholds == 0:
         thresholds = {"seuil_surface" : 30, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.7, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 7, "val_buffer" : 2}
 
-    #print(cyan + "findImagesFile : Fin de la recherche dans le repertoire des images contenues ou intersectant l'emprise" + endC)
+    print(cyan + "findImagesFile : Fin de la recherche dans le repertoire des images contenues ou intersectant l'emprise" + endC)
 
     # #1# Récupération de la table composée uniquement des segments arbustifs
     query = """

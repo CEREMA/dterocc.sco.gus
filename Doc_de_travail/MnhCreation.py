@@ -31,28 +31,24 @@ from Lib_file import removeVectorFile, removeFile
 debug = 3
 
 #########################################################################
-# FONCTION MnhCreation()                                                #
+# FONCTION mnhCreation()                                                #
 #########################################################################
-def MnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_entree, epsg = 2154,  nivellement = True, format_raster = 'GTiff', format_vector = 'GPKG',  rewrite = True, save_results_intermediate = False):
+def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, epsg = 2154,  nivellement = True, format_raster = 'GTiff', format_vector = 'GPKG',  overwrite = True, save_intermediate_results = False):
     """
-    # ROLE:
-    #     Rechercher dans un repertoire toutes les images qui sont contenues ou qui intersectent l'emprise
-    #
-    # ENTREES DE LA FONCTION :
-    #    file_mns            : Fichier vecteur de l'emprise de la zone d'étude
-    #    file_mnt    : Repertoire de recherche des images
-    #    file_out_mnh           : Fichier de l'image assemblée
-    #    empriseVector            : Format du fichier image, par défaut : GTiff
-    #    img_entree            : Format du fichier vecteur, par défaut : GPKG
-    #    nivellement                 : Liste des extensions d'images, par défaut : ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC']
-    #    format_raster                  : Ré-écriture ou pas, par défaut True ie ré-ecriture
-    #    format_vector : True si on sauvegarde les résultats intermédiaire, sinon False, par défaut : False
-    #    rewrite :
-    #    save_results_intermediate :
-    #
-    # SORTIES DE LA FONCTION :
-    #    0
-    #
+    Rôle : calculer le MNH à partir d'un MNS et d'un MNT en entrée
+
+    Paramètres :
+        file_mns : couche raster du MNS
+        file_mnt : couche raster du MNT
+        file_out_mnh : couche raster du MNH en sortie
+        empriseVector : fichier vecteur emprise de la zone d'étude
+        img_origine : image d'origine
+        epsg : epsg dans lequel on travaille, par défaut : 2154
+        nivellement : réhaussement des valeurs négatives du MNH à 0. Par défaut : True
+        format_raster : format de la donnée raster. Par défaut : GTiff
+        format_vector : format de la donnée vecteur. Par défaut : GPKG
+        overwrite : ré-écriture des fichiers. Par défaut : True
+        save_intermediate_results : sauvegarde des résultats intermédiaire. Par défaut : False
     """
 
 
@@ -62,11 +58,11 @@ def MnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_entree, eps
         print(cyan + "MnhCreation() : " + endC + "MNS : " + str(file_mns) + endC)
         print(cyan + "MnhCreation() : " + endC + "MNT : " + str(file_mnt) + endC)
         print(cyan + "MnhCreation() : " + endC + "Emprise zone d'étude : " + str(empriseVector) + endC)
-        print(cyan + "MnhCreation() : " + endC + "Image en entrée : " + str(img_entree) + endC)
+        print(cyan + "MnhCreation() : " + endC + "Image en entrée : " + str(img_origine) + endC)
         print(cyan + "MnhCreation() : " + endC + "Nivellement : " + str(nivellement) + endC)
         print(cyan + "MnhCreation() : " + endC + "Format raster : " + str(format_raster) + endC)
         print(cyan + "MnhCreation() : " + endC + "Formar vecteur : " + str(format_vector) + endC)
-        print(cyan + "MnhCreation() : " + endC + "Sauvegarde des résultats intermédiaires : " + str(save_results_intermediate) + endC)
+        print(cyan + "MnhCreation() : " + endC + "Sauvegarde des résultats intermédiaires : " + str(save_intermediate_results) + endC)
 
     # Récupération de la valeur nodata du mns
     nodatavalue = getNodataValueImage(file_mns)
@@ -102,12 +98,12 @@ def MnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_entree, eps
 
     # Préparation du MNS
     print(cyan + "MnhCreation : Début du preprocessing du MNS" + endC)
-    MnsPrepare(file_mns, mns_file_tmp, epsg)
+    mnsPrepare(file_mns, mns_file_tmp, epsg)
     print(cyan + "MnhCreation : Fin du preprocessing du MNS" + endC)
 
     # Préparation du MNT
     print(cyan + "MnhCreation : Début du preprocessing du MNT" + endC)
-    MntPrepare(file_mnt, mnt_file_tmp, epsg, mns_file_tmp)
+    mntPrepare(file_mnt, mnt_file_tmp, epsg, mns_file_tmp)
     print(cyan + "MnhCreation : Fin du preprocessing du MNS" + endC)
 
     # Calcul du MNH
@@ -124,7 +120,7 @@ def MnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_entree, eps
     # Ré-échantillonnage du MNH sur l'image de base
     print(cyan + "MnhCreation : Début du ré-échantillonnage du MNH" + endC)
 
-    cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_entree, mnhini_file_tmp, mnh_si_file_tmp)
+    cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_origine, mnhini_file_tmp, mnh_si_file_tmp)
     exit_code = os.system(cmd_superimpose)
     if exit_code != 0:
         raise NameError (bold + red + "!!! Une erreur c'est produite au cours du super impose du MNH. Voir message d'erreur."  + endC)
@@ -156,7 +152,7 @@ def MnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_entree, eps
         print(cyan + "MnhCreation : Fin du découpage du MNH à partir de l'emprise de la zone d'étude" + endC)
 
     # Suppression des fichiers temporaires
-    if not save_results_intermediate:
+    if not save_intermediate_results:
         if os.path.exists(mns_file_tmp):
             removeFile(mns_file_tmp)
 
@@ -177,22 +173,17 @@ def MnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_entree, eps
     return file_out_mnh
 
 
-def MnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 'GTiff', save_results_intermediate = False):
+def mnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 'GTiff', save_intermediate_results = False):
     """
-    # ROLE:
-    #     Préparer la donnée MNS
-    #
-    # ENTREES DE LA FONCTION
-    #    file_mns_in : fichier mns à traiter
-    #    file_mns_out : fichier mns de sortie, après traitements
-    #    epsg : epsg
-    #    md_value : paramètre d'interpolation correspondant à la distance maximale avec laquelle l'algorithm va chercher à interpoler ses valeurs, par défaut : 100
-    #    format_raster : format de la donnée mns, par défaut : GTiff
-    #    save_results_intermediate : variable si sauvegarde ou non des résultats intermédiaires, par défaut : False
-    #
-    # SORTIES DE LA FONCTION
-    #    0
-    #
+    Rôle : prépare la donnée MNS
+
+    Paramètres :
+        file_mns_in : fichier mns à traiter
+        file_mns_out : fichier mns de sortie, après traitements
+        epsg : epsg dans lequel on travail
+        md_value : paramètre d'interpolation correspondant à la distance maximale avec laquelle l'algorithm va chercher à interpoler ses valeurs. Par défaut : 100
+        format_raster : format de la donnée mns. Par défaut : GTiff
+        save_intermediate_results : variable si sauvegarde ou non des résultats intermédiaires. Par défaut : False
     """
 
     if os.path.exists(file_mns_out):
@@ -216,7 +207,7 @@ def MnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 
         raise NameError (bold + red + "!!! Une erreur c'est produite au cours de l'interpolation du MNS. Voir message d'erreur."  + endC)
 
     if debug >= 3:
-        print(cyan + "MnsPrepare : Fin de l'interpolation" + endC)
+        print(cyan + "mnsPrepare : Fin de l'interpolation" + endC)
 
 
     #Reprojection
@@ -227,30 +218,25 @@ def MnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 
         raise NameError (bold + red + "!!! Une erreur c'est produite au cours de la reprojection du MNS. Voir message d'erreur."  + endC)
 
     if debug >= 3:
-        print(cyan + "MnsPrepare : Fin de la reprojection et donc de la préparation du MNS" + endC)
+        print(cyan + "mnsPrepare : Fin de la reprojection et donc de la préparation du MNS" + endC)
 
-    if not save_results_intermediate:
+    if not save_intermediate_results:
         if os.path.exists(interpol_file_tmp):
             removeFile(interpol_file_tmp)
-    return 0
+    return
 
-def MntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100, format_raster = 'GTiff', save_results_intermediate = False):
+def mntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100, format_raster = 'GTiff', save_intermediate_results = False):
     """
-    # ROLE:
-    #     Préparer la donnée MNT
-    #
-    # ENTREES DE LA FONCTION
-    #    file_mnt_in : fichier MNT à traiter
-    #    file_mnt_out : fichier MNT de sortie, après traitements
-    #    epsg : epsg
-    #    file_superimpose : fichier pour échantillonner et stacker le MNT aux mêmes dimensions que le MNS
-    #    md_value : paramètre d'interpolation correspondant à la distance maximale avec laquelle l'algorithm va chercher à interpoler ses valeurs, par défaut : 100
-    #    format_raster : format de la donnée mns, par défaut : GTiff
-    #    save_results_intermediate : variable si sauvegarde ou non des résultats intermédiaires, par défaut : False
-    #
-    # SORTIES DE LA FONCTION
-    #    0
-    #
+    Rôle : prépare la donnée MNT
+
+    Paramètres :
+        file_mnt_in : fichier MNT à traiter
+        file_mnt_out : fichier MNT de sortie, après traitements
+        epsg : epsg
+        file_superimpose : fichier pour échantillonner et stacker le MNT aux mêmes dimensions que le MNS
+        md_value : paramètre d'interpolation correspondant à la distance maximale avec laquelle l'algorithm va chercher à interpoler ses valeurs, par défaut : 100
+        format_raster : format de la donnée mns, par défaut : GTiff
+        save_intermediate_results : variable si sauvegarde ou non des résultats intermédiaires, par défaut : False
     """
 
     if os.path.exists(file_mnt_out):
@@ -274,7 +260,7 @@ def MntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100
         raise NameError (bold + red + "!!! Une erreur c'est produite au cours de l'interpolation du MNT. Voir message d'erreur."  + endC)
 
     if debug >= 3:
-        print(cyan + "MntPrepare : Fin de l'interpolation" + endC)
+        print(cyan + "mntPrepare : Fin de l'interpolation" + endC)
 
 
     # Vérification de la projection du fichier MNT
@@ -295,7 +281,7 @@ def MntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100
             raise NameError (bold + red + "!!! Une erreur c'est produite au cours de la reprojection du MNT. Voir message d'erreur."  + endC)
 
         if debug >= 3:
-            print(cyan + "MnsPrepare : Fin de la reprojection du MNT" + endC)
+            print(cyan + "mnsPrepare : Fin de la reprojection du MNT" + endC)
 
     # SuperImpose sur le MNS
     cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(file_superimpose, reproj_file_tmp, file_mnt_out)
@@ -305,12 +291,12 @@ def MntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100
         raise NameError (bold + red + "!!! Une erreur c'est produite au cours du super impose du MNT. Voir message d'erreur."  + endC)
 
     if debug >= 3:
-        print(cyan + "MnsPrepare : Fin du superimpose du MNT" + endC)
+        print(cyan + "mnsPrepare : Fin du superimpose du MNT" + endC)
 
-    if not save_results_intermediate:
+    if not save_intermediate_results:
         if os.path.exists(interpol_file_tmp):
             removeFile(interpol_file_tmp)
         if os.path.exists(reproj_file_tmp):
             removeFile(reproj_file_tmp)
 
-    return 0
+    return

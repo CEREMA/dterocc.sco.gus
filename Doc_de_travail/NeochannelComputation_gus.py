@@ -19,15 +19,21 @@ PRECISION = 0.0000001
 #########################################################################
 # FONCTION neochannelComputation()                                      #
 #########################################################################
-def neochannelComputation(image_input, image_pan_input, file_output, empriseVector, imagechannel_order = ["Red","Green","Blue","NIR"], codage="float",save_results_intermediate = False):
+def neochannelComputation(image_input, image_pan_input, file_output, empriseVector, imagechannel_order = ["Red","Green","Blue","NIR"], codage="float",save_intermediate_results = False):
     """
-    #   Rôle : Cette fonction permet de créer l'ensemble des indices radiométriques
-    #   Paramètres :
-    #       image_input : fichier image d'entrée multi bandes
-    #       image_pan_input : fichier image panchromatique d'entrée monobande
-    #       file_output : fichier indiquant le repertoire dans lequel on va sauvegardre les données intermédiaires
-    #       channel_order : liste d'ordre des bandes de l'image, par défaut : ["Red","Green","Blue","NIR"]
-    #       codage : type de codage du fichier de sortie
+    Rôle : Cette fonction permet de créer l'ensemble des indices radiométriques
+
+    Paramètres :
+           image_input : fichier image d'entrée multi bandes
+           image_pan_input : fichier image panchromatique d'entrée monobande
+           file_output : fichier indiquant le repertoire dans lequel on va sauvegardre les données intermédiaires
+           empriseVector : fichier vecteur emprise de la zone d'étude
+           channel_order : liste d'ordre des bandes de l'image. Par défaut : ["Red","Green","Blue","NIR"]
+           codage : type de codage du fichier de sortie. Par défaut : float
+           save_intermediate_results : sauvegarde des résultats intermédiaire. Par défaut : False
+
+    Sortie :
+        liste des fichiers d'indices radiométriques
     """
     # Utilisation de fichiers temporaires pour produire les indices radiométriques
     repertory_output = os.path.dirname(file_output)
@@ -102,24 +108,24 @@ def neochannelComputation(image_input, image_pan_input, file_output, empriseVect
 
 
     #Calcul du NDVI
-    createNDVI(image_input, ndvi_file_tmp)
-    #Decoupe sur la zone d'étude
-    cutImageByVector(empriseVector ,ndvi_file_tmp, ndvi_out_file)
+    # createNDVI(image_input, ndvi_file_tmp)
+    # #Decoupe sur la zone d'étude
+    # cutImageByVector(empriseVector ,ndvi_file_tmp, ndvi_out_file)
 
-    #Calcul du MSAVI2
-    createMSAVI2(image_input, msavi2_file_tmp)
-    #Decoupe sur la zone d'étude
-    cutImageByVector(empriseVector ,msavi2_file_tmp, msavi2_out_file)
+    # #Calcul du MSAVI2
+    # createMSAVI2(image_input, msavi2_file_tmp)
+    # #Decoupe sur la zone d'étude
+    # cutImageByVector(empriseVector ,msavi2_file_tmp, msavi2_out_file)
 
-    #Calcul du NDWI2
-    createNDWI2(image_input, ndwi2_file_tmp)
-    #Decoupe sur la zone d'étude
-    cutImageByVector(empriseVector ,ndwi2_file_tmp, ndwi2_out_file)
+    # #Calcul du NDWI2
+    # createNDWI2(image_input, ndwi2_file_tmp)
+    # #Decoupe sur la zone d'étude
+    # cutImageByVector(empriseVector ,ndwi2_file_tmp, ndwi2_out_file)
 
-    #Calcul de la teinte
-    h_file_tmp = createHIS(image_input, h_file_tmp, li_choice = ["H"])[0]
-    #Decoupe sur la zone d'étude
-    cutImageByVector(empriseVector ,h_file_tmp, hue_out_file)
+    # #Calcul de la teinte
+    # h_file_tmp = createHIS(image_input, h_file_tmp, li_choice = ["H"])[0]
+    # #Decoupe sur la zone d'étude
+    # cutImageByVector(empriseVector ,h_file_tmp, hue_out_file)
 
     #Calcul de la texture SFS
     createSFS(image_pan_input, sfs_file_tmp)
@@ -127,7 +133,7 @@ def neochannelComputation(image_input, image_pan_input, file_output, empriseVect
     cutImageByVector(empriseVector ,sfs_file_tmp, sfs_out_file)
 
     # Suppression du fichier temporaire
-    if not save_results_intermediate:
+    if not save_intermediate_results:
         if os.path.exists(ndvi_file_tmp):
             removeFile(ndvi_file_tmp)
 
@@ -198,13 +204,13 @@ def createNDVI(image_input, image_NDVI_output, channel_order = ["Red","Green","B
 #########################################################################
 def createNDWI2(image_input, image_NDWI2_output, channel_order = ["Red","Green","Blue","NIR"], codage="float"):
     """
-    #   Rôle : Cette fonction permet de créer un fichier NDWI2 (eau) à partir d'une image ortho multi bande
-    #   paramètres :
-    #       image_input : fichier image d'entrée multi bandes
-    #       image_NDWI2_output : fichier NDWI2 de sortie (une bande)
-    #       channel_order : liste d'ordre des bandes de l'image, par défaut : ["Red","Green","Blue","NIR"]
-    #       codage : type de codage du fichier de sortie
-    # Source : https://hal.archives-ouvertes.fr/halshs-01070803/document
+    Rôle : Créé une image NDWI2 (indice d'eau) à partir d'une image ortho multi bande
+
+    Paramètres :
+           image_input : fichier image d'entrée multi bandes
+           image_NDWI2_output : fichier NDWI2 de sortie (une bande)
+           channel_order : liste d'ordre des bandes de l'image, par défaut : ["Red","Green","Blue","NIR"]
+           codage : type de codage du fichier de sortie
     """
 
     # Variables
@@ -242,13 +248,13 @@ def createNDWI2(image_input, image_NDWI2_output, channel_order = ["Red","Green",
 #########################################################################
 def createMSAVI2(image_input, image_MSAVI2_output, channel_order = ["Red","Green","Blue","NIR"], codage="float"):
     """
-    #   Rôle : Cette fonction permet de créer un fichier MSAVI2 (végétation) à partir d'une image ortho multi bande
-    #   paramètres :
-    #       image_input : fichier image d'entrée multi bandes
-    #       image_MSAVI2_output : fichier MSAVI de sortie une bande
-    #       channel_order : liste d'ordre des bandes de l'image, par défaut ["Red","Green","Blue","NIR"]
-    #       codage : type de codage du fichier de sortie
-    #
+    Rôle : calcul l'image MSAVI2 (indice de végétation) à partir d'une image ortho multi bande
+
+    Paramètres :
+           image_input : fichier image d'entrée multi bandes
+           image_MSAVI2_output : fichier MSAVI de sortie une bande
+           channel_order : liste d'ordre des bandes de l'image, par défaut ["Red","Green","Blue","NIR"]
+           codage : type de codage du fichier de sortie
     """
 
     # Variables
@@ -287,13 +293,14 @@ def createMSAVI2(image_input, image_MSAVI2_output, channel_order = ["Red","Green
 #########################################################################
 def createHIS(image_input, image_HIS_output, li_choice = ["H","I","S"], channel_order = ["Red","Green","Blue","NIR"], codage="float"):
     """
-    #   Rôle : Cette fonction permet de créer un fichier ISI (ombre) à partir d'une image ortho multi bande
-    #   paramètres :
-    #       image_input : fichier image d'entrée multi bandes
-    #       image_HIS_output : fichier HIS permettant de localiser le dossier ou les donnees HIS vont etre sauvegardees
-    #       li_choice : liste des images que l'on souhaite garder, par défaut ["H","I","S"]
-    #       channel_order : liste d'ordre des bandes de l'image, par défaut : ["Red","Green","Blue","NIR"]
-    #       codage : type de codage du fichier de sortie
+    Rôle : converti l'image RVBPIR en image H(teinte)I(intensite)S(saturation). Il y a possibilité de choisir la(es)quelle(s) des trois on garde.
+
+    Paramètres :
+           image_input : fichier image d'entrée multi bandes
+           image_HIS_output : fichier HIS permettant de localiser le dossier ou les donnees HIS vont etre sauvegardees
+           li_choice : liste des images que l'on souhaite garder, par défaut ["H","I","S"]
+           channel_order : liste d'ordre des bandes de l'image, par défaut : ["Red","Green","Blue","NIR"]
+           codage : type de codage du fichier de sortie
     """
 
     cont = 0
@@ -365,14 +372,13 @@ def createHIS(image_input, image_HIS_output, li_choice = ["H","I","S"], channel_
 #########################################################################
 def createSFS(image_pan_input, image_SFS_output, li_choice = [4], codage="float"):
     """
-    #   Rôle : Cette fonction permet de créer un fichier de texture Structural Features Set : Lenght (b1), Width (b2), PSI (b3), W-Mean (b4), Ratio (b5) et SD (b6)
-    #           à partir d'une fonction de l'otb et d'extraire uniquement la bande qui nous intéresse par la même occacion
-    #   Paramètres :
-    #       image_pan_input : fichier image d'entrée panchromatique
-    #       image_SFS_output : fichier SFS de sortie allant de 1 à 6 bandes
-    #       li_choice : liste des bandes à garder, par défaut [4] --> on garde la bande 4
-    #       codage : type de codage du fichier de sortie
-    #
+    Rôle : créé un fichier de texture Structural Features Set : Lenght (b1), Width (b2), PSI (b3), W-Mean (b4), Ratio (b5) et SD (b6)
+               à partir d'une fonction de l'otb et d'extraire uniquement la bande qui nous intéresse par la même occasion
+    Paramètres :
+           image_pan_input : fichier image d'entrée panchromatique
+           image_SFS_output : fichier SFS de sortie allant de 1 à 6 bandes
+           li_choice : liste des bandes à garder. Par défaut [4] --> on garde la bande 4
+           codage : type de codage du fichier de sortie
     """
 
     print(cyan + "createSFS() : " + bold + green + "Début du calcul de texture SFS" + endC)
