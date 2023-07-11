@@ -73,7 +73,7 @@ def macroSamplesPrepare(image_ref, input_vector_class, output_raster_class, empr
         bufferVector(cut_file_tmp, erosion_file_tmp, -1, col_name_buf = "", fact_buf=1.0, quadsecs=10, format_vector=format_vector)
     else :
         erosion_file_tmp = cut_file_tmp
-    erosion_file_tmp = r'/mnt/RAM_disk/output_vector_erosion.gpkg'
+   # erosion_file_tmp = r'/mnt/RAM_disk/output_vector_erosion.gpkg'
     # Creation d'un masque binaire
     if output_raster_class != "" and image_ref != "" :
         repertory_output = os.path.dirname(output_raster_class)

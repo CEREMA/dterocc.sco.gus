@@ -40,44 +40,44 @@ def neochannelComputation(image_input, image_pan_input, file_output, empriseVect
     file_name = os.path.splitext(os.path.basename(file_output))[0]
     extension = os.path.splitext(file_output)[1]
 
-    #Fichiers intermédiaires MSAVI2
-    file_out_suffix_ndvi = "_tmp_ndvi"
-    ndvi_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_ndvi + extension
+    # #Fichiers intermédiaires MSAVI2
+    # file_out_suffix_ndvi = "_tmp_ndvi"
+    # ndvi_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_ndvi + extension
 
-    if os.path.exists(ndvi_file_tmp):
-        os.remove(ndvi_file_tmp)
+    # if os.path.exists(ndvi_file_tmp):
+    #     os.remove(ndvi_file_tmp)
 
-    file_out_suffix_cut_ndvi = "_ndvi"
-    ndvi_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_ndvi + extension
+    # file_out_suffix_cut_ndvi = "_ndvi"
+    # ndvi_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_ndvi + extension
 
-    if os.path.exists(ndvi_out_file):
-        os.remove(ndvi_out_file)
+    # if os.path.exists(ndvi_out_file):
+    #     os.remove(ndvi_out_file)
 
-    #Fichiers intermédiaires MSAVI2
-    file_out_suffix_msavi2 = "_tmp_msavi2"
-    msavi2_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_msavi2 + extension
+    # #Fichiers intermédiaires MSAVI2
+    # file_out_suffix_msavi2 = "_tmp_msavi2"
+    # msavi2_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_msavi2 + extension
 
-    if os.path.exists(msavi2_file_tmp):
-        os.remove(msavi2_file_tmp)
+    # if os.path.exists(msavi2_file_tmp):
+    #     os.remove(msavi2_file_tmp)
 
-    file_out_suffix_cut_msavi2 = "_msavi2"
-    msavi2_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_msavi2 + extension
+    # file_out_suffix_cut_msavi2 = "_msavi2"
+    # msavi2_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_msavi2 + extension
 
-    if os.path.exists(msavi2_out_file):
-        os.remove(msavi2_out_file)
+    # if os.path.exists(msavi2_out_file):
+    #     os.remove(msavi2_out_file)
 
-    #Fichiers intermédiaires NDWI2
-    file_out_suffix_ndwi2 = "_tmp_ndwi2"
-    ndwi2_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_ndwi2 + extension
+    # #Fichiers intermédiaires NDWI2
+    # file_out_suffix_ndwi2 = "_tmp_ndwi2"
+    # ndwi2_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_ndwi2 + extension
 
-    if os.path.exists(ndwi2_file_tmp):
-        os.remove(ndwi2_file_tmp)
+    # if os.path.exists(ndwi2_file_tmp):
+    #     os.remove(ndwi2_file_tmp)
 
-    file_out_suffix_cut_ndwi2 = "_ndwi2"
-    ndwi2_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_ndwi2 + extension
+    # file_out_suffix_cut_ndwi2 = "_ndwi2"
+    # ndwi2_out_file = repertory_output + os.sep + file_name + file_out_suffix_cut_ndwi2 + extension
 
-    if os.path.exists(ndwi2_out_file):
-        os.remove(ndwi2_out_file)
+    # if os.path.exists(ndwi2_out_file):
+    #     os.remove(ndwi2_out_file)
 
     #Fichiers intermédiaires teinte Hue
     file_out_suffix_h = "_tmp_hue"
@@ -107,7 +107,7 @@ def neochannelComputation(image_input, image_pan_input, file_output, empriseVect
         os.remove(sfs_out_file)
 
 
-    #Calcul du NDVI
+    # #Calcul du NDVI
     # createNDVI(image_input, ndvi_file_tmp)
     # #Decoupe sur la zone d'étude
     # cutImageByVector(empriseVector ,ndvi_file_tmp, ndvi_out_file)
@@ -122,10 +122,10 @@ def neochannelComputation(image_input, image_pan_input, file_output, empriseVect
     # #Decoupe sur la zone d'étude
     # cutImageByVector(empriseVector ,ndwi2_file_tmp, ndwi2_out_file)
 
-    # #Calcul de la teinte
-    # h_file_tmp = createHIS(image_input, h_file_tmp, li_choice = ["H"])[0]
-    # #Decoupe sur la zone d'étude
-    # cutImageByVector(empriseVector ,h_file_tmp, hue_out_file)
+    #Calcul de la teinte
+    h_file_tmp = createHIS(image_input, h_file_tmp, li_choice = ["H"])[0]
+    #Decoupe sur la zone d'étude
+    cutImageByVector(empriseVector ,h_file_tmp, hue_out_file)
 
     #Calcul de la texture SFS
     createSFS(image_pan_input, sfs_file_tmp)

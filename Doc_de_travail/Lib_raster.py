@@ -37,7 +37,7 @@ from Lib_xml import parseDom, getListNodeDataDom, getListValueAttributeDom
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire
-debug = 1
+debug = 3
 
 # Les parametres de la fonction OTB otbcli_BinaryMorphologicalOperation a changé à partir de la version 7.0 de l'OTB
 pythonpath = os.environ["PYTHONPATH"]
@@ -1368,6 +1368,8 @@ def deletePixelsSuperpositionMasks(images_input_list, images_output_list, image_
         extension_file = os.path.splitext(os.path.basename(images_input_list[0]))[1]
         cleaning_image = repertory_output + os.sep + image_name + "_cleaning" + extension_file
 
+        print(cleaning_image)
+
         # Etape 1 : Repérage des superpositions et création du fichier de nettoyage
 
         # Récupération des images et écriture de l'expression du BandMath
@@ -1402,6 +1404,7 @@ def deletePixelsSuperpositionMasks(images_input_list, images_output_list, image_
         for idx_image in range (len(images_input_list)) :
             # Récupération du nom des images
             image_origin = images_input_list[idx_image]
+            print("creation d'images nettoyées, image_origin :",image_origin)
 
             # Attribution du nom de l image nettoyée en sortie
             image_cleaned = images_output_list[idx_image]
@@ -1422,10 +1425,10 @@ def deletePixelsSuperpositionMasks(images_input_list, images_output_list, image_
                 raise NameError(bold + red + "deletePixelsSuperpositionMasks() : An error occured during otbcli_BandMath command. See error message above." + endC)
 
         #  Etape 3 : Suprimer l'image temporaire de nettoyage
-        try:
-            os.remove(cleaning_image)
-        except Exception:
-            pass # Si le fichier ne peut pas être supprimé, on suppose qu'il n'existe pas
+        # try:
+        #     os.remove(cleaning_image)
+        # except Exception:
+        #     pass # Si le fichier ne peut pas être supprimé, on suppose qu'il n'existe pas
 
         if debug >= 3:
             print(cyan + "deletePixelsSuperpositionMasks() : " + endC + "Les images masques ont ete nettoyees")
