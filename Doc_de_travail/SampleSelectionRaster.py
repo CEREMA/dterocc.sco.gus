@@ -384,7 +384,7 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
                 vector_local_output_list.append(vector_sample_local_output)
 
                 # Gestion sans thread...
-                #SampleLocalExtraction(image_input, sample_points_output, emprise_local_sample, vector_sample_local_output, name_column, BAND_NAME, ram_otb, format_vector, extension_vector, save_results_intermediate)
+                SampleLocalExtraction(image_input, sample_points_output, emprise_local_sample, vector_sample_local_output, name_column, BAND_NAME, ram_otb, format_vector, extension_vector, save_results_intermediate)
 
                 # Gestion du multi threading
                 thread = threading.Thread(target=SampleLocalExtraction, args=(image_input, sample_points_output, emprise_local_sample, vector_sample_local_output, name_column, BAND_NAME, ram_otb, format_vector, extension_vector, save_results_intermediate))
