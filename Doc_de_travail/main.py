@@ -80,7 +80,7 @@ if __name__ == "__main__":
     #8# Nettoyage recouvrement des échantillons d'apprentissage
    # cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merged_output)
     #9# Sélection des échantillons
-    selectSamples(image_input_list = r'/mnt/RAM_disk/final.tif', sample_image_input = image_samples_merged_output, vector_output = r'/mnt/RAM_disk/TEST_CLASS/vector_echantillons.shp', table_statistics_output = r'/mnt/RAM_disk/TEST_CLASS/tab_stats.csv', sampler_strategy="percent", select_ratio_floor = 10, ratio_per_class_dico = {"1":2.6, "2":2.5,"3":5,"4":1.2,"5":0.8}, name_column = 'ROI', no_data_value = 0)
+    selectSamples(image_input_list =[r'/mnt/RAM_disk/final.tif'], sample_image_input = image_samples_merged_output, vector_output = r'/mnt/RAM_disk/TEST_CLASS/vector_echantillons.shp', table_statistics_output = r'/mnt/RAM_disk/TEST_CLASS/tab_stats.csv', sampler_strategy="percent", select_ratio_floor = 10, ratio_per_class_dico = {"1":2.6, "2":2.5,"3":5,"4":1.2,"5":0.8}, name_column = 'ROI', no_data_value = 0)
 
     #10# Classification supervisée RF
     #classifySupervised(image_input_list, sample_points_values_input, classification_file_output, confidence_file_output, model_output, model_input, field_class, sampler_mode, periodic_value, classifier_mode, kernel, rf_parametres_struct, no_data_value, path_time_log, ram_otb=0,  format_raster='GTiff', extension_vector=".shp")
@@ -166,21 +166,21 @@ if __name__ == "__main__":
         FROM classification_fv.strate_herbacee AS t3; 
     """
 
-    addUniqId(connexion, 'vegetation')
+  #   addUniqId(connexion, 'vegetation')
 
-    addSpatialIndex(connexion, 'vegetation')
+  #   addSpatialIndex(connexion, 'vegetation')
     
-   # Création des colonnes correspondant aux indicateurs descrptifs de la végétation
-   addColumn(connexion, 'vegetation', 'surface', 'float')
-   addColumn(connexion, 'vegetation', 'hauteur_med', 'float')
-   addColumn(connexion, 'vegetation', 'hauteur_et', 'float')
-   addColumn(connexion, 'vegetation', 'hauteur_max', 'float')
-   addColumn(connexion, 'vegetation', 'hauteur_min', 'float')
-   addColumn(connexion, 'vegetation', 'perc_feuillu', 'float')
-   addColumn(connexion, 'vegetation', 'perc_conifere', 'float')
-   addColumn(connexion, 'vegetation', 'perc_persistant', 'float')
-   addColumn(connexion, 'vegetation', 'perc_caduque', 'float')
-   addColumn(connexion, 'vegetation', 'type_sol', 'float')
+  #  # Création des colonnes correspondant aux indicateurs descrptifs de la végétation
+  #  addColumn(connexion, 'vegetation', 'surface', 'float')
+  #  addColumn(connexion, 'vegetation', 'hauteur_med', 'float')
+  #  addColumn(connexion, 'vegetation', 'hauteur_et', 'float')
+  #  addColumn(connexion, 'vegetation', 'hauteur_max', 'float')
+  #  addColumn(connexion, 'vegetation', 'hauteur_min', 'float')
+  #  addColumn(connexion, 'vegetation', 'perc_feuillu', 'float')
+  #  addColumn(connexion, 'vegetation', 'perc_conifere', 'float')
+  #  addColumn(connexion, 'vegetation', 'perc_persistant', 'float')
+  #  addColumn(connexion, 'vegetation', 'perc_caduque', 'float')
+  #  addColumn(connexion, 'vegetation', 'type_sol', 'float')
 
 
 
