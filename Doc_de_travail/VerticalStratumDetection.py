@@ -208,9 +208,20 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
     #Exécution de la requête SQL
     if debug >= 1:
         print(query)
-    executeQuery(connexion, query)
+    #  executeQuery(connexion, query)
 
-    # #Création indice unique
+
+    #Suppression de rgpt_arbuste trop petits --> surface <= 1m 
+    query = """
+    DELETE FROM rgpt_arbuste WHERE public.ST_AREA(geom) <= 1;
+    """
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+   # executeQuery(connexion, query)
+
+    #Création indice unique
     # addUniqId(connexion, 'rgpt_arbuste')
 
     # #Création d'un index spatial
@@ -222,8 +233,8 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
     #Remplissage de la colonne nb_sgt : compte le nombre de segments arbustifs dans chaque regroupement
     query = """
     UPDATE rgpt_arbuste SET nb_sgt = t3.compteur FROM (SELECT t1.fid , count(*) AS compteur
-                                                        FROM rgpt_arbuste as t1, (SELECT fid, geom FROM segments_vegetation WHERE strate='arbustif') AS t2
-                                                        WHERE public.ST_CoveredBy(t2.geom, public.ST_BUFFER(t1.geom,0.5))
+                                                        FROM rgpt_arbuste AS t1, (SELECT fid, geom FROM segments_vegetation WHERE strate='arbustif') AS t2
+                                                        WHERE public.ST_CoveredBy(t2.geom, public.ST_BUFFER(t1.geom,1))
                                                         GROUP BY t1.fid) AS t3
                                                     WHERE rgpt_arbuste.fid = t3.fid;
     """
