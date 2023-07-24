@@ -199,7 +199,7 @@ def computeStatisticsImage(image_raster, statistic_file=""):
          print(cyan + "computeStatisticsImage() : Ecriture du fichier statistique" + statistic_file + endC)
 
     if debug >=3:
-        print(cyan + "computeStatisticsImage() : Fin du calcul statistique : " + statistics_dico + endC)
+        print(cyan + "computeStatisticsImage() : Fin du calcul statistique : " + endC)
 
     return statistics_dico
 
