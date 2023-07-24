@@ -48,20 +48,20 @@ from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displ
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 1 : affichage intermédiaire de commentaires lors de l'execution du script
 # debug = 2 : affichage supérieur de commentaires lors de l'execution du script etc...
-debug = 5
+debug = 3
 
 ###########################################################################################################################################
 # STRUCTURE StructInfoMicoClass                                                                                                           #
 ###########################################################################################################################################
 class StructInfoMicoClass:
     """
-    # Structure contenant contenant les informations nombre de points, valeur du label macroclass et liste de points associé à une macro classe
+    # Structure contenant contenant les informations nombre de points, valeur du label microclass et liste de points associé à une micro classe
     """
     def __init__(self):
         self.label_class = 0
         self.nb_points = 0
         self.info_points_list = None
-        self.sample_points_list = None
+        sample_points_list = None
 
 ###########################################################################################################################################
 # FONCTION selectSamples                                                                                                                  #
@@ -69,15 +69,15 @@ class StructInfoMicoClass:
 def selectSamples(image_input_list, sample_image_input, vector_output, table_statistics_output, sampler_strategy, select_ratio_floor, ratio_per_class_dico, name_column, no_data_value, rand_seed=0, ram_otb=0, epsg=2154, format_vector='ESRI Shapefile', extension_vector=".shp", save_results_intermediate=False, overwrite=True) :
     """
     # ROLE:
-    #     fonction de selection de points d'échantillons dans un fichier raster apres fusion de toute les fichiers macro, de facon aléatoire
+    #     fonction de selection de points d'échantions dans un fichier raster apres fusion de toute les fichiers macro, de facon aléatoire
     #
     # ENTREES DE LA FONCTION :
     #    image_input_list : liste d'image d'entrée stacké au format .tif
-    #    sample_image_input : image d'echantillons de macro classes d'entrée .tif
+    #    sample_image_input : image d'echantillons de micro classes d'entrée .tif
     #    vector_output : fichier vecteur résultat de la vectorisation de la classification
-    #    table_statistics_output : fichier contenant le resultat des statistiques sur les valeurs des points par macro classes .csv
+    #    table_statistics_output : fichier contenant le resultat des statistiques sur les valeurs des points par micro classes .csv
     #    sampler_strategy : mode de strategie de selection
-    #    select_ratio_floor : ratio de taux de selection pour toutes les macro classes avec une valeur plancher
+    #    select_ratio_floor : ratio de taux de selection pour toutes les micro classes avec une valeur plancher
     #    ratio_per_class_dico : dictionaire de ratio  de taux de selection pour chaque macro classe
     #    name_column : nom de la colonne du fichier shape contenant l'information de classification
     #    no_data_value : Option : Value pixel of no data
@@ -171,13 +171,13 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
         if debug >= 3:
             print(cyan + "selectSamples() : " + bold + green + "Start statistique sur l'image des echantillons rasteur..." + endC)
 
-        id_macro_list = identifyPixelValues(sample_image_input)
+        id_micro_list = identifyPixelValues(sample_image_input)
 
-        if 0 in id_macro_list :
-            id_macro_list.remove(0)
+        if 0 in id_micro_list :
+            id_micro_list.remove(0)
 
-        min_macro_class_nb_points = -1
-        min_macro_class_label = 0
+        min_micro_class_nb_points = -1
+        min_micro_class_label = 0
         infoStructPointSource_dico = {}
 
         writeTextFile(file_statistic_points, '<?xml version="1.0" ?>\n')
@@ -185,27 +185,26 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
         appendTextFileCR(file_statistic_points, '    <Statistic name="pointsPerClassRaw">')
 
         if debug >= 2:
-            print("Nombre de points par macro classe :" + endC)
-        for id_macro in id_macro_list :
-            nb_pixels = countPixelsOfValue(sample_image_input, id_macro)
+            print("Nombre de points par micro classe :" + endC)
+        for id_micro in id_micro_list :
+            nb_pixels = countPixelsOfValue(sample_image_input, id_micro)
 
             if debug >= 2:
-                print("MacroClass : " + str(id_macro) + ", nb_points = " + str(nb_pixels))
-            appendTextFileCR(file_statistic_points, '        <StatisticPoints class="%d" value="%d" />' %(id_macro, nb_pixels))
+                print("MicroClass : " + str(id_micro) + ", nb_points = " + str(nb_pixels))
+            appendTextFileCR(file_statistic_points, '        <StatisticPoints class="%d" value="%d" />' %(id_micro, nb_pixels))
 
-            if min_macro_class_nb_points == -1 or min_macro_class_nb_points > nb_pixels :
-                min_macro_class_nb_points = nb_pixels
-                min_macro_class_label = id_macro
+            if min_micro_class_nb_points == -1 or min_micro_class_nb_points > nb_pixels :
+                min_micro_class_nb_points = nb_pixels
+                min_micro_class_label = id_micro
 
-            infoStructPointSource_dico[id_macro] = StructInfoMicoClass()
-            infoStructPointSource_dico[id_macro].label_class = id_macro
-            infoStructPointSource_dico[id_macro].nb_points = nb_pixels
-            infoStructPointSource_dico[id_macro].info_points_list = []
-            infoStructPointSource_dico[id_macro].sample_points_list = []
+            infoStructPointSource_dico[id_micro] = StructInfoMicoClass()
+            infoStructPointSource_dico[id_micro].label_class = id_micro
+            infoStructPointSource_dico[id_micro].nb_points = nb_pixels
+            infoStructPointSource_dico[id_micro].info_points_list = []
             del nb_pixels
 
         if debug >= 2:
-            print("MacroClass min points find : " + str(min_macro_class_label) + ", nb_points = " + str(min_macro_class_nb_points))
+            print("MicroClass min points find : " + str(min_micro_class_label) + ", nb_points = " + str(min_micro_class_nb_points))
 
         appendTextFileCR(file_statistic_points, '    </Statistic>')
 
@@ -276,21 +275,28 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
         if rand_seed > 0:
             random.seed( rand_seed )
 
-        # Pour toute les macro classes
-        # Selon la stategie de selection
-        nb_points_ratio = 0
-        if case('percent'):
-            for key in ratio_per_class_dico:
-                select_ratio_class = ratio_per_class_dico[key]
-                nb_points_ratio = int(infoStructPointSource_dico[id_macro].nb_points * select_ratio_class / 100)
-                infoStructPointSource_dico[id_macro].sample_points_list = random.sample(range(infoStructPointSource_dico[id_macro].nb_points), nb_points_ratio)
-                print(infoStructPointSource_dico[id_macro].sample_points_list)
+        # Pour toute les micro classes
+        for id_micro in id_micro_list :
+
+            # Selon la stategie de selection
+            nb_points_ratio = 0
+            while switch(sampler_strategy.lower()):
+                if case('percent'):
+                    # Le mode de selection 'percent' est choisi
+                    if id_micro >= 100:
+                        id_macro_class = int(math.floor(id_micro / 100) * 100)
+                    else :
+                        id_macro_class = int(id_micro)
+                    select_ratio_class = ratio_per_class_dico[id_macro_class]
+                    nb_points_ratio = int(infoStructPointSource_dico[id_micro].nb_points * select_ratio_class / 100)
+                    infoStructPointSource_dico[id_micro].sample_points_list = random.sample(range(infoStructPointSource_dico[id_micro].nb_points), nb_points_ratio)
+                    break
                 break
 
 
             if debug >= 2:
-                print("macroClass = " + str(id_macro) + ", nb_points_ratio " + str(nb_points_ratio))
-            appendTextFileCR(file_statistic_points, '        <StatisticPoints class="%d" value="%d" />' %(id_macro, nb_points_ratio))
+                print("MicroClass = " + str(id_micro) + ", nb_points_ratio " + str(nb_points_ratio))
+            appendTextFileCR(file_statistic_points, '        <StatisticPoints class="%d" value="%d" />' %(id_micro, nb_points_ratio))
 
         appendTextFileCR(file_statistic_points, '    </Statistic>')
         appendTextFileCR(file_statistic_points, '</GeneralStatistics>')
@@ -308,16 +314,16 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
         # Création du dico de points
         points_random_value_dico = {}
         index_dico_point = 0
-        for macro_class in infoStructPointSource_dico :
-            macro_class_struct = infoStructPointSource_dico[macro_class]
-            label_class = macro_class_struct.label_class
+        for micro_class in infoStructPointSource_dico :
+            micro_class_struct = infoStructPointSource_dico[micro_class]
+            label_class = micro_class_struct.label_class
             point_attr_dico = {name_column:int(label_class), COLUMN_CLASS:int(label_class), COLUMN_ORIGINFID:0}
 
-            for id_point in macro_class_struct.sample_points_list:
+            for id_point in micro_class_struct.sample_points_list:
 
                 # Recuperer les valeurs des coordonnees des points
-                coor_x = float(xmin + (int(macro_class_struct.info_points_list[id_point] % cols) * pixel_width)) + (pixel_width / 2.0)
-                coor_y = float(ymax - (int(macro_class_struct.info_points_list[id_point] / cols) * pixel_height)) - (pixel_height / 2.0)
+                coor_x = float(xmin + (int(micro_class_struct.info_points_list[id_point] % cols) * pixel_width)) + (pixel_width / 2.0)
+                coor_y = float(ymax - (int(micro_class_struct.info_points_list[id_point] / cols) * pixel_height)) - (pixel_height / 2.0)
                 points_random_value_dico[index_dico_point] = [[coor_x, coor_y], point_attr_dico]
                 del coor_x
                 del coor_y
@@ -340,6 +346,7 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
 
         # Creation du fichier shape
         createPointsFromCoordList(attribute_dico, points_random_value_dico, sample_points_output, projection_input, format_vector)
+        print(attribute_dico)
         del attribute_dico
         del points_random_value_dico
 
@@ -352,7 +359,8 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
 
         if debug >= 3:
             print(cyan + "selectSamples() : " + bold + green + "Start extraction des points d'echantillon dans l'image..." + endC)
-
+        
+        print(len(image_input_list))
         # Cas ou l'on a une seule image
         if len(image_input_list) == 1:
             # Extract sample
@@ -384,7 +392,7 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
                 vector_local_output_list.append(vector_sample_local_output)
 
                 # Gestion sans thread...
-                SampleLocalExtraction(image_input, sample_points_output, emprise_local_sample, vector_sample_local_output, name_column, BAND_NAME, ram_otb, format_vector, extension_vector, save_results_intermediate)
+                #SampleLocalExtraction(image_input, sample_points_output, emprise_local_sample, vector_sample_local_output, name_column, BAND_NAME, ram_otb, format_vector, extension_vector, save_results_intermediate)
 
                 # Gestion du multi threading
                 thread = threading.Thread(target=SampleLocalExtraction, args=(image_input, sample_points_output, emprise_local_sample, vector_sample_local_output, name_column, BAND_NAME, ram_otb, format_vector, extension_vector, save_results_intermediate))
@@ -439,24 +447,24 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
             res_values_dico = getAttributeValues(vector_output, None, None, attribute_name_dico, format_vector)
             del attribute_name_dico
 
-            # Trie des données par identifiant macro classes
+            # Trie des données par identifiant micro classes
             pending_event = cyan + "selectSamples() : " + bold + green + "Encours calcul des statistiques part2... " + endC
             if debug >=4:
                 print(pending_event)
 
-            data_value_by_macro_class_dico = {}
-            stat_by_macro_class_dico = {}
+            data_value_by_micro_class_dico = {}
+            stat_by_micro_class_dico = {}
 
             # Initilisation du dico complexe
-            for id_macro in id_macro_list :
-                data_value_by_macro_class_dico[id_macro] = {}
-                stat_by_macro_class_dico[id_macro] = {}
+            for id_micro in id_micro_list :
+                data_value_by_micro_class_dico[id_micro] = {}
+                stat_by_micro_class_dico[id_micro] = {}
                 for name_field_value in res_values_dico :
                     if name_field_value != name_column :
-                        data_value_by_macro_class_dico[id_macro][name_field_value] = []
-                        stat_by_macro_class_dico[id_macro][name_field_value] = {}
-                        stat_by_macro_class_dico[id_macro][name_field_value][AVERAGE] = 0.0
-                        stat_by_macro_class_dico[id_macro][name_field_value][STANDARD_DEVIATION] = 0.0
+                        data_value_by_micro_class_dico[id_micro][name_field_value] = []
+                        stat_by_micro_class_dico[id_micro][name_field_value] = {}
+                        stat_by_micro_class_dico[id_micro][name_field_value][AVERAGE] = 0.0
+                        stat_by_micro_class_dico[id_micro][name_field_value][STANDARD_DEVIATION] = 0.0
 
             # Trie des valeurs
             pending_event = cyan + "selectSamples() : " + bold + green + "Encours calcul des statistiques part3... " + endC
@@ -464,9 +472,9 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
                 print(pending_event)
 
             for index in range(len(res_values_dico[name_column])) :
-                id_macro = res_values_dico[name_column][index]
+                id_micro = res_values_dico[name_column][index]
                 for name_field_value in name_field_value_list :
-                    data_value_by_macro_class_dico[id_macro][name_field_value].append(res_values_dico[name_field_value][index])
+                    data_value_by_micro_class_dico[id_micro][name_field_value].append(res_values_dico[name_field_value][index])
             del res_values_dico
 
             # Calcul des statistiques
@@ -474,38 +482,38 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
             if debug >=4:
                 print(pending_event)
 
-            for id_macro in id_macro_list :
+            for id_micro in id_micro_list :
                 for name_field_value in name_field_value_list :
                     try :
-                        stat_by_macro_class_dico[id_macro][name_field_value][AVERAGE] = average(data_value_by_macro_class_dico[id_macro][name_field_value])
+                        stat_by_micro_class_dico[id_micro][name_field_value][AVERAGE] = average(data_value_by_micro_class_dico[id_micro][name_field_value])
                     except:
-                        stat_by_macro_class_dico[id_macro][name_field_value][AVERAGE] = 0
+                        stat_by_micro_class_dico[id_micro][name_field_value][AVERAGE] = 0
                     try :
-                        stat_by_macro_class_dico[id_macro][name_field_value][STANDARD_DEVIATION] = standardDeviation(data_value_by_macro_class_dico[id_macro][name_field_value])
+                        stat_by_micro_class_dico[id_micro][name_field_value][STANDARD_DEVIATION] = standardDeviation(data_value_by_micro_class_dico[id_micro][name_field_value])
                     except:
-                        stat_by_macro_class_dico[id_macro][name_field_value][STANDARD_DEVIATION] = 0
+                        stat_by_micro_class_dico[id_micro][name_field_value][STANDARD_DEVIATION] = 0
                     try :
-                        stat_by_macro_class_dico[id_macro][name_field_value][NB_POINTS] = len(data_value_by_macro_class_dico[id_macro][name_field_value])
+                        stat_by_micro_class_dico[id_micro][name_field_value][NB_POINTS] = len(data_value_by_micro_class_dico[id_micro][name_field_value])
                     except:
-                        stat_by_macro_class_dico[id_macro][name_field_value][NB_POINTS] = 0
+                        stat_by_micro_class_dico[id_micro][name_field_value][NB_POINTS] = 0
 
-            del data_value_by_macro_class_dico
+            del data_value_by_micro_class_dico
 
             # Creation du fichier statistique .csv
             pending_event = cyan + "selectSamples() : " + bold + green + "Encours calcul des statistiques part5... " + endC
             if debug >= 4:
                 print(pending_event)
 
-            text_csv = " macro classes ; Champs couche image ; Nombre de points  ; Moyenne ; Ecart type \n"
+            text_csv = " Micro classes ; Champs couche image ; Nombre de points  ; Moyenne ; Ecart type \n"
             writeTextFile(table_statistics_output, text_csv)
-            for id_macro in id_macro_list :
+            for id_micro in id_micro_list :
                 for name_field_value in name_field_value_list :
                     # Ecriture du fichier
-                    text_csv = " %d " %(id_macro)
+                    text_csv = " %d " %(id_micro)
                     text_csv += " ; %s" %(name_field_value)
-                    text_csv += " ; %d" %(stat_by_macro_class_dico[id_macro][name_field_value][NB_POINTS])
-                    text_csv += " ; %f" %(stat_by_macro_class_dico[id_macro][name_field_value][AVERAGE])
-                    text_csv += " ; %f" %(stat_by_macro_class_dico[id_macro][name_field_value][STANDARD_DEVIATION])
+                    text_csv += " ; %d" %(stat_by_micro_class_dico[id_micro][name_field_value][NB_POINTS])
+                    text_csv += " ; %f" %(stat_by_micro_class_dico[id_micro][name_field_value][AVERAGE])
+                    text_csv += " ; %f" %(stat_by_micro_class_dico[id_micro][name_field_value][STANDARD_DEVIATION])
                     appendTextFileCR(table_statistics_output, text_csv)
             del name_field_value_list
 
@@ -513,7 +521,7 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
             if debug >=3:
                 print(cyan + "selectSamples() : " + bold + green + "Pas de calcul des statistiques sur les valeurs des points demander!!!." + endC)
 
-        del id_macro_list
+        del id_micro_list
 
         pending_event = cyan + "selectSamples() : " + bold + green + "End calcul des statistiques sur les valeurs des points d'echantillons selectionnees. " + endC
         if debug >= 3:
