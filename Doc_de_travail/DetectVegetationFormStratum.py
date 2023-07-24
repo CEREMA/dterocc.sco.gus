@@ -151,7 +151,6 @@ def addSpatialIndex(connexion, tablename, geomcolumn = 'geom'):
     nameindex = 'idx_gist_' + tablename
     query = """
     CREATE INDEX %s ON %s USING gist(%s);
-;
     """ %(nameindex, tablename, geomcolumn)
 
     #Exécution de la requête SQL
