@@ -101,7 +101,24 @@ def heightIndicators(connexion, connexion_dic,tablename, columnnamelist, img_mnh
 
     return
 
-def indicatorEvergreenDeciduous(connexion, connexion_dic, vect_fv_in, img_prtps, img_hiver, table_fv_name, seuil = 0.10, columns_indics_name = ['perc_persistant', 'perc_caduque'] save_intermediate_results = False):
+def calculateSpringAndWinterNdviImage(img_spg_input, img_wtr_input)
+
+    repertory_output = os.path.dirname(img_spg_input) + '_TMP_CALC_NDVI_IMAGE'
+    extension = os.path.splitext(img_spg_input)[1]
+    img_ndvi_spg = repertory_output + os.sep + 'img_ndvi_printemps' + extension
+    img_ndvi_wtr = repertory_output + os.sep + 'img_ndvi_hiver' + extension
+
+    #Calcul des images ndvi de printemps_été et d'hiver 
+    cmd_ndvi_spg = "otbcli_BandMath -il %s -out %s -exp '(im1b4-im1b1)/(im1b4+im1b1)'" %(img_spg_input, img_ndvi_spg)
+    os.system(cmd_ndvi_spg)
+
+    cmd_ndvi_wtr = "otbcli_BandMath -il %s -out %s -exp '(im1b4-im1b1)/(im1b4+im1b1)'" %(img_wtr_input, img_ndvi_wtr)
+    os.system(cmd_ndvi_wtr)
+
+    return img_ndvi_spg, img_ndvi_wtr
+
+
+def indicatorEvergreenDeciduous(connexion, connexion_dic, vect_fv_in, img_ref,img_ndvi_spg, img_ndvi_wtr, table_fv_name, seuil = 0.10, columns_indics_name = ['perc_persistant', 'perc_caduque'], superimpose_choice = False, save_intermediate_results = False):
     """
     Rôle : cette fonction permet de calculer le pourçentage de persistants et de caduques sur les polygones en entrée
 
@@ -109,40 +126,48 @@ def indicatorEvergreenDeciduous(connexion, connexion_dic, vect_fv_in, img_prtps,
         connexion : variable de connexion à la BD
         connexion_dic : dictionnaire des paramètres de connexion à la base de données et au schéma correspondant
         vect_fv_in : couche vecteur de la végétation
-        img_prtps : image Pléiades de printemps / été
-        img_hiver : image Pléiades d'hiver
+        img_ref : image Pléiades de référence
+        img_ndvi_spg : image ndvi printemps
+        img_ndvi_wtr : image ndvi hiver
         table_fv_name : nom de la  table contenant les polygones de végétation détaillés de type nomduschema.nomdelatable
         seuil : valeur du seuil de PIR pour distinguer les conifères des feuillus. Par défaut : 0.10
         columns_indics_name : liste des noms de colonne des indicateurs à implémenter. Par défaut :['perc_persistant', 'perc_caduque'] 
+        superimpose_choice : choix d'appliquer un superimpose sur une des deux images ndvi produites pour qu'elles se superposent parfaitement. Par défaut : False
         save_intermediate_results : garder ou non les fichiers temporaires. Par défaut : False
 
     """
     #Création du dossier temporaire et des fichiers temporaires
-    repertory_output = os.path.dirname(img_prtps) + '_TMP_CALC_INDICATEURS_PERSCADU'
-    extension = os.path.splitext(img_prtps)[1]
+    repertory_output = os.path.dirname(img_ref) + '_TMP_CALC_INDICATEURS_PERSCADU'
+    extension = os.path.splitext(img_ref)[1]
     image_pers_out = repertory_output + os.sep + 'img_mask_persistants' + extension
     image_cadu_out = repertory_output + os.sep + 'img_mask_caduques' + extension
 
     vect_fv_pers_out = repertory_output + os.sep + 'vect_fv_stats_pers.gpkg'
     vect_fv_cadu_out = repertory_output + os.sep + 'vect_fv_stats_cadu.gpkg'
+   
 
-    img_ndvi_prtps = repertory_output + os.sep + 'img_ndvi_printemps' + extension
-    img_ndvi_hiver = repertory_output + os.sep + 'img_ndvi_hiver' + extension
-
-    #Calcul des images ndvi de printemps_été et d'hiver 
-    cmd_ndvi_prtps = "otbcli_BandMath -il %s -out %s -exp '(im1b4-im1b1)/(im1b4+im1b1)'" %(img_prtps, img_ndvi_prtps)
-    os.system(cmd_ndvi_prtps)
-
-    cmd_ndvi_hiver = "otbcli_BandMath -il %s -out %s -exp '(im1b4-im1b1)/(im1b4+im1b1)'" %(img_hiver, img_ndvi_hiver)
-    os.system(cmd_ndvi_hiver)
-
-    #Calcul du masque de caduques
-    cmd_mask_cadu = "otbcli_BandMath -il %s %s -out '%s?&nodata=-99' uint8 -exp '(abs(im2b1-im1b1)>%s)?1:0'" %(img_ndvi_prtps, img_ndvi_hiver, image_cadu_out, seuil)
-    os.system(cmd_mask_cadu)
+    #Superimpose si souhaité 
+    if superimpose_choice :
+        img_ndvi_si_wtr = repertory_output + os.sep + 'img_ndvi_si_hiver' + extension
+        cmd_superimpose = "otbcli_Superimpose -inr %s -inm %s -out %s" %(img_ndvi_spg,img_ndvi_wtr, img_ndvi_si_wtr)
+        try:
+            os.system(cmd_superimpose)
+            img_ndvi_wtr = img_ndvi_si_wtr
+        except :
+            raise Exception("La fonction Superimpose s'est mal déroulée.")
+        
 
     #Calcul du masque de caduques
-    cmd_mask_pers = "otbcli_BandMath -il %s %s -out '%s?&nodata=-99' uint8 -exp '(abs(im2b1-im1b1)<=%s)?1:0'" %(img_ndvi_prtps, img_ndvi_hiver, image_pers_out, seuil)
+    cmd_mask_cadu = "otbcli_BandMath -il %s %s -out '%s?&nodata=-99' uint8 -exp '(abs(im2b1-im1b1)>%s)?1:0'" %(img_ndvi_spg, img_ndvi_wtr, image_cadu_out, seuil)
+    try:
+        os.system(cmd_mask_cadu)
+    except :
+        raise Exception("Les deux images NDVI n'ont pas la même emprise. Veuillez relancer le programme en sélectionnant l'option de Superimpose")
+
+    #Calcul du masque de persistants
+    cmd_mask_pers = "otbcli_BandMath -il %s %s -out '%s?&nodata=-99' uint8 -exp '(abs(im2b1-im1b1)<=%s)?1:0'" %(img_ndvi_spg, img_ndvi_wtr, image_pers_out, seuil)
     os.system(cmd_mask_pers)
+    
 
     #Statistiques zonales sur les polygones de formes végétales concernées : tous les segments appartennant à la strate arborée et arbustive
     ol_to_add_list = ["count", "sum"]
@@ -175,11 +200,11 @@ def indicatorEvergreenDeciduous(connexion, connexion_dic, vect_fv_in, img_prtps,
     #Update de l'attribut perc_caduque et perc_persistant
 
     query = """
-    UPDATE %s AS t SET %s = (t2.pers_count*100/t2.pers_sum) FROM tab_indic_pers_cadu AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustive');
+    UPDATE %s AS t SET %s = (t2.pers_count*100/t2.pers_sum) FROM tab_indic_pers_cadu AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustif');
     """ %(table_fv_name, columns_indics_nam[0])
 
     query += """
-    UPDATE %s AS t SET %s = (t2.cadu_count*100/t2.cadu_sum) FROM tab_indic_pers_cadu AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustive');
+    UPDATE %s AS t SET %s = (t2.cadu_count*100/t2.cadu_sum) FROM tab_indic_pers_cadu AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustif');
     """ %(table_fv_name, columns_indics_nam[1])
 
     #Exécution de la requête SQL
@@ -221,7 +246,7 @@ def indicatorConiferousDeciduous(connexion, connexion_dic, image_input, vect_fv_
 
     #Calcul du masque de conifères
     cmd_mask_conif = "otbli_BandMath -il %s -out %s -exp '(im1b4<%s)?1:0'" %(image_input, image_conif_out, seuil)
-    os.system(cmd_mask_conif)
+    
 
     #Calcul du masque de feuillus
     cmd_mask_decid = "otbli_BandMath -il %s -out %s -exp '(im1b4>=%s)?1:0'" %(image_input, image_feuill_out, seuil)
@@ -257,11 +282,11 @@ def indicatorConiferousDeciduous(connexion, connexion_dic, image_input, vect_fv_
     #Update de l'attribut perc_conif et perc_decid
 
     query = """
-    UPDATE %s AS t SET %s = (t2.conif_count*100/t2.conif_sum) FROM tab_indic_conif_decid AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustive');
+    UPDATE %s AS t SET %s = (t2.conif_count*100/t2.conif_sum) FROM tab_indic_conif_decid AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustif');
     """ %(table_fv_name, columns_indics_nam[0])
 
     query += """
-    UPDATE %s AS t SET %s = (t2.decid_count*100/t2.decid_sum) FROM tab_indic_conif_decid AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustive');
+    UPDATE %s AS t SET %s = (t2.decid_count*100/t2.decid_sum) FROM tab_indic_conif_decid AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustif');
     """ %(table_fv_name, columns_indics_nam[1])
 
     #Exécution de la requête SQL
@@ -275,3 +300,101 @@ def indicatorConiferousDeciduous(connexion, connexion_dic, image_input, vect_fv_
             removeDir(repertory_output)
 
     return
+
+
+def indicatorTypeofGround(connexion, connexion_dic, img_ref, img_ndvi_wtr, vect_fv_in, table_fv_name, seuil  = 0.3, column_indic_name = 'type_sol', save_intermediate_results = False):
+    """
+    Rôle : cette fonction permet d'indiquer si le sol sous-jacent à la végétation est de type perméable ou imperméable
+
+    Paramètres :
+        connexion : variable de connexion à la BD
+        connexion_dic : dictionnaire des paramètres de connexion à la base de données et au schéma correspondant
+        image_ref : image Pléiades de référence
+        vect_fv_in : couche vecteur de la végétation
+        table_fv_name : nom de la  table contenant les polygones de végétation détaillés de type nomduschema.nomdelatable
+        seuil : valeur du seuil de NDVI pour distinguer les surfaces perméables d'imperméables. Par défaut : 0.3
+        column_indic_name : nom de la colonne de l'indicateur de type de sol. Par défaut : 'type_sol'
+        save_intermediate_results : garder ou non les fichiers temporaires
+
+    """
+    #Création du dossier temporaire et des fichiers temporaires
+    repertory_output = os.path.dirname(img_ref) + '_TMP_CALC_INDICATEURS_TYPESOL'
+    extension = os.path.splitext(img_ref)[1]
+    image_permeable = repertory_output + os.sep + 'img_mask_permeable' + extension
+    image_impermeable = repertory_output + os.sep + 'img_mask_impermeable' + extension
+
+    vect_fv_perm_out = repertory_output + os.sep + 'vect_fv_stats_perm.gpkg'
+    vect_fv_imperm_out = repertory_output + os.sep + 'vect_fv_stats_imperm.gpkg'
+   
+        
+
+    #Calcul du masque perméable
+    cmd_mask_permeable = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1<%s)?1:0'" %(img_ndvi_wtr, image_permeable, seuil)
+    os.system(cmd_mask_permeable)
+    
+
+    #Calcul du masque imperméable
+    cmd_mask_impermeable = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1<=%s)?1:0'" %(img_ndvi_wtr, image_impermeable, seuil)
+    os.system(cmd_mask_impermeable)
+    
+
+    #Statistiques zonales sur les polygones de formes végétales concernées : tous les segments appartennant à la strate arborée et arbustive
+    ol_to_add_list = ["count", "sum"]
+    col_to_delete_list = ["unique", "range", "max", "median", "mean","std"]
+    class_label_dico = {}
+    statisticsVectorRaster(image_permeable, vect_fv_in, vect_fv_perm_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    
+    statisticsVectorRaster(image_impermeable, vect_fv_in, vect_fv_imperm_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    
+    #Export des données dans la BD et concaténation des colonnes
+
+    table_perm = 'tab_fv_perm'
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_perm_out, table_perm, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["user_name"], format_type='GPKG')
+
+    table_imperm = 'tab_fv_imperm'
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_imperm_out, table_imperm, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["user_name"], format_type='GPKG')
+
+    query = """
+    CREATE TABLE tab_indic_perm_imperm AS
+        SELECT t1.fid, t1.sum AS perm_sum t1.count AS perm_count, t2.sum AS imp_sum, t2.count AS imp_count
+        FROM %s AS t1, %s AS t2
+        WHERE t1.fid = t2.fid;
+    """ %(table_pers,table_cadu)
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Update de l'attribut perc_caduque et perc_persistant
+
+    query = """
+     UPDATE %s AS t SET %s = 'permeable' FROM tab_indic_perm_imperm WHERE (t2.perm_count*100/t2.perm_sum) >= 0.5;
+    """ %(table_fv_name, column_indic_name)
+    
+    query += """
+     UPDATE %s AS t SET %s = 'impermeable' FROM tab_indic_perm_imperm WHERE (t2.perm_count*100/t2.perm_sum) < 0.5;
+    """ %(table_fv_name, column_indic_name)
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Correction pour les boisements et la strate herbacée --> hypothèse que ce n'est que du sol perméable sous-jacent
+    query = """
+    UPDATE %s AS t SET %s = 'permeable' WHERE t.fv in ('boisement arbore', 'boisement arbustif') or t.strate = 'herbace';
+    """ %(table_fv_name, column_indic_name) 
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Suppression du dossier temporaire
+    if not save_intermediate_results:
+        if os.path.exists(repertory_output):
+            removeDir(repertory_output)
+
+    return
+
