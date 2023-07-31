@@ -10,6 +10,8 @@ from osgeo import ogr ,osr
 from MacroSampleCreation import *
 from CleanCoverClasses import * 
 from SampleSelectionRaster import *
+from SupervisedClassification import *
+from MajorityFilter import *
 # from VerticalStratumDetection import *
 
 if __name__ == "__main__":
@@ -19,75 +21,190 @@ if __name__ == "__main__":
     #à faire par la suite
 
     #Structurer un dossier qui stockera toutes les données
+    
+    #Création du repertoire du projet 
+    repertory_prj = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023'
+    path_prj = repertory_prj + os.sep + 'ProjetGUS'
+    if  not os.path.exists(path_prj):
+      os.makedirs(path_prj)
 
-    img_ref = r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif'
-    #1# Assemblage des tuiles d'images Pléiades sur l'emprise de la zone d'étude
-    #Soit elles sont déjà assemblées et on ne fait que découper avec la fonction suivante
+    #Dossier de stockage des datas
+    path_data = path_prj + os.sep + '0-Data'  
+    path_data_entry = path_data + os.sep + '00-DonneesEntrees'
+    path_data_prod = path_data + os.sep + '01-DonneesProduites'
 
+    if not os.path.exists(path_data):
+      os.makedirs(path_data)
 
-    #cutImageByVector(r'/mnt/RAM_disk/MGN_contours.shp' ,r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN.tif', r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif')
-    #Soit elles doivent êtres assemblées
+    if not os.path.exists(path_data_entry):
+      os.makedirs(path_data_entry)
 
-    #images_input_list = [r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/MNHtest.tif', r'/mnt/RAM_disk/img_origine_hue.tif', r'/mnt/RAM_disk/img_origine_msavi2.tif', r'/mnt/RAM_disk/img_origine_ndvi.tif', r'/mnt/RAM_disk/img_origine_ndwi2.tif', r'/mnt/RAM_disk/img_origine_tmp_txtSFS_u.tif']
-    images_input_list = [r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/MNHtest.tif']
-    #2# Calcul du MNH
-    #mnh = mnhCreation(r'/mnt/RAM_disk/DSM_PRODUITS_RGE.tif', r'/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNT/2021/NANCY/MNT_RGEALTI/MNT_RGEALTI_1M_ZONE_DE_NANCY.tif', r'/mnt/RAM_disk/MNHtest.tif', r'/mnt/RAM_disk/MGN_contours.shp', r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif',  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_results = True)
+    if not os.path.exists(path_data_prod):
+      os.makedirs(path_data_prod)
 
+    # DATAS
+    img_tiles_repertory = ''
+    img_ref = path_data_entry + os.sep + 'img_pleiades_ref.tif'
 
-    #3# Calcul des néocanaux
-   # neochannels = neochannelComputation(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/ORT_P1AP_MGN.tif', r'/mnt/RAM_disk/img_origine.tif', r'/mnt/RAM_disk/MGN_contours.shp', save_intermediate_results = False)
+    img_ref = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/ORT_20220614_NADIR_16B_MGN_V2.tif'
+    shp_zone = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/MGN_contours.shp'
+    
+   ## PRE-TRAITEMENTS ##  
+    # IMAGES ASSEMBLY
+   #NB pour l'instant repertory n'est pas utilisé dans le code --> à revoir 
+   # assemblyImages(repertory, img_tiles_repertory, img_ref, no_data_value, epsg, save_results_intermediate = False, ext_txt = '.txt',  format_raster = 'GTiff')
 
-    # for el in neochannels:
-    #     images_input_list.append(el)
-    # Phase de test si les emprises correspondent bien
-    images_input_list = [r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', r'/mnt/RAM_disk/MNHtest.tif', r'/mnt/RAM_disk/img_origine_ndvi.tif',  r'/mnt/RAM_disk/img_origine_ndwi2.tif',  r'/mnt/RAM_disk/img_origine_msavi2.tif',  r'/mnt/RAM_disk/img_origine_hue.tif',  r'/mnt/RAM_disk/img_origine_txtSFS.tif']
-    #4# Concatnéation des néocanaux
-   # concatenateData(images_input_list, r'/mnt/RAM_disk/final.tif')
+    # MNH CREATION  
 
-    #5# Création des échantillons d'apprentissage
+   # mnh = mnhCreation(r'/mnt/RAM_disk/DSM_PRODUITS_RGE.tif', r'/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNT/2021/NANCY/MNT_RGEALTI/MNT_RGEALTI_1M_ZONE_DE_NANCY.tif', r'/mnt/RAM_disk/MNHtest.tif', r'/mnt/RAM_disk/MGN_contours.shp', r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif',  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_results = True)
+
+    # Stockage des données d'entrée dans un dossier : /  
+
+    img_spring = img_ref
+
+    # img_winter = 
+
+   # NB : l'image PAN doit aussi être découpée à la même emprise que l'image de référence --> pour que la superposition des résultats suivant puisse se faire correctement 
+    img_ref_PAN = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/ORT_P1AP_MGN.tif'
+
+    # img_MNS = 
+
+    # img_MNT = 
+
+    # CALCUL DES NEOCANAUX
+
+   # img_neocanaux = path_data_prod + os.sep + 'img_neocanaux.tif'
+
+    neochannels = neochannelComputation(img_ref, img_ref_PAN, path_data_prod, shp_zone, save_intermediate_results = False)
+    img_MNH_ini = r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/MNH_14062022_CF.tif'
+    img_MNH_si = r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/MNH_14062022_SI.tif'
+    img_MNH = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/01-DonneesProduites/MNH_14062022.tif'
+
+    # Si la concaténation renvoie une erreur -->il va falloir superimpose le mnh 
+    # cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_ref, img_MNH_ini, img_MNH_si)
+    # exit_code = os.system(cmd_superimpose)
+    # cutImageByVector(shp_zone ,img_MNH_si, img_MNH)
+
+   # img_to_concatenate =[ img_ref, img_MNH, neochannels["ndvi"], neochannels["msavi"],neochannels["ndwi"], neochannels["hue"],neochannels["sfs"]]
+   # print(img_to_concatenate) 
+    
+    # CONCATENATION DES NEOCANAUX
+    img_stack = path_data_prod + os.sep + 'img_stack.tif'
+
+  
+   # concatenateData(img_to_concatenate, img_stack)
+
+    ## EXTRACTION DE LA VEGETATION PAR CLASSIFICATION SUPERVISEE ## 
+     #Dossier de stockage des datas
+    path_extractveg = path_prj + os.sep + '1-ExtractionVegetation'  
+
+    if not os.path.exists(path_extractveg):
+      os.makedirs(path_extractveg)
+
+    path_tmp_preparesamples = path_extractveg + os.sep + 'TMP_PREPARE_SAMPLE'
+
+    if not os.path.exists(path_tmp_preparesamples):
+      os.makedirs(path_tmp_preparesamples)
+
+    path_tmp_cleansamples = path_extractveg + os.sep + 'TMP_CLEAN_SAMPLE'
+
+    if not os.path.exists(path_tmp_cleansamples):
+      os.makedirs(path_tmp_cleansamples)
+
+    path_tmp_selectsamples = path_extractveg + os.sep + 'TMP_SELECT_SAMPLE'
+
+    if not os.path.exists(path_tmp_selectsamples):
+      os.makedirs(path_tmp_selectsamples)
+
+    #1# Création des échantillons d'apprentissage
     #Fournir 5 couches vectorielles
-    bati = r'/mnt/RAM_disk/TEST_CLASS/50_ECHANTILLONS/bati.shp'
-    route = r'/mnt/RAM_disk/TEST_CLASS/50_ECHANTILLONS/route.shp'
-    solnu = r'/mnt/RAM_disk/TEST_CLASS/50_ECHANTILLONS/solnu.shp'
-    eau = r'/mnt/RAM_disk/TEST_CLASS/50_ECHANTILLONS/eau.shp'
-    vegetation = r'/mnt/RAM_disk/TEST_CLASS/50_ECHANTILLONS/vegetation.shp'
+    bati = path_data_entry + os.sep + 'bati_vector.shp'
+    route =  path_data_entry + os.sep + 'route_vector.shp'
+    solnu =  path_data_entry + os.sep + 'solnu_vector.shp'
+    eau =  path_data_entry + os.sep + 'eau_vector.shp'
+    vegetation =  path_data_entry + os.sep + 'vegetation_vector.shp'
 
+    bati_prepare = path_tmp_preparesamples + os.sep + 'bati_vector_prepare.tif'
+    route_prepare = path_tmp_preparesamples + os.sep + 'route_vector_prepare.tif'
+    solnu_prepare = path_tmp_preparesamples + os.sep + 'solnu_vector_prepare.tif'
+    eau_prepare = path_tmp_preparesamples + os.sep + 'eau_vector_prepare.tif'
+    vegetation_prepare = path_tmp_preparesamples + os.sep + 'vegetation_vector_prepare.tif'
 
-    #6# Préparation des échantillons d'apprentissage
-    # macroSamplesPrepare(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', bati,r'/mnt/RAM_disk/TEST_CLASS/bati_prepare.tif', r'/mnt/RAM_disk/MGN_contours.shp', erosionoption = True, format_vector='ESRI Shapefile')
-    # macroSamplesPrepare(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', route, r'/mnt/RAM_disk/TEST_CLASS/route_prepare.tif', r'/mnt/RAM_disk/MGN_contours.shp', erosionoption = False, format_vector='ESRI Shapefile')
-    # macroSamplesPrepare(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', solnu, r'/mnt/RAM_disk/TEST_CLASS/solnu_prepare.tif', r'/mnt/RAM_disk/MGN_contours.shp', erosionoption = True, format_vector='ESRI Shapefile')
-    # macroSamplesPrepare(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', eau, r'/mnt/RAM_disk/TEST_CLASS/eau_prepare.tif', r'/mnt/RAM_disk/MGN_contours.shp', erosionoption = True, format_vector='ESRI Shapefile')
-    # macroSamplesPrepare(r'/mnt/RAM_disk/ORT_20220614_NADIR_16B_MGN_V2.tif', vegetation, r'/mnt/RAM_disk/TEST_CLASS/vegetation_prepare.tif', r'/mnt/RAM_disk/MGN_contours.shp', erosionoption = True, format_vector='ESRI Shapefile')
-    #7# Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
-  #   corr_bati = {"ndvi" : [r'/mnt/RAM_disk/img_origine_ndvi.tif', 0, 0.25]}
-  #  # macroSamplesClean(r'/mnt/RAM_disk/TEST_CLASS/bati_prepare.tif', r'/mnt/RAM_disk/TEST_CLASS/bati_clean.tif', corr_bati)
+    bati_clean = path_tmp_cleansamples + os.sep + 'bati_vector_clean.tif'
+    route_clean = path_tmp_cleansamples + os.sep + 'route_vector_clean.tif'
+    solnu_clean = path_tmp_cleansamples + os.sep + 'solnu_vector_clean.tif'
+    eau_clean = path_tmp_cleansamples + os.sep + 'eau_vector_clean.tif'
+    vegetation_clean = path_tmp_cleansamples + os.sep + 'vegetation_vector_clean.tif'
 
-  #   corr_route = {"ndvi" : [r'/mnt/RAM_disk/img_origine_ndvi.tif', 0, 0.25]}
-  #   macroSamplesClean(r'/mnt/RAM_disk/TEST_CLASS/route_prepare.tif', r'/mnt/RAM_disk/TEST_CLASS/route_clean.tif', corr_route)
+    image_samples_merged_output = path_tmp_cleansamples + os.sep + 'img_samples_merged.tif'
 
-  #   corr_solnu = {"ndvi" : [r'/mnt/RAM_disk/img_origine_ndvi.tif', 0, 0.25]}
-  #   macroSamplesClean(r'/mnt/RAM_disk/TEST_CLASS/solnu_prepare.tif', r'/mnt/RAM_disk/TEST_CLASS/solnu_clean.tif', corr_solnu)
+    samplevector = path_tmp_selectsamples + os.sep + 'sample_vector_selected.shp'
+    table_statistics_output = path_tmp_selectsamples + os.sep + 'statistics_sample_vector_selected.csv'
 
-  #   corr_eau = {"ndvi" : [r'/mnt/RAM_disk/img_origine_ndvi.tif', 0, 0.25]}
-  #   macroSamplesClean(r'/mnt/RAM_disk/TEST_CLASS/eau_prepare.tif', r'/mnt/RAM_disk/TEST_CLASS/eau_clean.tif', corr_eau)
+    img_classif = path_extractveg + os.sep + 'img_classification.tif'
+    img_classif_confid = path_extractveg + os.sep + 'img_classification_confidence.tif'
 
-  #   corr_vegetation = {"ndvi" : [r'/mnt/RAM_disk/img_origine_ndvi.tif', 0.25, 1]}
-  #   macroSamplesClean(r'/mnt/RAM_disk/TEST_CLASS/vegetation_prepare.tif', r'/mnt/RAM_disk/TEST_CLASS/vegetation_clean.tif', corr_vegetation)
+    img_classif_filtered = path_extractveg + os.sep + 'img_classification_filtered.tif'
 
-    mask_samples_macro_input_list = [r'/mnt/RAM_disk/TEST_CLASS/bati_clean.tif', r'/mnt/RAM_disk/TEST_CLASS/route_clean.tif', r'/mnt/RAM_disk/TEST_CLASS/solnu_clean.tif', r'/mnt/RAM_disk/TEST_CLASS/eau_clean.tif', r'/mnt/RAM_disk/TEST_CLASS/vegetation_clean.tif']
-    image_samples_merged_output = r'/mnt/RAM_disk/TEST_CLASS/kmean_echantillons.tif'
-    #8# Nettoyage recouvrement des échantillons d'apprentissage
-   # cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merged_output)
-    #9# Sélection des échantillons
-    selectSamples(image_input_list =[r'/mnt/RAM_disk/final.tif'], sample_image_input = image_samples_merged_output, vector_output = r'/mnt/RAM_disk/TEST_CLASS/vector_echantillons.shp', table_statistics_output = r'/mnt/RAM_disk/TEST_CLASS/tab_stats.csv', sampler_strategy="percent", select_ratio_floor = 10, ratio_per_class_dico = {"1":2.6, "2":2.5,"3":5,"4":1.2,"5":0.8}, name_column = 'ROI', no_data_value = 0)
-
-    #10# Classification supervisée RF
-    #classifySupervised(image_input_list, sample_points_values_input, classification_file_output, confidence_file_output, model_output, model_input, field_class, sampler_mode, periodic_value, classifier_mode, kernel, rf_parametres_struct, no_data_value, path_time_log, ram_otb=0,  format_raster='GTiff', extension_vector=".shp")
-    #11# Application du filtre majoritaire   
-    #filterImageMajority(image_input = r'/mnt/RAM_disk/final.tif', filtered_image_output = r'/mnt/RAM_disk/img_classifiee_filtree.tif', filter_mode = 'gdal', umc_pixels = 8) 
+    #2# Préparation des échantillons d'apprentissage
+    # macroSamplesPrepare(img_ref, bati, bati_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
+    # macroSamplesPrepare(img_ref, route, route_prepare, shp_zone, erosionoption = False, format_vector='ESRI Shapefile')
+    # macroSamplesPrepare(img_ref, solnu, solnu_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
+    # macroSamplesPrepare(img_ref, eau, eau_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
+    macroSamplesPrepare(img_ref, vegetation, vegetation_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
     
+    #3# Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
+    # corr_bati = {"ndvi" : [neochannels["ndvi"] ,0, 0.35]}
+    # macroSamplesClean(bati_prepare, bati_clean, corr_bati)
+
+    # corr_route = {"ndvi":  [neochannels["ndvi"], 0, 0.35]}
+    # macroSamplesClean(route_prepare,route_clean, corr_route)
+
+    # corr_solnu = {"ndvi" : [neochannels["ndvi"], 0, 0.2], "hue" :[neochannels["hue"],0,50] }
+    # macroSamplesClean(solnu_prepare, solnu_clean, corr_solnu)
+
+    # corr_eau = {"ndwi" :[neochannels["ndwi"],-500,1] }
+    # macroSamplesClean(eau_prepare, eau_clean, corr_eau)
+
+    # corr_vegetation = {"ndvi" : [neochannels["ndvi"], 0.35, 1], "msavi" : [neochannels["msavi"],0.4,1] }
+    # macroSamplesClean(vegetation_prepare , vegetation_clean, corr_vegetation)
+
+    # mask_samples_macro_input_list = [bati_clean, route_clean,solnu_clean, eau_clean,vegetation_clean]
     
+    # #4# Nettoyage recouvrement des échantillons d'apprentissage
+    # cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merged_output)
+    
+    # #5# Sélection des échantillons
+
+    # selectSamples(img_stack, image_samples_merged_output, samplevector, table_statistics_output, sampler_strategy="percent", select_ratio_floor = 10, ratio_per_class_dico = {1:1.37,2:3.40,3:100,4:0.37,5:0.84}, name_column = 'ROI', no_data_value = 0)
+    
+
+    # #6# Classification supervisée RF
+    # depth_tree = 50
+    # sample_min = 20
+    # termin_criteria = 0.0
+    # cluster = 30
+    # size_features = 2
+    # num_tree = 50
+    # obb_erreur = 0.001
+
+    # rf_parametres_struct = StructRFParameter()
+    # rf_parametres_struct.max_depth_tree = depth_tree
+    # rf_parametres_struct.min_sample = sample_min
+    # rf_parametres_struct.ra_termin_criteria = termin_criteria
+    # rf_parametres_struct.cat_clusters = cluster
+    # rf_parametres_struct.var_size_features = size_features
+    # rf_parametres_struct.nbtrees_max =  num_tree
+    # rf_parametres_struct.acc_obb_erreur = obb_erreur
+
+    # classifySupervised(img_stack, samplevector, img_classif, img_classif_confid, model_output = '', model_input = '', field_class = 'ROI', classifier_mode = "rf", rf_parametres_struct = rf_parametres_struct,no_data_value = 0, ram_otb=0,  format_raster='GTiff', extension_vector=".shp")
+    
+    # #7# Application du filtre majoritaire   
+    # filterImageMajority(img_classif, img_classif_filtered, umc_pixels = 8) 
+    
+    # #Suppression des dossiers temporaires si souhaité
+    # if os.path.exists():
+    #   remove() 
     
     # # Segmentation de l'image
     #segmentationImageVegetetation(r'/mnt/RAM_disk/ORT_ZE.tif',r'/mnt/RAM_disk/ZE_segmentation.tif', r'/mnt/RAM_disk/ZE_out_segmentation.gpkg')
@@ -152,7 +269,8 @@ if __name__ == "__main__":
     #Calcul des indicateurs de végétation
 
    #0. Préparation de la table finale de cartographie qu'on nommera "vegetation" dans un nouveau schema
-    createSchema(connexion, 'data_final')
+   # createSchema(connexion, 'data_final')
+  #  connexion = openConnection('etape2', user_name='postgres', password="", ip_host='localhost', num_port='5432', schema_name='donneelidar')
 
     query = """
     CREATE TABLE vegetation AS
@@ -180,7 +298,7 @@ if __name__ == "__main__":
   #  addColumn(connexion, 'vegetation', 'perc_conifere', 'float')
   #  addColumn(connexion, 'vegetation', 'perc_persistant', 'float')
   #  addColumn(connexion, 'vegetation', 'perc_caduque', 'float')
-  #  addColumn(connexion, 'vegetation', 'type_sol', 'float')
+  #  addColumn(connexion, 'vegetation', 'type_sol', 'varchar(100)')
 
 
 
