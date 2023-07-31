@@ -156,58 +156,58 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
     #     print(query)
     # executeQuery(connexion, query)
 
-    # #Prétraitements : transformation de l'ensemble des multipolygones en symples polygones
-    # query = """
-    # CREATE TABLE segments_vegetation AS
-    #     SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
-    #     FROM segments_vegetation_ini as t
-    # """
+    #Prétraitements : transformation de l'ensemble des multipolygones en symples polygones
+    query = """
+    CREATE TABLE segments_vegetation_bis2 AS
+        SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
+        FROM segments_vegetation_ini as t
+    """
 
-    # #Exécution de la requête SQL
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-    # #Traitement des artefacts au reflet blanc
-    # query = """
-    # CREATE TABLE segments_txt_val0 AS
-    #     SELECT * 
-    #     FROM segments_vegetation
-    #     WHERE txt = 0;
+    #Traitement des artefacts au reflet blanc
+    query = """
+    CREATE TABLE segments_txt_val0_bis2 AS
+        SELECT * 
+        FROM segments_vegetation_bis2
+        WHERE txt = 0;
 
-    # DELETE FROM segments_vegetation WHERE txt = 0;
-    # """ 
+    DELETE FROM segments_vegetation_bis2 WHERE txt = 0;
+    """ 
 
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-    # #Ajout d'un identifiant unique
-    # addUniqId(connexion, 'segments_vegetation')
+    #Ajout d'un identifiant unique
+    addUniqId(connexion, 'segments_vegetation_bis2')
 
-    # #Ajout d'un index spatial 
-    # addSpatialIndex(connexion, 'segments_vegetation')
+    #Ajout d'un index spatial 
+    addSpatialIndex(connexion, 'segments_vegetation_bis2')
 
-    # #Ajout de l'attribut "strate"
-    # addColumn(connexion, 'segments_vegetation', 'strate', 'varchar(100)')
+    #Ajout de l'attribut "strate"
+    addColumn(connexion, 'segments_vegetation_bis2', 'strate', 'varchar(100)')
 
-    # #Première phase : classification générale, à partir de règles de hauteur et de texture
-    # query = """
-    # UPDATE %s as t SET strate = 'arbore' WHERE t.txt < %s AND t.mnh  > %s;
-    # """ %('segments_vegetation', 11,3)
+    #Première phase : classification générale, à partir de règles de hauteur et de texture
+    query = """
+    UPDATE %s as t SET strate = 'arbore' WHERE t.txt < %s AND t.mnh  > %s;
+    """ %('segments_vegetation_bis2', 11,3)
 
-    # query += """
-    # UPDATE %s as t SET strate = 'arbustif' WHERE t.txt < %s AND  t.mnh  <= %s;
-    # """ %('segments_vegetation', 11, 3)
+    query += """
+    UPDATE %s as t SET strate = 'arbustif' WHERE t.txt < %s AND  t.mnh  <= %s;
+    """ %('segments_vegetation_bis2', 11, 3)
 
-    # query += """
-    # UPDATE %s as t SET strate = 'herbace' WHERE t.txt  >= %s;
-    # """ %('segments_vegetation', 11)
+    query += """
+    UPDATE %s as t SET strate = 'herbace' WHERE t.txt  >= %s;
+    """ %('segments_vegetation_bis2', 11)
 
-    # #Exécution de la requête SQL
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
     #Deuxième phase : reclassification des segments arbustifs
 
@@ -362,7 +362,7 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
     # #1. Reclassification des segments arbustes "isolés" 
    # reclassIsolatedSegments(connexion)
     # #2. Reclassification des segments arbustes "regroupés"
-    reclassGroupSegments(connexion)
+   # reclassGroupSegments(connexion)
     closeConnection(connexion)
 
 
@@ -379,190 +379,190 @@ def reclassIsolatedSegments(connexion):
 
     """
 
-#    #Récupération des segments herbacés 
-#     query = """
-#     CREATE TABLE rgpt_herbace AS
-#         SELECT public.ST_MAKEVALID((public.ST_DUMP(public.ST_UNION(t.geom))).geom) AS geom
-#         FROM (SELECT geom 
-#                 FROM segments_vegetation
-#                 WHERE strate='herbace') AS t;
-#     """         
+   #Récupération des segments herbacés 
+    query = """
+    CREATE TABLE rgpt_herbace AS
+        SELECT public.ST_MAKEVALID((public.ST_DUMP(public.ST_UNION(t.geom))).geom) AS geom
+        FROM (SELECT geom 
+                FROM segments_vegetation
+                WHERE strate='herbace') AS t;
+    """         
 
-#     #Exécution de la requête SQL
-#     if debug >= 1:
-#         print(query)
-#     executeQuery(connexion, query)              
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)              
 
-#     #A. Reclassification des tous les segments arbustes isolés entourés de segments arborés et/ou de "vide"
+    #A. Reclassification des tous les segments arbustes isolés entourés de segments arborés et/ou de "vide"
 
-#     #Table contenant les identifiants des segments arbustifs isolés, la longueur de sa frontière et la longueur de sa frontière en contact avec segments arborés
+    #Table contenant les identifiants des segments arbustifs isolés, la longueur de sa frontière et la longueur de sa frontière en contact avec segments arborés
 
-#     query = """
-#     CREATE TABLE arbu_isole_touch_arbo AS 
-# 	    SELECT t1.fid, t1.geom, public.st_perimeter(t1.geom) AS long_bound_arbu, t2.long_bound_inters_arbo AS long_bound_inters_arbo
-# 	    FROM (SELECT t3.fid, SUM(public.ST_LENGTH(t3.geom_bound_inters_arbo)) AS long_bound_inters_arbo
-# 			    FROM (SELECT t1.fid, t1.geom, arbre.fid as fid_arbo, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, arbre.geom)) AS geom_bound_inters_arbo 
-# 					    FROM  arbuste_uniq AS t1, (SELECT fid, geom FROM segments_vegetation WHERE strate = 'arbore') as arbre
-# 					    WHERE public.ST_INTERSECTS(t1.geom,arbre.geom) and t1.fid not in (SELECT t1.fid
-# 																				    FROM (SELECT geom FROM segments_vegetation WHERE strate = 'herbace') AS herbe, arbuste_uniq as t1
-# 																				    WHERE public.ST_INTERSECTS(herbe.geom, t1.geom)
-# 																				    GROUP BY t1.fid)) AS t3
-# 			    GROUP BY t3.fid) AS t2, arbuste_uniq AS t1
-# 	WHERE t1.fid = t2.fid;
-#     """
+    query = """
+    CREATE TABLE arbu_isole_touch_arbo AS 
+	    SELECT t1.fid, t1.geom, public.st_perimeter(t1.geom) AS long_bound_arbu, t2.long_bound_inters_arbo AS long_bound_inters_arbo
+	    FROM (SELECT t3.fid, SUM(public.ST_LENGTH(t3.geom_bound_inters_arbo)) AS long_bound_inters_arbo
+			    FROM (SELECT t1.fid, t1.geom, arbre.fid as fid_arbo, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, arbre.geom)) AS geom_bound_inters_arbo 
+					    FROM  arbuste_uniq AS t1, (SELECT fid, geom FROM segments_vegetation WHERE strate = 'arbore') as arbre
+					    WHERE public.ST_INTERSECTS(t1.geom,arbre.geom) and t1.fid not in (SELECT t1.fid
+																				    FROM (SELECT geom FROM segments_vegetation WHERE strate = 'herbace') AS herbe, arbuste_uniq as t1
+																				    WHERE public.ST_INTERSECTS(herbe.geom, t1.geom)
+																				    GROUP BY t1.fid)) AS t3
+			    GROUP BY t3.fid) AS t2, arbuste_uniq AS t1
+	WHERE t1.fid = t2.fid;
+    """
 
-#     #Exécution de la requête SQL
-#     if debug >= 1:
-#         print(query)
-#     executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
                        
-    #B. Reclassification des segments "arbustifs" en classe "arbore" entourés UNIQUEMENT d'arboré (frontière en contact avec arboré = frontière totale du segment)
+    # B. Reclassification des segments "arbustifs" en classe "arbore" entourés UNIQUEMENT d'arboré (frontière en contact avec arboré = frontière totale du segment)
 
-#     query = """
-#     UPDATE segments_vegetation SET strate = 'arbore' FROM (
-# 											SELECT t1.fid
-# 											FROM arbu_isole_touch_arbo AS t1
-# 											WHERE t1.long_bound_inters_arbo = t1.long_bound_arbu) AS arbuste_entoure_arbre 
-# 									  WHERE segments_vegetation.fid = arbuste_entoure_arbre.fid ;
-#     """
-#     #Exécution de la requête SQL
-#     if debug >= 1:
-#         print(query)
-#     executeQuery(connexion, query)
+    query = """
+    UPDATE segments_vegetation SET strate = 'arbore' FROM (
+											SELECT t1.fid
+											FROM arbu_isole_touch_arbo AS t1
+											WHERE t1.long_bound_inters_arbo = t1.long_bound_arbu) AS arbuste_entoure_arbre 
+									  WHERE segments_vegetation.fid = arbuste_entoure_arbre.fid ;
+    """
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-#    #C. Reclassification du segment "arbustif" en classe "arbore" ou suppression du segment s'il est entouré d'arboré ET de vide
+   #C. Reclassification du segment "arbustif" en classe "arbore" ou suppression du segment s'il est entouré d'arboré ET de vide
 
-#    # si la différence de hauteur entre le segment arbustif et les segments arborés est inférieure ou égale à 1m --> reclassification en 'arbore'
-#     query = """
-#     UPDATE segments_vegetation SET strate = 'arbore' FROM (SELECT arbuste.fid FROM (SELECT t1.* 
-# 																			            FROM (
-# 																					        SELECT t3.fid, t3.geom  
-# 																					        FROM arbu_isole_touch_arbo AS t3 
-# 																					        WHERE t3.long_bound_inters_arbo < t3.long_bound_arbu
-#                                                                                             ) as arbuste,
-# 																				            segments_vegetation AS t1
-# 																			            WHERE t1.fid = arbuste.fid
-#                                                                                       ) AS arbuste,
-# 																		              (SELECT * FROM segments_vegetation WHERE strate = 'arbore') AS arbre
-# 																	            WHERE public.ST_INTERSECTS(arbuste.geom, arbre.geom) AND abs(arbuste.mnh-arbre.mnh)<=1 
-# 																	            GROUP BY arbuste.fid) AS t2
-# 										               WHERE segments_vegetation.fid = t2.fid;
-#     """
-#     #Exécution de la requête SQL
-#     if debug >= 1:
-#         print(query)
-#     executeQuery(connexion, query)
+   # si la différence de hauteur entre le segment arbustif et les segments arborés est inférieure ou égale à 1m --> reclassification en 'arbore'
+    query = """
+    UPDATE segments_vegetation SET strate = 'arbore' FROM (SELECT arbuste.fid FROM (SELECT t1.* 
+																			            FROM (
+																					        SELECT t3.fid, t3.geom  
+																					        FROM arbu_isole_touch_arbo AS t3 
+																					        WHERE t3.long_bound_inters_arbo < t3.long_bound_arbu
+                                                                                            ) as arbuste,
+																				            segments_vegetation AS t1
+																			            WHERE t1.fid = arbuste.fid
+                                                                                      ) AS arbuste,
+																		              (SELECT * FROM segments_vegetation WHERE strate = 'arbore') AS arbre
+																	            WHERE public.ST_INTERSECTS(arbuste.geom, arbre.geom) AND abs(arbuste.mnh-arbre.mnh)<=1 
+																	            GROUP BY arbuste.fid) AS t2
+										               WHERE segments_vegetation.fid = t2.fid;
+    """
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-#    # si la différence de hauteur entre le segment arbustif et les segments arborés est supérieure stricte à 1m --> suppression
-#     query = """
-#     DELETE FROM segments_vegetation USING (SELECT arbuste.fid FROM (
-#                                                                     SELECT t1.* 
-# 														            FROM (
-# 															            SELECT t3.fid, t3.geom  
-# 															            FROM arbu_isole_touch_arbo AS t3
-# 															            WHERE t3.long_bound_inters_arbo < t3.long_bound_arbu
-#                                                                         ) as arbuste,
-# 															            segments_vegetation as t1
-# 														            WHERE t1.fid = arbuste.fid
-#                                                                     ) AS arbuste,
-# 													                (SELECT * FROM segments_vegetation WHERE strate = 'arbore') AS arbre
-# 													          WHERE public.ST_INTERSECTS(arbuste.geom, arbre.geom) AND abs(arbuste.mnh-arbre.mnh)>1 
-# 													          GROUP BY arbuste.fid
-#                                            ) AS t2
-# 										   WHERE segments_vegetation.fid = t2.fid;
-#     """
-#     #Exécution de la requête SQL
-#     if debug >= 1:
-#         print(query)
-#     executeQuery(connexion, query)
+   # si la différence de hauteur entre le segment arbustif et les segments arborés est supérieure stricte à 1m --> suppression
+    query = """
+    DELETE FROM segments_vegetation USING (SELECT arbuste.fid FROM (
+                                                                    SELECT t1.* 
+														            FROM (
+															            SELECT t3.fid, t3.geom  
+															            FROM arbu_isole_touch_arbo AS t3
+															            WHERE t3.long_bound_inters_arbo < t3.long_bound_arbu
+                                                                        ) as arbuste,
+															            segments_vegetation as t1
+														            WHERE t1.fid = arbuste.fid
+                                                                    ) AS arbuste,
+													                (SELECT * FROM segments_vegetation WHERE strate = 'arbore') AS arbre
+													          WHERE public.ST_INTERSECTS(arbuste.geom, arbre.geom) AND abs(arbuste.mnh-arbre.mnh)>1 
+													          GROUP BY arbuste.fid
+                                           ) AS t2
+										   WHERE segments_vegetation.fid = t2.fid;
+    """
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-#    # D. Reclassification de tous les segments arbustifs isolés entourés de segments arborés ET herbacés
+   # D. Reclassification de tous les segments arbustifs isolés entourés de segments arborés ET herbacés
 
-#    # Table contenant les identifiants des segments arbustifs isolés, la longueur de sa frontière et la longueur de sa frontière en contact avec segments herbacés
-#     query = """
-#     CREATE TABLE arbu_isole_touch_herbe AS 
-# 	    SELECT t1.fid, t1.geom, public.st_perimeter(t1.geom) AS long_bound_arbu, t3.long_bound_inters_herbe AS long_bound_inters_herbe
-# 	    FROM (
-#              SELECT t2.fid, SUM(public.ST_LENGTH(t2.geom_bound_inters_herbe)) AS long_bound_inters_herbe
-# 			 FROM (
-#                     SELECT t1.fid, t1.geom, herbe.fid AS fid_arbo, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, herbe.geom)) AS geom_bound_inters_herbe
-# 					FROM  arbuste_uniq AS t1, (SELECT fid, geom FROM segments_vegetation WHERE strate = 'herbace') as herbe
-# 					WHERE public.ST_INTERSECTS(t1.geom,herbe.geom) and t1.fid not in (SELECT t1.fid
-# 																				FROM (SELECT geom FROM segments_vegetation WHERE strate = 'arbore') AS arbre, arbuste_uniq AS t1
-# 																				WHERE public.ST_INTERSECTS(arbre.geom, t1.geom)
-# 																				GROUP BY t1.fid)
-#                     ) AS t2
-# 			 GROUP BY t2.fid
-#              ) AS t3, arbuste_uniq AS t1
-# 	    WHERE t1.fid = t3.fid;
-#     """
+   # Table contenant les identifiants des segments arbustifs isolés, la longueur de sa frontière et la longueur de sa frontière en contact avec segments herbacés
+    query = """
+    CREATE TABLE arbu_isole_touch_herbe AS 
+	    SELECT t1.fid, t1.geom, public.st_perimeter(t1.geom) AS long_bound_arbu, t3.long_bound_inters_herbe AS long_bound_inters_herbe
+	    FROM (
+             SELECT t2.fid, SUM(public.ST_LENGTH(t2.geom_bound_inters_herbe)) AS long_bound_inters_herbe
+			 FROM (
+                    SELECT t1.fid, t1.geom, herbe.fid AS fid_arbo, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, herbe.geom)) AS geom_bound_inters_herbe
+					FROM  arbuste_uniq AS t1, (SELECT fid, geom FROM segments_vegetation WHERE strate = 'herbace') as herbe
+					WHERE public.ST_INTERSECTS(t1.geom,herbe.geom) and t1.fid not in (SELECT t1.fid
+																				FROM (SELECT geom FROM segments_vegetation WHERE strate = 'arbore') AS arbre, arbuste_uniq AS t1
+																				WHERE public.ST_INTERSECTS(arbre.geom, t1.geom)
+																				GROUP BY t1.fid)
+                    ) AS t2
+			 GROUP BY t2.fid
+             ) AS t3, arbuste_uniq AS t1
+	    WHERE t1.fid = t3.fid;
+    """
 
-#     #Exécution de la requête SQL
-#     if debug >= 1:
-#         print(query)
-#     executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-#    # Création de la table ne contenant que les arbustes qui touchent à la fois de l'arboré et de l'herbacé
-#     query = """
-#     CREATE TABLE arbu_touch_herb_arbo AS (
-# 	    SELECT t1.* 
-# 	    FROM arbuste_uniq as t1, (SELECT fid 
-# 						            FROM arbu_isole_touch_arbo AS t2
-# 						            UNION
-# 						            SELECT fid 
-# 						            FROM arbu_isole_touch_herbe AS t3) AS t4 
-# 	    WHERE t1.fid != t4.fid);
-#     """
+   # Création de la table ne contenant que les arbustes qui touchent à la fois de l'arboré et de l'herbacé
+    query = """
+    CREATE TABLE arbu_touch_herb_arbo AS (
+	    SELECT t1.* 
+	    FROM arbuste_uniq as t1, (SELECT fid 
+						            FROM arbu_isole_touch_arbo AS t2
+						            UNION
+						            SELECT fid 
+						            FROM arbu_isole_touch_herbe AS t3) AS t4 
+	    WHERE t1.fid != t4.fid);
+    """
 
-#     #Exécution de la requête SQL
-#     if debug >= 1:
-#         print(query)
-#     executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-#    # Création de la table "matable" contenant l'identifiant du segment arboré ou herbacé avec lequel le segment arbustif intersecte 
-#     query = """
-#     CREATE TABLE matable AS (
-#                                         SELECT arbuste.fid AS id_arbu, sgt_herbarbo.fid AS id_sgt_t, sgt_herbarbo.strate AS strate_touch, abs(arbuste.mnh-sgt_herbarbo.mnh) AS diff_h
-# 							            FROM (
-#                                               SELECT t1.* 
-#                                               FROM segments_vegetation AS t1, arbuste_uniq AS t2 
-#                                               WHERE t1.fid = t2.fid
-#                                               ) AS arbuste, 
-# 								              (SELECT * FROM segments_vegetation WHERE strate in ('arbore', 'herbace')) AS sgt_herbarbo
-# 							            WHERE public.ST_INTERSECTS(arbuste.geom, sgt_herbarbo.geom));
-#     """
+   # Création de la table "matable" contenant l'identifiant du segment arboré ou herbacé avec lequel le segment arbustif intersecte 
+    query = """
+    CREATE TABLE matable AS (
+                                        SELECT arbuste.fid AS id_arbu, sgt_herbarbo.fid AS id_sgt_t, sgt_herbarbo.strate AS strate_touch, abs(arbuste.mnh-sgt_herbarbo.mnh) AS diff_h
+							            FROM (
+                                              SELECT t1.* 
+                                              FROM segments_vegetation AS t1, arbuste_uniq AS t2 
+                                              WHERE t1.fid = t2.fid
+                                              ) AS arbuste, 
+								              (SELECT * FROM segments_vegetation WHERE strate in ('arbore', 'herbace')) AS sgt_herbarbo
+							            WHERE public.ST_INTERSECTS(arbuste.geom, sgt_herbarbo.geom));
+    """
 
-#     #Exécution de la requête SQL
-#     if debug >= 1:
-#         print(query)
-#     executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-#     query = """
-#     CREATE TABLE sgt_touch_herbarbo AS (
-#                                         SELECT matable.*
-#                                         FROM matable
-#                                         INNER JOIN
-#                                         (SELECT matable.id_arbu AS id_arbu, min(matable.diff_h) AS min_diff_h
-#                                         FROM matable
-#                                         GROUP BY id_arbu) AS t 
-#                                         ON matable.id_arbu = t.id_arbu AND matable.diff_h = t.min_diff_h);
-#     """
+    query = """
+    CREATE TABLE sgt_touch_herbarbo AS (
+                                        SELECT matable.*
+                                        FROM matable
+                                        INNER JOIN
+                                        (SELECT matable.id_arbu AS id_arbu, min(matable.diff_h) AS min_diff_h
+                                        FROM matable
+                                        GROUP BY id_arbu) AS t 
+                                        ON matable.id_arbu = t.id_arbu AND matable.diff_h = t.min_diff_h);
+    """
 	
-#     #Exécution de la requête SQL
-#     if debug >= 1:
-#         print(query)
-#     executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-#    # Reclassification pour chaque segment arbustif isolé en herbacé ou arboré ou arbustif suivant la valeur minimale de différence de hauteur avec le segment le plus proche
-#     query = """
-#     UPDATE segments_vegetation SET strate = sgt_touch_herbarbo.strate_touch FROM sgt_touch_herbarbo AS sgt_touch_herbarbo
-#                                                                             WHERE segments_vegetation.fid = sgt_touch_herbarbo.id_arbu AND sgt_touch_herbarbo.diff_h <= 1;
-#     """
+   # Reclassification pour chaque segment arbustif isolé en herbacé ou arboré ou arbustif suivant la valeur minimale de différence de hauteur avec le segment le plus proche
+    query = """
+    UPDATE segments_vegetation SET strate = sgt_touch_herbarbo.strate_touch FROM sgt_touch_herbarbo AS sgt_touch_herbarbo
+                                                                            WHERE segments_vegetation.fid = sgt_touch_herbarbo.id_arbu AND sgt_touch_herbarbo.diff_h <= 1;
+    """
 
-#     #Exécution de la requête SQL
-#     if debug >= 1:
-#         print(query)
-#     executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
     return 
 
@@ -589,13 +589,13 @@ def reclassGroupSegments(connexion):
         FROM (SELECT geom FROM segments_vegetation WHERE strate='arbore') AS t1;
     """
     # Exécution de la requête SQL
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-    # # Index spatiaux 
-    # addSpatialIndex(connexion, 'herbace')
-    # addSpatialIndex(connexion, 'arbore')
+    # Index spatiaux 
+    addSpatialIndex(connexion, 'herbace')
+    addSpatialIndex(connexion, 'arbore')
 
       
 
@@ -610,12 +610,11 @@ def reclassGroupSegments(connexion):
         FROM rgpt_arbuste AS t, arbore
         WHERE public.st_intersects(arbore.geom, t.geom);
     """ 
-    print(query)
-   # executeQuery(connexion, query)
+    executeQuery(connexion, query)
 
-    # Ajout des indexs
-    # addIndex(connexion, 'tab_interm_rgptarbu_touch_arbo', 'fid', 'indx_fid_1') 
-    # addSpatialIndex(connexion, 'tab_interm_rgptarbu_touch_arbo')
+   #  Ajout des indexs
+    addIndex(connexion, 'tab_interm_rgptarbu_touch_arbo', 'fid', 'indx_fid_1') 
+    addSpatialIndex(connexion, 'tab_interm_rgptarbu_touch_arbo')
 
     # Création d'une table intermédiaire contenant les rgpt n'intersectants QUE des segments herbacés 
     query = """
@@ -624,87 +623,84 @@ def reclassGroupSegments(connexion):
         FROM tab_interm_rgptarbu_touch_herbo AS t2
         WHERE t2.fid not in (select fid from tab_interm_rgptarbu_touch_arbo);                                                               
     """
-  #  print(query)
-   # executeQuery(connexion, query)
+    executeQuery(connexion, query)
 
 
-    # # Ajout des indexs
-   # addIndex(connexion, 'tab_interm_rgptarbu_touchonlyherb', 'fid', 'indx_fid_2') 
-   # addSpatialIndex(connexion, 'tab_interm_rgptarbu_touchonlyherb')
+    # Ajout des indexs
+    addIndex(connexion, 'tab_interm_rgptarbu_touchonlyherb', 'fid', 'indx_fid_2') 
+    addSpatialIndex(connexion, 'tab_interm_rgptarbu_touchonlyherb')
 
-     # Création d'une table intermédiaire contenant les rgpt_arbustifs qui intersectent des segments herbacés
-    # query = """
-    # CREATE TABLE tab_interm_rgptarbu_touch_herbo AS
-    #     SELECT DISTINCT t.fid, t.geom
-    #     FROM rgpt_arbuste AS t, herbace
-    #     WHERE public.st_intersects(herbace.geom, t.geom);
-    # """ 
-    # print(query)
-    # executeQuery(connexion, query)
+    # Création d'une table intermédiaire contenant les rgpt_arbustifs qui intersectent des segments herbacés
+    query = """
+    CREATE TABLE tab_interm_rgptarbu_touch_herbo AS
+        SELECT DISTINCT t.fid, t.geom
+        FROM rgpt_arbuste AS t, herbace
+        WHERE public.st_intersects(herbace.geom, t.geom);
+    """ 
+    executeQuery(connexion, query)
 
-    # # Ajout des indexs
-    # addIndex(connexion, 'tab_interm_rgptarbu_touch_herbo', 'fid', 'indx_fid_3') 
-    # addSpatialIndex(connexion, 'tab_interm_rgptarbu_touch_herbo')
+    # Ajout des indexs
+    addIndex(connexion, 'tab_interm_rgptarbu_touch_herbo', 'fid', 'indx_fid_3') 
+    addSpatialIndex(connexion, 'tab_interm_rgptarbu_touch_herbo')
 
     # Création d'une table intermédiaire contenant les rgpt n'intersectants QUE des segments arborés 
-#     query = """     
-#     CREATE TABLE tab_interm_rgptarbu_touchonlyarbo AS
-#         SELECT t2.fid, t2.geom
-#         FROM tab_interm_rgptarbu_touch_arbo AS t2
-#         WHERE t2.fid not in (select fid from tab_interm_rgptarbu_touch_herbo);                                                          
-#     """
-#   #  print(query)
-#    # executeQuery(connexion, query)
+    query = """     
+    CREATE TABLE tab_interm_rgptarbu_touchonlyarbo AS
+        SELECT t2.fid, t2.geom
+        FROM tab_interm_rgptarbu_touch_arbo AS t2
+        WHERE t2.fid not in (select fid from tab_interm_rgptarbu_touch_herbo);                                                          
+    """
+    executeQuery(connexion, query)
 
 
-#     # Ajout des indexs
-#     addIndex(connexion, 'tab_interm_rgptarbu_touchonlyarbo', 'fid', 'indx_fid_4') 
-#     addSpatialIndex(connexion, 'tab_interm_rgptarbu_touchonlyarbo')
+    # Ajout des indexs
+    addIndex(connexion, 'tab_interm_rgptarbu_touchonlyarbo', 'fid', 'indx_fid_4') 
+    addSpatialIndex(connexion, 'tab_interm_rgptarbu_touchonlyarbo')
 
 
-#     # Création de la table contenant les segments arbustifs appartennant à des regroupements en contact avec des segments herbacés uniquement
-#     query = """
-#     CREATE TABLE sgt_rgpt_onlyherba AS
-#         SELECT DISTINCT t1.fid, t1.geom, t1.fid_rgpt
-#         FROM arbu_de_rgpt AS t1, tab_interm_rgptarbu_touchonlyherb as t2
-#         WHERE  t1.fid_rgpt = t2.fid;
-#     """
+    # Création de la table contenant les segments arbustifs appartennant à des regroupements en contact avec des segments herbacés uniquement
+    query = """
+    CREATE TABLE sgt_rgpt_onlyherba AS
+        SELECT DISTINCT t1.fid, t1.geom, t1.fid_rgpt
+        FROM arbu_de_rgpt AS t1, tab_interm_rgptarbu_touchonlyherb as t2
+        WHERE  t1.fid_rgpt = t2.fid;
+    """
 
-#     # Création de la table contenant les segments arbustifs appartennant à des regroupements en contact avec des segments arborés uniquement
-#     query += """
-#     CREATE TABLE sgt_rgpt_onlyarbo AS
-#         SELECT DISTINCT t1.fid, t1.geom, t1.fid_rgpt
-#         FROM arbu_de_rgpt AS t1, tab_interm_rgptarbu_touchonlyarbo as t2
-#         WHERE  t1.fid_rgpt = t2.fid;
-#     """
-#     # Exécution de la requête SQL
-#     print(query)
-#     executeQuery(connexion, query)
+    # Création de la table contenant les segments arbustifs appartennant à des regroupements en contact avec des segments arborés uniquement
+    query += """
+    CREATE TABLE sgt_rgpt_onlyarbo AS
+        SELECT DISTINCT t1.fid, t1.geom, t1.fid_rgpt
+        FROM arbu_de_rgpt AS t1, tab_interm_rgptarbu_touchonlyarbo as t2
+        WHERE  t1.fid_rgpt = t2.fid;
+    """
+    # Exécution de la requête SQL
+    print(query)
+    executeQuery(connexion, query)
 
-#     addSpatialIndex(connexion, 'sgt_rgpt_onlyherba')
-#     addSpatialIndex(connexion, 'sgt_rgpt_onlyarbo')
-#     addIndex(connexion, 'sgt_rgpt_onlyherba', 'fid', 'indx_sgtrgpt_onlyherba') 
-#     addIndex(connexion, 'sgt_rgpt_onlyarbo', 'fid', 'indx_sgtrgpt_onlyarbo') 
-
-
+    addSpatialIndex(connexion, 'sgt_rgpt_onlyherba')
+    addSpatialIndex(connexion, 'sgt_rgpt_onlyarbo')
+    addIndex(connexion, 'sgt_rgpt_onlyherba', 'fid', 'indx_sgtrgpt_onlyherba') 
+    addIndex(connexion, 'sgt_rgpt_onlyarbo', 'fid', 'indx_sgtrgpt_onlyarbo') 
 
 
-    # Création de la table contant les segments arbustifs appartennant à des regroupements en contact avec des segments herbacés ET des segments arborés
-    # query = """
-    # CREATE TABLE sgt_rgpt_touch_arbo_herbe AS
-    #                                         SELECT t1.fid, t1.geom, t1.fid_rgpt
-    #                                         FROM arbu_de_rgpt AS t1
-    #                                         WHERE t1.fid not in (select t2.fid from sgt_rgpt_onlyherba as t2 union select t3.fid from sgt_rgpt_onlyarbo as t3)
-    # """
 
 
-    # # Exécution de la requête SQL
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #  Création de la table contant les segments arbustifs appartennant à des regroupements en contact avec des segments herbacés ET des segments arborés
+    query = """
+    CREATE TABLE sgt_rgpt_touch_arbo_herbe AS
+                                            SELECT t1.fid, t1.geom, t1.fid_rgpt
+                                            FROM arbu_de_rgpt AS t1
+                                            WHERE t1.fid not in (select t2.fid from sgt_rgpt_onlyherba as t2 union select t3.fid from sgt_rgpt_onlyarbo as t3)
+    """
 
-    # addIndex(connexion, 'sgt_rgpt_touch_arbo_herbe', 'fid','idx_fid_sgt_touch_both')
-    # addSpatialIndex(connexion, 'sgt_rgpt_touch_arbo_herbe')
+
+    # Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    addIndex(connexion, 'sgt_rgpt_touch_arbo_herbe', 'fid','idx_fid_sgt_touch_both')
+    addSpatialIndex(connexion, 'sgt_rgpt_touch_arbo_herbe')
 
 
     #Récupération du nombre de lignes
