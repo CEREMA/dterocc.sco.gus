@@ -170,8 +170,8 @@ def computeStatisticsImage(image_raster, statistic_file=""):
         image_array_float[image_array_float == no_data_value] = np.nan
         image_min = numpy.nanmin(image_array_float)
         image_max = numpy.nanmax(image_array_float)
-        image_mean = numpy.mean(image_array_float)
-        image_std = numpy.std(image_array_float)
+        image_mean = numpy.nanmean(image_array_float)
+        image_std = numpy.nanstd(image_array_float)
         statistics_dico[i] = [image_min, image_max, image_mean, image_std]
 
     # Ecriture des resultats dans un fichier xml
