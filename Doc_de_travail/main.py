@@ -151,7 +151,7 @@ if __name__ == "__main__":
     # macroSamplesPrepare(img_ref, route, route_prepare, shp_zone, erosionoption = False, format_vector='ESRI Shapefile')
     # macroSamplesPrepare(img_ref, solnu, solnu_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
     # macroSamplesPrepare(img_ref, eau, eau_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
-    macroSamplesPrepare(img_ref, vegetation, vegetation_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
+    # macroSamplesPrepare(img_ref, vegetation, vegetation_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
     
     #3# Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
     # corr_bati = {"ndvi" : [neochannels["ndvi"] ,0, 0.35]}
@@ -169,45 +169,45 @@ if __name__ == "__main__":
     # corr_vegetation = {"ndvi" : [neochannels["ndvi"], 0.35, 1], "msavi" : [neochannels["msavi"],0.4,1] }
     # macroSamplesClean(vegetation_prepare , vegetation_clean, corr_vegetation)
 
-    # mask_samples_macro_input_list = [bati_clean, route_clean,solnu_clean, eau_clean,vegetation_clean]
+   # mask_samples_macro_input_list = [bati_clean, route_clean, solnu_clean, eau_clean, vegetation_clean]
     
-    # #4# Nettoyage recouvrement des échantillons d'apprentissage
-    # cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merged_output)
+    #4# Nettoyage recouvrement des échantillons d'apprentissage
+   # cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merged_output)
     
-    # #5# Sélection des échantillons
+    #5# Sélection des échantillons
 
-    # selectSamples(img_stack, image_samples_merged_output, samplevector, table_statistics_output, sampler_strategy="percent", select_ratio_floor = 10, ratio_per_class_dico = {1:1.37,2:3.40,3:100,4:0.37,5:0.84}, name_column = 'ROI', no_data_value = 0)
+   # selectSamples([img_stack], image_samples_merged_output, samplevector, table_statistics_output, sampler_strategy="percent", select_ratio_floor = 10, ratio_per_class_dico = {1:1.37,2:3.40,3:100,4:0.37,5:0.84}, name_column = 'ROI', no_data_value = 0)
     
 
-    # #6# Classification supervisée RF
-    # depth_tree = 50
-    # sample_min = 20
-    # termin_criteria = 0.0
-    # cluster = 30
-    # size_features = 2
-    # num_tree = 50
-    # obb_erreur = 0.001
+    #6# Classification supervisée RF
+    depth_tree = 50
+    sample_min = 20
+    termin_criteria = 0.0
+    cluster = 30
+    size_features = 2
+    num_tree = 50
+    obb_erreur = 0.001
 
-    # rf_parametres_struct = StructRFParameter()
-    # rf_parametres_struct.max_depth_tree = depth_tree
-    # rf_parametres_struct.min_sample = sample_min
-    # rf_parametres_struct.ra_termin_criteria = termin_criteria
-    # rf_parametres_struct.cat_clusters = cluster
-    # rf_parametres_struct.var_size_features = size_features
-    # rf_parametres_struct.nbtrees_max =  num_tree
-    # rf_parametres_struct.acc_obb_erreur = obb_erreur
+    rf_parametres_struct = StructRFParameter()
+    rf_parametres_struct.max_depth_tree = depth_tree
+    rf_parametres_struct.min_sample = sample_min
+    rf_parametres_struct.ra_termin_criteria = termin_criteria
+    rf_parametres_struct.cat_clusters = cluster
+    rf_parametres_struct.var_size_features = size_features
+    rf_parametres_struct.nbtrees_max =  num_tree
+    rf_parametres_struct.acc_obb_erreur = obb_erreur
 
-    # classifySupervised(img_stack, samplevector, img_classif, img_classif_confid, model_output = '', model_input = '', field_class = 'ROI', classifier_mode = "rf", rf_parametres_struct = rf_parametres_struct,no_data_value = 0, ram_otb=0,  format_raster='GTiff', extension_vector=".shp")
+   # classifySupervised([img_stack], samplevector, img_classif, img_classif_confid, model_output = '', model_input = '', field_class = 'ROI', classifier_mode = "rf", rf_parametres_struct = rf_parametres_struct,no_data_value = 0, ram_otb=0,  format_raster='GTiff', extension_vector=".shp")
     
-    # #7# Application du filtre majoritaire   
-    # filterImageMajority(img_classif, img_classif_filtered, umc_pixels = 8) 
+    #7# Application du filtre majoritaire   
+    filterImageMajority(img_classif, img_classif_filtered, umc_pixels = 8) 
     
-    # #Suppression des dossiers temporaires si souhaité
+    #Suppression des dossiers temporaires si souhaité
     # if os.path.exists():
     #   remove() 
     
     # # Segmentation de l'image
-    #segmentationImageVegetetation(r'/mnt/RAM_disk/ORT_ZE.tif',r'/mnt/RAM_disk/ZE_segmentation.tif', r'/mnt/RAM_disk/ZE_out_segmentation.gpkg')
+    # segmentationImageVegetetation(r'/mnt/RAM_disk/ORT_ZE.tif',r'/mnt/RAM_disk/ZE_segmentation.tif', r'/mnt/RAM_disk/ZE_out_segmentation.gpkg')
 
 
     # # Classification en strates verticales
