@@ -1327,7 +1327,7 @@ def mergeListRaster(input_images_list, output_merge_image, codage="uint16", ram_
 #########################################################################
 # FONCTION deletePixelsSuperpositionMasks()                             #
 #########################################################################
-def deletePixelsSuperpositionMasks(images_input_list, images_output_list, image_name='image', codage="uint16", ram_otb=0):
+def deletePixelsSuperpositionMasks(images_input_list, images_output_list, image_name='joke', codage="uint16", ram_otb=0):
     """
     #   Rôle : Cette fonction permet de reperer les pixels ayant de l'information binaire sur plusieurs images (0 et 1) et de les supprimer sur toutes ces images
     #   Paramètres en entrée :
@@ -1368,7 +1368,8 @@ def deletePixelsSuperpositionMasks(images_input_list, images_output_list, image_
         extension_file = os.path.splitext(os.path.basename(images_input_list[0]))[1]
         cleaning_image = repertory_output + os.sep + image_name + "_cleaning" + extension_file
 
-        print(cleaning_image)
+        if os.path.exists(cleaning_image):
+            os.remove(cleaning_image)
 
         # Etape 1 : Repérage des superpositions et création du fichier de nettoyage
 
@@ -1408,6 +1409,9 @@ def deletePixelsSuperpositionMasks(images_input_list, images_output_list, image_
 
             # Attribution du nom de l image nettoyée en sortie
             image_cleaned = images_output_list[idx_image]
+            
+            if os.path.exists(image_cleaned):
+                os.remove(image_cleaned)
 
             # Expression
             expression = "\"(im1b1!=0 and im2b1!=0?0:im1b1)\""
