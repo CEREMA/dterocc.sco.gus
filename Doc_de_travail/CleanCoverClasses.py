@@ -16,6 +16,7 @@ def cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merg
 
     length_mask = len(mask_samples_macro_input_list)
     images_mask_cleaned_list = []
+    images_list_out =[] 
     temporary_files_list = []
     repertory_output_tmp_list = []
     extension_raster =  os.path.splitext(image_samples_merged_output)[1]
@@ -33,6 +34,10 @@ def cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merg
         filename = os.path.splitext(os.path.basename(samples_image_input))[0]
         image_mask_cleaned =  repertory_output + os.sep + filename + "mask_clean" + extension_raster
         images_mask_cleaned_list.append(image_mask_cleaned)
+        image_out = repertory_output + os.sep + filename + "cleaned" + extension_raster
+        images_list_out.append(image_out)
+        
+
 
     # Suppression des pixels possédant la même valeur binaire sur plusieurs images
     print(mask_samples_macro_input_list)
@@ -44,16 +49,14 @@ def cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merg
 
     #Attribution des valeurs de label aux masques de chaque classe pour les pixels valant 1
     length = len(images_mask_cleaned_list)  
-    print(length)
     for img in range(len(images_mask_cleaned_list)):
         print(images_mask_cleaned_list[img],images_mask_cleaned_list[img],img)
-        command = "otbcli_BandMath -il %s -out %s -exp '(im1b1==1)?%s:0'" %(images_mask_cleaned_list[img],images_mask_cleaned_list[img], str(img+1))
-        print(command)
+        command = "otbcli_BandMath -il %s -out %s -exp '(im1b1==1)?%s:0'" %(images_mask_cleaned_list[img],images_list_out[img], str(img+1))
         exitCode = os.system(command)
         if exitCode != 0:
             print(command)
 
-    mergeListRaster(images_mask_cleaned_list, image_samples_merged_output, "uint16")
+    mergeListRaster(images_list_out, image_samples_merged_output, "uint16")
     updateReferenceProjection(img_ref, image_samples_merged_output)
 
     return
