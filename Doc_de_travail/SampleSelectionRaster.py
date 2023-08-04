@@ -374,44 +374,44 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
             if exitCode != 0:
                 raise NameError(cyan + "selectSamples() : " + bold + red + "An error occured during otbcli_SampleExtraction command. See error message above." + endC)
 
-        # Cas de plusieurs imagettes
-        else :
+        # # Cas de plusieurs imagettes
+        # else :
 
-            # Le repertoire de sortie
-            repertory_output = os.path.dirname(vector_output)
-            # Initialisation de la liste pour le multi-threading et la liste de l'ensemble des echantions locaux
-            thread_list = []
-            vector_local_output_list = []
+        #     # Le repertoire de sortie
+        #     repertory_output = os.path.dirname(vector_output)
+        #     # Initialisation de la liste pour le multi-threading et la liste de l'ensemble des echantions locaux
+        #     thread_list = []
+        #     vector_local_output_list = []
 
-            # Obtenir l'emprise des images d'entrées pour redecouper le vecteur d'echantillon d'apprentissage pour chaque image
-            for image_input in image_input_list :
-                # Definition des fichiers sur emprise local
-                file_name = os.path.splitext(os.path.basename(image_input))[0]
-                emprise_local_sample = repertory_output + os.sep + file_name + SUFFIX_SAMPLE + extension_vector
-                vector_sample_local_output = repertory_output + os.sep + file_name + SUFFIX_VALUE + extension_vector
-                vector_local_output_list.append(vector_sample_local_output)
+        #     # Obtenir l'emprise des images d'entrées pour redecouper le vecteur d'echantillon d'apprentissage pour chaque image
+        #     for image_input in image_input_list :
+        #         # Definition des fichiers sur emprise local
+        #         file_name = os.path.splitext(os.path.basename(image_input))[0]
+        #         emprise_local_sample = repertory_output + os.sep + file_name + SUFFIX_SAMPLE + extension_vector
+        #         vector_sample_local_output = repertory_output + os.sep + file_name + SUFFIX_VALUE + extension_vector
+        #         vector_local_output_list.append(vector_sample_local_output)
 
-                # Gestion sans thread...
-                #SampleLocalExtraction(image_input, sample_points_output, emprise_local_sample, vector_sample_local_output, name_column, BAND_NAME, ram_otb, format_vector, extension_vector, save_results_intermediate)
+        #         # Gestion sans thread...
+        #         SampleLocalExtraction(image_input, sample_points_output, emprise_local_sample, vector_sample_local_output, name_column, BAND_NAME, ram_otb, format_vector, extension_vector, save_results_intermediate)
 
-                # Gestion du multi threading
-                thread = threading.Thread(target=SampleLocalExtraction, args=(image_input, sample_points_output, emprise_local_sample, vector_sample_local_output, name_column, BAND_NAME, ram_otb, format_vector, extension_vector, save_results_intermediate))
-                thread.start()
-                thread_list.append(thread)
+        #         # Gestion du multi threading
+        #         thread = threading.Thread(target=SampleLocalExtraction, args=(image_input, sample_points_output, emprise_local_sample, vector_sample_local_output, name_column, BAND_NAME, ram_otb, format_vector, extension_vector, save_results_intermediate))
+        #         thread.start()
+        #         thread_list.append(thread)
 
             # Extraction des echantions points des images
-            try:
-                for thread in thread_list:
-                    thread.join()
-            except:
-                print(cyan + "selectSamples() : " + bold + red + "Erreur lors de l'éextaction des valeurs d'echantion : impossible de demarrer le thread" + endC, file=sys.stderr)
+            # try:
+            #     for thread in thread_list:
+            #         thread.join()
+            # except:
+            #     print(cyan + "selectSamples() : " + bold + red + "Erreur lors de l'éextaction des valeurs d'echantion : impossible de demarrer le thread" + endC, file=sys.stderr)
 
-            # Fusion des multi vecteurs de points contenant les valeurs des bandes de l'image
-            fusionVectors(vector_local_output_list, vector_output, format_vector)
+            # # Fusion des multi vecteurs de points contenant les valeurs des bandes de l'image
+            # fusionVectors(vector_local_output_list, vector_output, format_vector)
 
-            # Clean des vecteurs point sample local file
-            for vector_sample_local_output in vector_local_output_list :
-                removeVectorFile(vector_sample_local_output)
+            # # Clean des vecteurs point sample local file
+            # for vector_sample_local_output in vector_local_output_list :
+            #     removeVectorFile(vector_sample_local_output)
 
         if debug >= 3:
             print(cyan + "selectSamples() : " + bold + green + "End extraction des points d'echantillon dans l'image." + endC)
