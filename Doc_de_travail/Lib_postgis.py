@@ -935,6 +935,29 @@ def getAllColumns(connection, table_name):
     return columns_list
 
 ########################################################################
+# FONCTION addIndex()                                                  #
+########################################################################
+def addIndex(connexion, table_name, column_name, name_index):
+    """
+    Rôle : créé un index sur une colonne de la table
+
+    Paramètres :
+        connexion : laisser tel quel, récupère les informations de connexion à la base
+        table_name : nom de la table
+        column_name : nom de la colonne
+        name_index : nom de l'index
+    """
+    print("Création d'un index spatial :")
+    query = """
+    CREATE INDEX %s ON %s(%s);
+    """ %(name_index,table_name, column_name )
+
+    executeQuery(connexion, query)
+    print(query)
+
+    return 
+
+########################################################################
 # FONCTION versionPostgreSQL()                                         #
 ########################################################################
 def versionPostgreSQL(database_name='postgres', user_name='postgres', password='postgres', ip_host='localhost', num_port='5432', schema_name=''):
@@ -985,3 +1008,4 @@ def versionPostGIS(database_name='template_postgis', user_name='postgres', passw
     if debug >= 3:
         print(bold + "Version de PostGIS : " + endC + str(postgis_version))
     return postgis_version
+
