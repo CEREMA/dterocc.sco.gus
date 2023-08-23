@@ -3,12 +3,13 @@ import os,sys,glob,shutil,string, argparse
 from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
 from Lib_file import cleanTempData, deleteDir, removeFile
 from CrossingVectorRaster import *
-import pandas as pd
-import geopandas as gpd
 from rasterstats import *
 from Lib_postgis import *
 from DetectVegetationFormStratum import *
 
+###########################################################################################################################################
+# FONCTION vegetationMask()                                                                                                               #
+###########################################################################################################################################
 def vegetationMask(img_input, img_output, num_class = {"bati" : 1, "route" : 2, "sol nu" : 3, "eau" : 4, "vegetation" : 5}, overwrite = False):
     """
     Rôle : créé un masque de végétation à partir d'une image classifiée
@@ -39,6 +40,9 @@ def vegetationMask(img_input, img_output, num_class = {"bati" : 1, "route" : 2, 
 
     return
 
+###########################################################################################################################################
+# FONCTION segmentationImageVegetetation()                                                                                                #
+###########################################################################################################################################
 def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize = 10, num_class = {"bati" : 1, "route" : 2, "sol nu" : 3, "eau" : 4, "vegetation" : 5}, format_vector='GPKG', save_intermediate_result = True, overwrite = False):
     """
     Rôle : segmente l'image en entrée à partir d'une fonction OTB_Segmentation MEANSHIFT
@@ -82,7 +86,10 @@ def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize
 
     return
 
-def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_dic, dic_seuil, format_type = 'GPKG', tab_ref, save_intermediate_result = False, overwrite = True):
+###########################################################################################################################################
+# FONCTION classificationVerticalStratum()                                                                                                #
+###########################################################################################################################################
+def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = False, overwrite = True):
     """
     Rôle : classe les segments en trois strates : arborée, arbustive et herbacée
 
@@ -91,7 +98,8 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
         connexion_dic : dictionnaire des paramètres de connexion selon le modèle : {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : 'postgres', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
         sgts_input : fichier vecteur de segmentation
         raster_dic : dictionnaire associant le type de donnée récupéré avec le fichier raster contenant les informations, par exemple : {"mnh" : filename}
-        dic_seuil : dictionnaire des seuils de hauteur, de texture, de surface. Le format {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf", "seuil_arbu_repres" : 20} 
+        tab_ref : nom de la table principale. Par défaut : 'segments_vegetation'
+        dic_seuil : dictionnaire des seuils de hauteur, de texture, de surface. Le format {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20} 
         format_type : format de la donnée vecteur en entrée, par défaut : GPKG
         save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaire. Par défaut : False
         overwrite : paramètre de ré-écriture des fichiers. Par défaut False
@@ -155,6 +163,12 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
         print(query)
     executeQuery(connexion, query)
 
+    #Suppression des deux tables txt et mnh
+    if tablename_txt != '' :
+        dropTable(connexion, tablename_txt) 
+    if tablename_mnh != '':
+        dropTable(connexion, tablename_mnh) 
+
     ##################################################################### 
     ## Prétraitements : transformation de l'ensemble des multipolygones##
     ##                  en simples polygones ET suppression des        ## 
@@ -197,6 +211,10 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
     #Ajout de l'attribut "strate"
     addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
 
+
+    if not save_intermediate_result:
+        dropTable(connexion, 'segments_txt_val0')
+
     ##################################################################### 
     ## Première étape : classification générale, à partir de règles de ##
     ##                  hauteur et de texture                          ##  
@@ -230,40 +248,53 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
       # - les segments  de "regroupement" (en contact avec d'autres segments arbustifs)
 
     #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
-    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref)
-    
+    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
+
+
     ###
     #1# Première phase de reclassification
     ###   
 
     #1.0# Reclassification des arbustes isolés selon leur hauteur
-    tab_sgt_arbu_uniq_treat2 = reclassIsolatedSgtsByHeight(connexion, tab_ref) 
+    tab_sgt_arbu_uniq_treat2 = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil) 
     #il nous reste les segments arbustifs isolés qui n'ont pas pu être retraités par la hauteur 
 
     #1.1# Reclassification des segments arbustes "regroupés"
 
-    tab_sgt_arbu_treat2 = reclassGroupSegments(connexion)
+    reclassGroupSegments(connexion, tab_ref, tab_rgpt_arbu, dic_seuil)
     #il nous reste les segments arbustifs de rgpts qui n'ont pas été reclassés par leur configuration
+
+    dropTable(connexion, tab_rgpt_arbu)
+    dropTable(connexion, tab_arbu_de_rgpt)
+    dropTable(connexion, tab_arbu_uniq)
 
     # SUPPRIMER LES TABLES DE REGROUPEMENTS FAITES AVANT ET TOUT REFONDRE
 
-    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref)
+   tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
     
     ###
     #2# Deuxième phase de reclassification
     ### 
 
     #2.0# Reclassification des arbustes "isolés" selon un rapport de surface 
-    reclassIsolatedSgtsByAreaRatio(connexion, arbu_uniq)
+    reclassIsolatedSgtsByAreaRatio(connexion,  tab_ref, tab_arbu_uniq, dic_seuil)
+    
+    # #2.1# Reclassification des arbustes "regroupés" entourés uniquement d'arboré selon un rapport de surface 
+    reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil)
 
-    #2.1# Reclassification des arbustes "regroupés" entourés uniquement d'arboré selon un rapport de surface 
-    reclassGroupSgtsByAreaRatio(connexion, tab_sgts_veg)
+    if not save_intermediate_result : 
+        dropTable(connexion, tab_rgpt_arbu)
+        dropTable(connexion, tab_arbu_de_rgpt)
+        dropTable(connexion, tab_arbu_uniq)
     
     closeConnection(connexion)
 
     return
 
-def pretreatment_arbu(connexion, tab_ref):
+###########################################################################################################################################
+# FONCTION pretreatment_arbu()                                                                                                            #
+###########################################################################################################################################
+def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
     """
     Rôle : calculer et créer des tables intermédiaires pour la strate arbustive à traiter : 
             - une table constituée des géométries de regroupements arbustifs et du nombre de segments les composants (rgpt_arbu)
@@ -273,6 +304,7 @@ def pretreatment_arbu(connexion, tab_ref):
     Paramètres :
         connexion : paramètres de connexion
         tab_ref : nom de la table contenant tous les semgents végétation d'origine avec l'attribut 'strate' en prime 
+        save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
 
     Sortie :
         liste des noms des tables créée
@@ -283,7 +315,8 @@ def pretreatment_arbu(connexion, tab_ref):
     query = """
     CREATE TABLE rgpt_arbu AS
         SELECT public.ST_MAKEVALID((public.ST_DUMP(public.ST_UNION(t.geom))).geom) AS geom
-        FROM %s AS t;
+        FROM %s AS t
+        WHERE t.strate = 'arbustif';
     """ %(tab_ref)
         
     #Exécution de la requête SQL
@@ -349,6 +382,7 @@ def pretreatment_arbu(connexion, tab_ref):
         """ %(fid_rgpt)
         cursor.execute(query)
         rgpt_count = cursor.fetchall()
+        print(rgpt_count)
 
         #Update de l'attribut nb_sgt dans la table rgpt_arbuste
         print("Met à jour la valeur du nombre de segment dans la table rgpt_arbu")
@@ -357,6 +391,7 @@ def pretreatment_arbu(connexion, tab_ref):
         """ %(rgpt_count[0][1],rgpt_count[0][0])  
 
         #Exécution de la requête SQL
+        print(query)
         executeQuery(connexion, query)
 
 
@@ -405,15 +440,22 @@ def pretreatment_arbu(connexion, tab_ref):
     #Création d'un index sur une colonne 
     addIndex(connexion, 'arbu_uniq', 'fid', 'idx_arbu_uniq')
 
+    if not save_intermediate_result:
+        dropTable(connexion, 'tab_interm_arbuste')
+
     return 'rgpt_arbu', 'arbu_de_rgpt', 'arbu_uniq'
     
-def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil):
+###########################################################################################################################################
+# FONCTION reclassIsolatedSgtsByHeight()                                                                                                  #
+###########################################################################################################################################
+def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate_result = False):
     """
     Rôle : reclasse les segments arbustifs isolés selon leurs différences de hauteur avec les segments arborés et arbustifs les entourant
 
     Paramètres :
         connexion : paramètres de connexion à la BD
         tab_ref : nom de la table contenant tous les segments végétation d'origine
+        save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
     
     """
 
@@ -466,7 +508,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil):
     query = """
     CREATE TABLE arbu_touch_herb_arbo_and_only_arbo AS (
 	    SELECT t1.* 
-	    FROM arbu_uniq as t1,  
+	    FROM arbu_uniq as t1  
 	    WHERE t1.fid not in (SELECT fid FROM arbu_isole_touch_herbe));
     """
 
@@ -519,9 +561,19 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil):
         print(query)
     executeQuery(connexion, query)
 
+    if not save_intermediate_result:
+        dropTable(connexion, 'arbu_isole_touch_arbo')
+        dropTable(connexion, 'arbu_isole_touch_herbe')
+        dropTable(connexion, 'arbu_touch_herb_arbo_and_only_arbo')
+        dropTable(connexion, 'matable')
+        dropTable(connexion, 'sgt_touch_herbarbo')
+
     return
 
-def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil):
+###########################################################################################################################################
+# FONCTION reclassIsolatedSgtsByAreaRatio()                                                                                               #
+###########################################################################################################################################
+def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, save_intermediate_result = False):
     """
     Rôle : reclasse les différents segments arbustifs "isolés" selon un rapport de surface avec les segments arborés ou arborés ET herbacés environnants
 
@@ -530,6 +582,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil):
         tab_ref : nom de la table contenant tous les segments végétation d'origine
         arbu_uniq : nom de la table contenant tous les segments arbustifs isolés
         dic_seuil : dictionnaire des seuils pour la reclassification
+        save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
 
     """
 
@@ -691,7 +744,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil):
         FROM (SELECT t1.* FROM %s AS t1, arbu_uniq_surf_stats2 AS t2 WHERE t1.fid = t2.fid_sgt) AS t,
             (SELECT * FROM %s WHERE strate in ('arbore', 'herbace')) AS t3
         WHERE public.ST_INTERSECTS(t.geom, t3.geom);
-    """ %(tab_ref)
+    """ %(tab_ref, tab_ref)
 
      #Exécution de la requête SQL
     if debug >= 1:
@@ -706,7 +759,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil):
         FROM arbu_uniq_surf_stats2 AS r, 
                 (SELECT t2.fid_sgt, t2.fid_touch, t.min_diffh 
                     FROM arbu_uniq_diffh2 AS t2, 
-                        (SELECT r2.fid_sgt, t2.fid_touch, min(r2.diff_mnh) AS min_diffh FROM arbu_uniq_diffh2 AS r2 GROUP BY r2.fid_sgt) AS t 
+                        (SELECT r2.fid_sgt, r2.fid_touch, min(r2.diff_mnh) AS min_diffh FROM arbu_uniq_diffh2 AS r2 GROUP BY r2.fid_sgt, r2.fid_touch) AS t 
                     WHERE t2.fid_sgt = t.fid_sgt AND t2.diff_mnh = t.min_diffh) AS t
         WHERE r.fid_sgt = t.fid_sgt;
     """
@@ -732,10 +785,25 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil):
         print(query)
     executeQuery(connexion, query)
 
+    if not save_intermediate_result:
+        dropTable(connexion, 'arbu_isole_touch_arbo')
+        dropTable(connexion, 'arbu_isole_touch_herbe')
+        dropTable(connexion, 'arbu_uniq_surf_stats')
+        dropTable(connexion, 'arbu_uniq_diffh')
+        dropTable(connexion, 'arbu_uniq_mindiffh_surfstats')
+        dropTable(connexion, 'arbu_touch_herb_arbo')
+        dropTable(connexion, 'arbu_uniq_surf_stats2')
+        dropTable(connexion, 'arbu_uniq_diffh2')
+        dropTable(connexion, 'arbu_uniq_mindiffh_surfstats2')
+
 
     return 
 
-def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  dic_seuil):
+
+###########################################################################################################################################
+# FONCTION reclassGroupSgtsByAreaRatio()                                                                                                  #
+###########################################################################################################################################
+def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  dic_seuil, save_intermediate_result = False):
     """
     Rôle : classe les différents segments arbustifs regroupés selon le rapport de surface
     NB : pour l'instant, on ne se charge que des regroupements entourés QUE d'arboré
@@ -745,6 +813,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
         tab_ref : nom de la table contenant tous les segments végétation d'origine
         rgpt_arbu : nom de la table contenant les regroupements arbustifs
         arbu_de_rgpt : nom de la table contenant les segments arbustifs appartennants à des regroupements
+        save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
 
     """
 
@@ -838,7 +907,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
     #Creation de la table rgpt_arbu_surf_stats contenant pour chaque regroupement arbustif son identifiant, sa surface et la surface totale des segments arborés le touchant
     query = """
     CREATE TABLE rgpt_arbu_surf_stats3 AS 
-	    SELECT t1.fid AS fid_rgpt public.ST_AREA(t1.geom) AS surf_rgpt, public.ST_AREA(public.ST_UNION(t2.geom)) AS surf_touch_arbo
+	    SELECT t1.fid AS fid_rgpt, public.ST_AREA(t1.geom) AS surf_rgpt, public.ST_AREA(public.ST_UNION(t2.geom)) AS surf_touch_arbo
 	    FROM tab_interm_rgptarbu_touchonlyarbo AS t1, arbore AS t2
 	    WHERE public.ST_INTERSECTS(t1.geom, t2.geom)
 	    GROUP BY t1.fid, public.ST_AREA(t1.geom);
@@ -848,24 +917,34 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
     executeQuery(connexion, query)
 
  
-   # update
+   #Mise à jour du statut "strate" du segment arbustif rentrant dans les conditions
     query = """
-    UPDATE %s SET strate = 'arbore' 
+    UPDATE %s AS t1 SET strate = 'arbore' 
             FROM (SELECT t1.fid 
-                    FROM %s AS t1, (SELECT * FROM rgpt_arbu_surf_stats3 AS r WHERE r.surf_sgt/r.surf_touch_arbo <= %s AND r.surf_rgpt<= %s) AS t2 
-                    WHERE t1.fid_rgpt = t2.fid_rgpt) AS t
-            WHERE fid = t.fid ;
+                    FROM %s AS t1, (SELECT * FROM rgpt_arbu_surf_stats3 AS r WHERE r.surf_rgpt/r.surf_touch_arbo <= %s AND r.surf_rgpt<= %s) AS t2 
+                    WHERE t1.fid_rgpt = t2.fid_rgpt) AS t2
+            WHERE t1.fid = t2.fid ;
     """ %(tab_ref, arbu_de_rgpt, dic_seuil["seuil_ratio_surf"], dic_seuil["seuil_arbu_repres"])
 
     if debug >= 1:
         print(query)
     executeQuery(connexion, query)
 
+    if not save_intermediate_result :
+        dropTable(connexion, 'herbace')
+        dropTable(connexion, 'arbore')
+        dropTable(connexion, 'tab_interm_rgptarbu_touch_arbo')
+        dropTable(connexion, 'tab_interm_rgptarbu_touch_herbo')
+        dropTable(connexion, 'tab_interm_rgptarbu_touchonlyarbo')
+        dropTable(connexion, 'rgpt_arbu_surf_stats3')
+
   
     return 
 
-
-def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil):
+###########################################################################################################################################
+# FONCTION reclassGroupSegments()                                                                                                         #
+###########################################################################################################################################
+def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermediate_result = False):
     """
     Rôle : reclasse les segments arbustifs regroupés
 
@@ -874,6 +953,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil):
         tab_ref : nom de la table contenant tous les segments végétation d'origine
         rgpt_arbu : nom de la table contenant les regroupements arbustifs
         dic_seuil : dictionnaire contenant les seuils à prendre en compte lors de différentes classifications
+        save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
 
     """
     ###
@@ -996,6 +1076,11 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil):
  	    WHERE t1.fid = t3.fid and t1.fid = t4.fid;
     """  
 
+    # Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
     # Mise à jour du statut des segments arbustifs appartennant à un regroupement touchant très peu d'arboré 
     query = """
     UPDATE %s AS t1 SET strate = 'arbore' 
@@ -1011,11 +1096,21 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil):
                     WHERE public.ST_INTERSECTS(t1.geom, t2.geom)) AS t2
             WHERE t1.fid = t2.fid_arbu AND t2.diff_h <= %s;
     """ %(tab_ref, tab_ref, dic_seuil["seuil_touch_arbo_vs_herba"], tab_ref, dic_seuil["seuil_h2"])
+    
+    # Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
     # Suppression des regroupements de la liste à traiter avec itération si le regroupement partage une plus grande longueur de frontière avec l'herbacé que l'arbore
     query = """
     DELETE FROM tab_interm_rgptarbu_toucharboetherbo AS t1 USING (SELECT * FROM rgpt_herbarbotouch_longbound AS t WHERE t.long_bound_inters_arbo * 100 / t.long_bound_arbu < %s) AS t2 WHERE t1.fid = t2.fid; 
     """ %(dic_seuil["seuil_touch_arbo_vs_herba"])
+
+    # Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
     ###
     #3# Lancement du traitement itératif
@@ -1025,6 +1120,11 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil):
     query = """
     CREATE TABLE rgpt_arbu_to_treat AS (SELECT * FROM tab_interm_rgptarbu_toucharboetherbo UNION SELECT * FROM tab_interm_rgptarbu_touchonlyarbo);
     """ 
+
+    # Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
     #  Création de la table contant les segments arbustifs appartennant à des regroupements en contact avec des segments herbacés ET des segments arborés
     query = """
@@ -1107,10 +1207,10 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil):
 
     # Reclassification des segments situés en bordure de regroupement via le critère de hauteur
     query = """
-    UPDATE %s SET
+    UPDATE %s AS t SET
         strate = sgt_rgpt_bordure.strate_touch
         FROM sgt_rgpt_bordure
-        WHERE %s.fid = sgt_rgpt_bordure.id_arbu and sgt_rgpt_bordure.diff_h <= %s;
+        WHERE t.fid = sgt_rgpt_bordure.id_arbu AND sgt_rgpt_bordure.diff_h <= %s;
     """ %(tab_ref, dic_seuil["seuil_h2"])
 
     # Exécution de la requête SQL
@@ -1213,7 +1313,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil):
        
         # Suppression dans la table "sgt_rgpt_touch_arbo_herbe" des segments arbustifs traités précédemment
         query = """
-        DELETE FROM sgt_rgpt_arbu_to_treat USING sgt_rgpt_bordure5 WHERE sgt_rgpt_arbu_to_treat.fid = sgt_rgpt_bordure.id_arbu AND sgt_rgpt_bordure.diff_h <= %s;
+        DELETE FROM sgt_rgpt_arbu_to_treat USING sgt_rgpt_bordure WHERE sgt_rgpt_arbu_to_treat.fid = sgt_rgpt_bordure.id_arbu AND sgt_rgpt_bordure.diff_h <= %s;
         """ %( dic_seuil["seuil_h2"])
         
         # Exécution de la requête SQL
@@ -1238,9 +1338,22 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil):
     # il nous reste les segments qui sont restés ici classés arbustifs à traiter à présent selon le rapport de surface par rapport à ce qui les entoure
     # refondre tous les segments arbustifs en sortie de ce traitement et décomposer en segments arbustifs isolés et segments arbustifs regroupés 
     
+    if not save_intermediate_result :
+        dropTable(connexion, 'herbace')
+        dropTable(connexion, 'arbore')
+        dropTable(connexion, 'tab_interm_rgptarbu_touch_arbo')
+        dropTable(connexion, 'tab_interm_rgptarbu_touch_herbo')
+        dropTable(connexion, 'tab_interm_rgptarbu_touchonlyarbo')
+        dropTable(connexion, 'tab_interm_rgptarbu_toucharboetherbo')
+        dropTable(connexion, 'rgpt_herbarbotouch_longbound')
+        dropTable(connexion, 'rgpt_arbu_to_treat')
+        dropTable(connexion, 'sgt_rgpt_arbu_to_treat')
     
     return 
 
+###########################################################################################################################################
+# FONCTION calc_statMedian()                                                                                                              #
+###########################################################################################################################################
 def calc_statMedian(vector_input, image_input, vector_output):
     """
     Rôle : croisement raster/vecteur où on va calculer la médiane du raster sur l'emprise des entités vecteurs
