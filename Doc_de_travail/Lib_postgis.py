@@ -424,6 +424,126 @@ def addData(connection, table_name, data):
     return 0
 
 ########################################################################
+# FONCTION dropColumn()                                                #
+########################################################################
+def dropColumn(connexion, tablename, columnname):
+    """
+    Rôle : supprime une colonne d'une table
+
+    Paramètres :
+        connexion : connexion à la base donnée et au schéma correspondant
+        tablename : nom de la table correspondant aux segments de végétation
+        columnname : nom de la colonne à supprimer
+    """
+
+    query = """
+    ALTER TABLE %s DROP COLUMN IF EXISTS %s;
+    """ %(tablename, columnname)
+
+    # Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    return
+
+########################################################################
+# FONCTION addIndex()                                                  #
+########################################################################
+def addIndex(connexion, tablename, columnname, nameindex):
+    """
+    Rôle : créé un index sur une colonne de la table
+
+    Paramètres :
+        conneixon :
+        tablename : nom de la table
+        columnname : nom de la colonne
+        nameindex : nom de l'index
+    """
+
+    query = """
+    CREATE INDEX %s ON %s(%s);
+    """ %(nameindex,tablename, columnname )
+
+    executeQuery(connexion, query)
+
+    return 
+
+########################################################################
+# FONCTION addUniqId()                                                 #
+########################################################################
+def addUniqId(connexion, tablename):
+    """
+    Rôle : créé un identifiant unique fid généré automatiquement
+
+    Paramètres :
+        connexion : connexion à la base donnée et au schéma correspondant
+        tablename : nom de la table correspondant aux segments de végétation
+    """
+
+    query = """
+    ALTER TABLE %s ADD COLUMN fid SERIAL PRIMARY KEY;
+    """ %(tablename)
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    return
+
+########################################################################
+# FONCTION addSpatialIndex()                                           #
+########################################################################
+def addSpatialIndex(connexion, tablename, geomcolumn = 'geom'):
+    """
+    Rôle : créé un index spatial associé à la colonne géometrie
+
+    Paramètres :
+        connexion : connexion à la base donnée et au schéma correspondant
+        tablename : nom de la table correspondant aux segments de végétation
+        geomcolumn : nom de la colonne géometrie, par défaut : 'geom'
+    """
+
+    nameindex = 'idx_gist_' + tablename
+    query = """
+    CREATE INDEX %s ON %s USING gist(%s);
+    """ %(nameindex, tablename, geomcolumn)
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    return
+
+########################################################################
+# FONCTION addColumn()                                                 #
+########################################################################
+def addColumn(connexion, tablename, columnname, columntype):
+    """
+    Rôle : créé un attribut d'une table dans la db
+
+    Paramètres :
+        connexion : connexion à la base donnée et au schéma correspondant
+        tablename : nom de la table correspondant aux segments de végétation
+        attributname : nom de l'attribut ajouté
+        columntype : type de l'attribut ex : float, varchar, int, etc ...
+    """
+
+    query = """
+    ALTER TABLE %s ADD COLUMN %s %s;
+    """ %(tablename, columnname, columntype)
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    return
+
+
+########################################################################
 # FONCTION deleteData()                                                #
 ########################################################################
 def deleteData(connection, table_name, column_name, data_name):
