@@ -4,13 +4,16 @@ from Lib_postgis import *
 ## Classification des FV de la strate arborée ## 
 ################################################
 
-def detectInTreeStratum(connexion, tablename, output_tree_layer, connexion_fv_dic, thresholds = 0, save_results_as_layer = False, save_intermediate_results = False):
+###########################################################################################################################################
+# FONCTION detectInTreeStratum()                                                                                                          #
+###########################################################################################################################################
+def detectInTreeStratum(connexion, tab_ref, output_tree_layer, connexion_fv_dic, thresholds = 0, save_results_as_layer = False, save_intermediate_results = False):
     """
     Rôle : détecté les formes végétales horizontales au sein de la strate arborée
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table correspondant aux segments de végétation (inclure le nom du schema si la table appartient à un autre schema)
+        tab_ref : nom de la table correspondant aux segments de végétation (inclure le nom du schema si la table appartient à un autre schema)
         output_tree_layer : couche vectorielle de sortie composée de la strate arborée classée en strate verticale ET horizontale
         connexion_fv_dic : dictionnaire contenant les paramètres de connexion (pour la sauvegarde en fin de fonction)
         thresholds : dictionnaire des seuils à appliquer, par défaut : {"seuil_surface" : 0, "seuil_compacite_1" : 0, "seuil_compacite_2" : 0, "seuil_convexite" : 0, "seuil_elongation" : 0, "val_largeur_max_alignement" : 0, "val_buffer" : 0}
@@ -18,14 +21,16 @@ def detectInTreeStratum(connexion, tablename, output_tree_layer, connexion_fv_di
         save_intermediate_results : sauvegarde ou non des tables intermédiaires
 
     Sortie :
-        tablename : nom de la table contenant les éléments de la strate arborée classés horizontalement
+        tab_ref : nom de la table contenant les éléments de la strate arborée classés horizontalement
     """
 
-    #0# Attribution de valeurs par défaut pou
+    #0# Attribution de valeurs par défaut pour les seuils si non renseignés
     if thresholds == 0:
         thresholds = {"seuil_surface" : 30, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.7, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 7, "val_buffer" : 1}
 
-    print(cyan + "findImagesFile : Fin de la recherche dans le repertoire des images contenues ou intersectant l'emprise" + endC)
+    ###################################################
+    ## Préparation de la couche arborée de référence ## 
+    ###################################################
 
     #1# Récupération de la table composée uniquement des segments arborés
     query = """
@@ -33,13 +38,14 @@ def detectInTreeStratum(connexion, tablename, output_tree_layer, connexion_fv_di
         SELECT *
         FROM %s
         WHERE strate = 'arbore';
-    """ %(tablename)
+    """ %(tab_ref)
 
     #Exécution de la requête SQL
     if debug >= 1:
         print(query)
     executeQuery(connexion, query)
 
+    #Création des indexes 
     addSpatialIndex(connexion, 'arbore_ini')
     addIndex(connexion, 'arbore_ini', 'fid', 'idx_fid_arboreini')
 
@@ -61,10 +67,9 @@ def detectInTreeStratum(connexion, tablename, output_tree_layer, connexion_fv_di
     #Création d'un index spatial
     addSpatialIndex(connexion, 'arbore')
 
-    #Création de la colonne strate qui correspond à 'arbore' pour tous les polygones
+    #Création de la colonne strate qui correspond à 'arbore' pour tous les polygones et complétion
     addColumn(connexion, 'arbore', 'strate', 'varchar(100)')
 
-    #Ajout de la valeur 'arbore' pour toutes les entités de la table arbore
     query = """
     UPDATE arbore SET strate = 'arbore' WHERE fid = fid;
     """ 
@@ -88,11 +93,11 @@ def detectInTreeStratum(connexion, tablename, output_tree_layer, connexion_fv_di
     lastTreeClassification(connexion, 'arbore', thresholds["seuil_convexite"], thresholds["seuil_elongation"], thresholds["seuil_surface"], thresholds["seuil_compacite_1"], thresholds["seuil_compacite_2"], thresholds["val_buffer"])
 
     #6# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
-    tablename = ''
-    tablename = createLayerTree(connexion, 'arbore', 'arbore_bststr_uniq', 'rgpt_arbore')
+    tab_ref = ''
+    tab_ref = createLayerTree(connexion, 'arbore', 'arbore_bststr_uniq', 'rgpt_arbore')
 
-    if tablename == '':
-        tablename = 'strate_arboree'
+    if tab_ref == '':
+        tab_ref = 'strate_arboree'
 
     # SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
     if not save_intermediate_results :
@@ -104,23 +109,25 @@ def detectInTreeStratum(connexion, tablename, output_tree_layer, connexion_fv_di
 
     ## SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
     if save_results_as_layer :
-       exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_tree_layer, tablename, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
+       exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_tree_layer, tab_ref, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
 
     closeConnection(connexion)
 
-    return tablename
+    return tab_ref
 
 
 
 
-
-def getCoordRectEnglValue(connexion, tablename, attributname = 'x0'):
+###########################################################################################################################################
+# FONCTION getCoordRectEnglValue()                                                                                                        #
+###########################################################################################################################################
+def getCoordRectEnglValue(connexion, tab_ref, attributname = 'x0'):
     """
     Rôle : récupère et créé les coordonnées des 4 sommet du rectangle englobant
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table correspondant aux segments de végétation
+        tab_ref : nom de la table correspondant aux segments de végétation
         attributname : nom de l'attribut créé, par défaut : 'x0'
     """
     if attributname == 'x0':
@@ -139,8 +146,8 @@ def getCoordRectEnglValue(connexion, tablename, attributname = 'x0'):
         print("Le nom de l'attribut " + attributname + " n'est pas correcte.")
 
     query = """
-    UPDATE %s SET %s = cast(split_part(split_part(substring(left(public.st_astext(public.st_orientedenvelope(geom)),-2),10),',',%s),' ',%s) as DECIMAL) WHERE fid = fid;
-    """ %(tablename, attributname, l[0], l[1])
+    UPDATE %s SET %s = CAST(SPLIT_PART(SPLIT_PART(SUBSTRING(LEFT(public.ST_ASTEXT(public.ST_ORIENTEDENVELOPE(geom)),-2),10),',',%s),' ',%s) as DECIMAL) WHERE fid = fid;
+    """ %(tab_ref, attributname, l[0], l[1])
 
     # Exécution de la requête SQL
     if debug >= 1:
@@ -149,13 +156,17 @@ def getCoordRectEnglValue(connexion, tablename, attributname = 'x0'):
 
     return
 
-def firstClassification(connexion, tablename, compacthreshold = 0.7, areathreshold = 30, typeclass = 'arbore'):
+
+###########################################################################################################################################
+# FONCTION firstClassification()                                                                                                          #
+###########################################################################################################################################
+def firstClassification(connexion, tab_ref, compacthreshold = 0.7, areathreshold = 30, typeclass = 'arbore'):
     """
     Rôle : classification en trois classes basée sur un critère de surface et de compacité
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table dans laquelle on calcule l'indicateur de compacité
+        tab_ref : nom de la table dans laquelle on calcule l'indicateur de compacité
         compacthreshold : valeur du seuil de compacité, par défaut : 0.7
         areathreshold : valeur du seuil de surface, par défaut : 30
         typeclass : type de classification : 'arbore' ou 'arbustif', par défaut : 'arbore'
@@ -164,27 +175,27 @@ def firstClassification(connexion, tablename, compacthreshold = 0.7, areathresho
     if typeclass == 'arbore':
         query = """
         UPDATE %s AS arb SET fv = 'arbre isole' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp > %s;
-        """ %(tablename, areathreshold, compacthreshold)
+        """ %(tab_ref, areathreshold, compacthreshold)
 
         query += """
         UPDATE %s AS arb SET fv = 'tache arboree' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp <= %s;
-        """ %(tablename, areathreshold, compacthreshold)
+        """ %(tab_ref, areathreshold, compacthreshold)
 
         query += """
         UPDATE %s AS arb SET fv = 'regroupement arbore' WHERE public.ST_AREA(arb.geom) > %s;
-        """ %(tablename, areathreshold)
+        """ %(tab_ref, areathreshold)
     else :
         query = """
         UPDATE %s AS arb SET fv = 'arbuste isole' WHERE public.ST_AREA(geom) <= %s AND id_comp > %s;
-        """ %(tablename, areathreshold, compacthreshold)
+        """ %(tab_ref, areathreshold, compacthreshold)
 
         query += """
         UPDATE %s AS arb SET fv = 'tache arbustive' WHERE public.ST_AREA(geom) <= %s AND id_comp <= %s;
-        """ %(tablename, areathreshold, compacthreshold)
+        """ %(tab_ref, areathreshold, compacthreshold)
 
         query += """
         UPDATE %s AS arb SET fv = 'regroupement arbustif' WHERE public.ST_AREA(geom) > %s;
-        """ %(tablename, areathreshold)
+        """ %(tab_ref, areathreshold)
 
     #Exécution de la requête SQL
     if debug >= 1:
@@ -193,13 +204,16 @@ def firstClassification(connexion, tablename, compacthreshold = 0.7, areathresho
 
     return
 
-def classTreeWoodStrict(connexion, tablename, thresholdTreeLine):
+###########################################################################################################################################
+# FONCTION classTreeWoodStrict()                                                                                                          #
+###########################################################################################################################################
+def classTreeWoodStrict(connexion, tab_ref, thresholdTreeLine):
     """
     Rôle : détection et classification des polygones de boisement arborés
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table correspondant aux segments de végétation
+        tab_ref : nom de la table correspondant aux segments de végétation
         thresholdTreeLine : valeur seuil de largeur d'un alignement d'arbres
     """
 
@@ -218,7 +232,7 @@ def classTreeWoodStrict(connexion, tablename, thresholdTreeLine):
             FROM (SELECT public.ST_MakeValid((public.ST_DUMP(public.ST_BUFFER(public.ST_BUFFER(arb.geom,-%s),%s))).geom::public.geometry(Polygon,2154)) AS geom
                     FROM arbore as arb
                     WHERE arb.fv='regroupement arbore') AS t;
-    """ %(tablename, thresholdTreeLine, thresholdTreeLine, tablename, thresholdTreeLine, thresholdTreeLine)
+    """ %(tab_ref, thresholdTreeLine, thresholdTreeLine, tab_ref, thresholdTreeLine, thresholdTreeLine)
 
     #Exécution de la requête SQL
     if debug >= 1:
@@ -259,13 +273,16 @@ def classTreeWoodStrict(connexion, tablename, thresholdTreeLine):
 
     return
 
-def lastTreeClassification(connexion, tablename, convexthreshold, extensiontreshold, areathreshold, compacthreshold, compacthreshold_V2, valbuffer):
+###########################################################################################################################################
+# FONCTION classTreeWoodStrict()                                                                                                          #
+###########################################################################################################################################
+def lastTreeClassification(connexion, tab_ref, convexthreshold, extensiontreshold, areathreshold, compacthreshold, compacthreshold_V2, valbuffer):
     """
     Rôle : détection et classification du reste des polygones classés "regroupement arboré" lors de la première classification
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table correspondant aux segments de végétation
+        tab_ref : nom de la table correspondant aux segments de végétation
         convexthreshold : seuil à appliquer sur l'indice de convexité
         extensionthreshold : seuil à appliquer sur l'indice d'élongation
         areathreshold : seuil à appliquer sur la surface des polygones
@@ -281,14 +298,14 @@ def lastTreeClassification(connexion, tablename, convexthreshold, extensiontresh
         FROM (SELECT public.ST_MAKEVALID(public.ST_UNION(geom)) as geom
                 FROM %s
                 WHERE fv = 'regroupement arbore') AS rgt, (SELECT public.ST_MAKEVALID(public.ST_UNION(geom)) as geom from arbore_bststr_uniq) as ou;
-    """ %(tablename)
+    """ %(tab_ref)
 
     #Exécution de la requête SQL
     if debug >= 1:
         print(query)
     executeQuery(connexion, query)
 
-    tablename = 'rgpt_arbore'
+    tab_ref = 'rgpt_arbore'
 
     ## PREPARATION DES DONNEES ##
 
@@ -325,43 +342,43 @@ def lastTreeClassification(connexion, tablename, convexthreshold, extensiontresh
     UPDATE %s as rgt SET fv = 'arbre isole'
     FROM arbore_bststr_uniq
     WHERE  public.ST_AREA(rgt.geom) <= %s AND rgt.id_comp  >= %s AND public.ST_INTERSECTS(rgt.geom, arbore_bststr_uniq.geom) is false;
-    """ %(tablename, areathreshold, compacthreshold)
+    """ %(tab_ref, areathreshold, compacthreshold)
 
     # si la surface est inférieure à 30, que ça ne touche pas un boisement stricte ET que son id_comp <0.7 --> tâche verte
     query += """
     UPDATE %s as rgt SET fv = 'tache arbore'
     FROM arbore_bststr_uniq
     WHERE  public.ST_AREA(rgt.geom) <= %s AND rgt.id_comp  < %s AND public.ST_INTERSECTS(rgt.geom, arbore_bststr_uniq.geom) is false;
-    """ %(tablename, areathreshold, compacthreshold)
+    """ %(tab_ref, areathreshold, compacthreshold)
 
     # si la surface est inférieure à 30 et que ça touche un boisement stricte --> ça appartient au boisement
     query += """
     UPDATE %s as rgt SET fv = 'boisement arbore'
     FROM arbore_bststr_uniq
     WHERE public.ST_AREA(rgt.geom)<= %s AND public.ST_INTERSECTS(rgt.geom, arbore_bststr_uniq.geom);
-    """ %(tablename, areathreshold)
+    """ %(tab_ref, areathreshold)
 
     # si la surface est supérieure à 30
     # --> classification à partir d'indices de formes du reste des polygones appartennant aux regroupements
     query += """
     UPDATE %s as rgt SET fv='alignement arbore'
     WHERE  rgt.id_conv >= %s AND rgt.id_elong  >= %s AND public.ST_AREA(rgt.geom) > %s;
-    """ %(tablename, convexthreshold, extensiontreshold, areathreshold)
+    """ %(tab_ref, convexthreshold, extensiontreshold, areathreshold)
 
     query += """
     UPDATE %s as rgt SET fv='boisement arbore'
     WHERE rgt.id_conv >= %s AND rgt.id_elong < %s AND public.ST_AREA(rgt.geom) > %s;
-    """ %(tablename, convexthreshold, extensiontreshold, areathreshold)
+    """ %(tab_ref, convexthreshold, extensiontreshold, areathreshold)
 
     query += """
     UPDATE %s as rgt SET fv='alignement arbore'
     WHERE rgt.id_conv < %s AND rgt.id_comp < %s AND public.ST_AREA(rgt.geom) > %s;
-    """ %(tablename, convexthreshold, compacthreshold_V2, areathreshold)
+    """ %(tab_ref, convexthreshold, compacthreshold_V2, areathreshold)
 
     query += """
     UPDATE %s as rgt SET fv='boisement arbore'
     WHERE rgt.id_conv < %s AND rgt.id_comp >= %s AND public.ST_AREA(rgt.geom) > %s;
-    """ %(tablename, convexthreshold, compacthreshold_V2, areathreshold)
+    """ %(tab_ref, convexthreshold, compacthreshold_V2, areathreshold)
 
     # Exécution de la requête SQL
     if debug >= 1:
@@ -370,6 +387,10 @@ def lastTreeClassification(connexion, tablename, convexthreshold, extensiontresh
 
     return
 
+
+###########################################################################################################################################
+# FONCTION classTreeWoodStrict()                                                                                                          #
+###########################################################################################################################################
 def createLayerTree(connexion, tab_firstclass, tab_woodstrict, tab_lastclass):
     """
     Rôle :
@@ -430,14 +451,17 @@ def createLayerTree(connexion, tab_firstclass, tab_woodstrict, tab_lastclass):
 ## Classification des FV de la strate arbustive ## 
 ##################################################
 
-def detectInShrubStratum(connexion, tablename, output_shrub_layer, connexion_fv_dic, thresholds = 0, save_results_as_layer = False, save_results_intermediate = False):
+###########################################################################################################################################
+# FONCTION detectInShrubStratum()                                                                                                          #
+###########################################################################################################################################
+def detectInShrubStratum(connexion, tab_ref, output_shrub_layer, connexion_fv_dic, thresholds = 0, save_results_as_layer = False, save_results_intermediate = False):
     """
     Rôle : détecté les formes végétales horizontales au sein de la
     strate arbustive
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table correspondant aux segments de végétation
+        tab_ref : nom de la table correspondant aux segments de végétation
         output_shrub_layer : couche vectorielle de sortie composée de la strate arbustive classée en strate verticale ET horizontale
         connexion_fv_dic : dictionnaire contenant les paramètres de connexion (pour la sauvegarde en fin de fonction)
         thresholds : dictionnaire des seuils à appliquer, par défaut : {"seuil_surface" : 0, "seuil_compacite_1" : 0, "seuil_compacite_2" : 0, "seuil_convexite" : 0, "seuil_elongation" : 0, "val_largeur_max_alignement" : 0, "val_buffer" : 0}
@@ -445,7 +469,7 @@ def detectInShrubStratum(connexion, tablename, output_shrub_layer, connexion_fv_
         save_results_intermediate : sauvegarde ou non des tables intermédiaires
 
     Sortie :
-        tablename : nom de la table contenant les éléments de la strate arbustive classés horizontalement
+        tab_ref : nom de la table contenant les éléments de la strate arbustive classés horizontalement
     """
 
     #0# Attribution de valeurs par défaut pour la connexion
@@ -460,7 +484,7 @@ def detectInShrubStratum(connexion, tablename, output_shrub_layer, connexion_fv_
     #     SELECT *
     #     FROM %s
     #     WHERE strate = 'arbustif';
-    # """ %(tablename)
+    # """ %(tab_ref)
 
     # #Exécution de la requête SQL
     # if debug >= 1:
@@ -515,7 +539,7 @@ def detectInShrubStratum(connexion, tablename, output_shrub_layer, connexion_fv_
     # lastShrubClassification(connexion, 'arbustif', thresholds["seuil_convexite"], thresholds["seuil_elongation"], thresholds["seuil_surface"], thresholds["seuil_compacite_1"], thresholds["seuil_compacite_2"], thresholds["val_buffer"])
 
     #6# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
-    # tablename = createLayerShrub(connexion, 'arbustif', 'arbustif_bststr_uniq', 'rgpt_arbustif')
+    # tab_ref = createLayerShrub(connexion, 'arbustif', 'arbustif_bststr_uniq', 'rgpt_arbustif')
 
     # ## SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
     # if not save_results_intermediate :
@@ -527,20 +551,23 @@ def detectInShrubStratum(connexion, tablename, output_shrub_layer, connexion_fv_
 
     ## SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
     # if save_results_as_layer :
-    tablename = 'strate_arbustive'
-    exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_shrub_layer, tablename, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
+    tab_ref = 'strate_arbustive'
+    exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_shrub_layer, tab_ref, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
 
     closeConnection(connexion)
-    return tablename
+    return tab_ref
 
 
-def classShrubWoodStrict(connexion, tablename, thresholdShrubLine):
+###########################################################################################################################################
+# FONCTION classShrubWoodStrict()                                                                                                          #
+###########################################################################################################################################
+def classShrubWoodStrict(connexion, tab_ref, thresholdShrubLine):
     """
     Rôle : détection et classification des polygones de boisement arborés
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table correspondant aux segments de végétation
+        tab_ref : nom de la table correspondant aux segments de végétation
         thresholdShrubLine : valeur seuil de largeur d'un alignement d'arbres
     """
 
@@ -559,7 +586,7 @@ def classShrubWoodStrict(connexion, tablename, thresholdShrubLine):
             FROM (SELECT public.ST_MakeValid((public.ST_DUMP(public.ST_BUFFER(public.ST_BUFFER(arb.geom,-%s),%s))).geom::public.geometry(Polygon,2154)) AS geom
                     FROM %s as arb
                     WHERE arb.fv='regroupement arbustif') AS t;
-    """ %(tablename, thresholdShrubLine, thresholdShrubLine, tablename, thresholdShrubLine, thresholdShrubLine, tablename)
+    """ %(tab_ref, thresholdShrubLine, thresholdShrubLine, tab_ref, thresholdShrubLine, thresholdShrubLine, tab_ref)
 
     #Exécution de la requête SQL
     if debug >= 1:
@@ -600,13 +627,16 @@ def classShrubWoodStrict(connexion, tablename, thresholdShrubLine):
 
     return
 
-def lastShrubClassification(connexion, tablename, convexthreshold, extensiontreshold, areathreshold, compacthreshold, compacthreshold_V2, valbuffer):
+###########################################################################################################################################
+# FONCTION lastShrubClassification()                                                                                                          #
+###########################################################################################################################################
+def lastShrubClassification(connexion, tab_ref, convexthreshold, extensiontreshold, areathreshold, compacthreshold, compacthreshold_V2, valbuffer):
     """
     Rôle : détection et classification du reste des polygones classés "regroupement arbustif" lors de la première classification
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table correspondant aux segments de végétation
+        tab_ref : nom de la table correspondant aux segments de végétation
         convexthreshold : seuil à appliquer sur l'indice de convexité
         extensionthreshold : seuil à appliquer sur l'indice d'élongation
         areathreshold : seuil à appliquer sur la surface des polygones
@@ -623,7 +653,7 @@ def lastShrubClassification(connexion, tablename, convexthreshold, extensiontres
         FROM (SELECT public.ST_MAKEVALID(public.ST_UNION(geom)) as geom
                 FROM %s
                 WHERE fv = 'regroupement arbustif') AS rgt, (SELECT public.ST_MAKEVALID(public.ST_UNION(geom)) as geom from arbustif_bststr_uniq) as ou;
-    """ %(tablename)
+    """ %(tab_ref)
 
     #Exécution de la requête SQL
     if debug >= 1:
@@ -659,7 +689,7 @@ def lastShrubClassification(connexion, tablename, convexthreshold, extensiontres
     #Création et calcul de l'indicateur d'élongation
     createExtensionIndicator(connexion, 'rgpt_arbustif')
 
-    tablename = 'rgpt_arbustif'
+    tab_ref = 'rgpt_arbustif'
 
     ## CLASSIFICATION ##
     # si la surface est inférieure à 30, que ça ne touche pas un boisement stricte ET que son id_comp >= 0.7 --> arbuste isole
@@ -667,43 +697,43 @@ def lastShrubClassification(connexion, tablename, convexthreshold, extensiontres
     UPDATE %s as rgt SET fv = 'arbuste isole'
     FROM arbustif_bststr_uniq
     WHERE  public.ST_AREA(rgt.geom) <= %s AND rgt.id_comp  >= %s AND public.ST_INTERSECTS(rgt.geom, arbustif_bststr_uniq.geom) is false;
-    """ %(tablename, areathreshold, compacthreshold)
+    """ %(tab_ref, areathreshold, compacthreshold)
 
     # si la surface est inférieure à 30, que ça ne touche pas un boisement stricte ET que son id_comp <0.7 --> tâche verte
     query += """
     UPDATE %s as rgt SET fv = 'tache arbustive'
     FROM arbustif_bststr_uniq
     WHERE  public.ST_AREA(rgt.geom) <= %s AND rgt.id_comp  < %s AND public.ST_INTERSECTS(rgt.geom, arbustif_bststr_uniq.geom) is false;
-    """ %(tablename, areathreshold, compacthreshold)
+    """ %(tab_ref, areathreshold, compacthreshold)
 
     # si la surface est inférieure à 30 et que ça touche un boisement stricte --> ça appartient au boisement
     query += """
     UPDATE %s as rgt SET fv = 'boisement arbustif'
     FROM arbustif_bststr_uniq
     WHERE public.ST_AREA(rgt.geom)<= %s AND public.ST_INTERSECTS(rgt.geom, arbustif_bststr_uniq.geom);
-    """ %(tablename, areathreshold)
+    """ %(tab_ref, areathreshold)
 
     # si la surface est supérieure à 30
     # --> classification à partir d'indices de formes du reste des polygones appartennant aux regroupements
     query += """
     UPDATE %s as rgt SET fv='alignement arbustif'
     WHERE  rgt.id_conv >= %s AND rgt.id_elong  >= %s AND public.ST_AREA(rgt.geom) > %s;
-    """ %(tablename, convexthreshold, extensiontreshold, areathreshold)
+    """ %(tab_ref, convexthreshold, extensiontreshold, areathreshold)
 
     query += """
     UPDATE %s as rgt SET fv='boisement arbustif'
     WHERE rgt.id_conv >= %s AND rgt.id_elong < %s AND public.ST_AREA(rgt.geom) > %s;
-    """ %(tablename, convexthreshold, extensiontreshold, areathreshold)
+    """ %(tab_ref, convexthreshold, extensiontreshold, areathreshold)
 
     query += """
     UPDATE %s as rgt SET fv='alignement arbustif'
     WHERE rgt.id_conv < %s AND rgt.id_comp < %s AND public.ST_AREA(rgt.geom) > %s;
-    """ %(tablename, convexthreshold, compacthreshold_V2, areathreshold)
+    """ %(tab_ref, convexthreshold, compacthreshold_V2, areathreshold)
 
     query += """
     UPDATE %s as rgt SET fv='boisement arbustif'
     WHERE rgt.id_conv < %s AND rgt.id_comp >= %s AND public.ST_AREA(rgt.geom) > %s;
-    """ %(tablename, convexthreshold, compacthreshold_V2, areathreshold)
+    """ %(tab_ref, convexthreshold, compacthreshold_V2, areathreshold)
 
     # Exécution de la requête SQL
     if debug >= 1:
@@ -712,6 +742,9 @@ def lastShrubClassification(connexion, tablename, convexthreshold, extensiontres
 
     return
 
+###########################################################################################################################################
+# FONCTION createLayerShrub()                                                                                                          #
+###########################################################################################################################################
 def createLayerShrub(connexion, tab_firstclass, tab_woodstrict, tab_lastclass):
     """
     Rôle :
@@ -774,13 +807,13 @@ def createLayerShrub(connexion, tab_firstclass, tab_woodstrict, tab_lastclass):
 ########################################################################
 # FONCTION createCompactnessIndicator()                                #
 ########################################################################
-def createCompactnessIndicator(connexion, tablename, buffer_value):
+def createCompactnessIndicator(connexion, tab_ref, buffer_value):
     """
     Rôle : créé et calcul un indice de compacité sur une forme pouvant être dilatée ou erodée
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table dans laquelle on calcule l'indicateur de compacité
+        tab_ref : nom de la table dans laquelle on calcule l'indicateur de compacité
         buffer_value : valeur attribuée à la bufferisation
 
     Sortie :
@@ -792,7 +825,7 @@ def createCompactnessIndicator(connexion, tablename, buffer_value):
     ALTER TABLE %s ADD id_comp float;
 
     UPDATE %s AS t SET id_comp = (4*PI()*public.ST_AREA(public.ST_BUFFER(t.geom,%s)))/(public.ST_PERIMETER(public.ST_BUFFER(t.geom,%s))*public.ST_PERIMETER(public.ST_BUFFER(t.geom,%s))) WHERE t.fid = t.fid AND public.ST_PERIMETER(public.ST_BUFFER(t.geom,%s)) <> 0;
-    """ %(tablename, tablename, buffer_value, buffer_value, buffer_value, buffer_value)
+    """ %(tab_ref, tab_ref, buffer_value, buffer_value, buffer_value, buffer_value)
 
     #Exécution de la requête SQL
     if debug >= 1:
@@ -804,13 +837,13 @@ def createCompactnessIndicator(connexion, tablename, buffer_value):
 ########################################################################
 # FONCTION createConvexityIndicator()                                  #
 ########################################################################
-def createConvexityIndicator(connexion, tablename):
+def createConvexityIndicator(connexion, tab_ref):
     """
     Rôle : créé et calcul un indice de convexité sur une forme pouvant être dilatée ou erodée
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table dans laquelle on calcule l'indicateur de compacité
+        tab_ref : nom de la table dans laquelle on calcule l'indicateur de compacité
     """
 
     #Création et implémentation de l'indicateur de convexité (id_conv)
@@ -819,7 +852,7 @@ def createConvexityIndicator(connexion, tablename):
 
     UPDATE %s SET id_conv = (public.ST_AREA(geom)/public.ST_AREA(public.ST_ORIENTEDENVELOPE(geom)))
                         WHERE fid = fid AND public.ST_AREA(public.ST_ORIENTEDENVELOPE(geom)) <> 0;
-    """ %(tablename, tablename)
+    """ %(tab_ref, tab_ref)
 
     #Exécution de la requête SQL
     if debug >= 1:
@@ -832,41 +865,41 @@ def createConvexityIndicator(connexion, tablename):
 ########################################################################
 # FONCTION createExtensionIndicator()                                  #
 ########################################################################
-def createExtensionIndicator(connexion, tablename):
+def createExtensionIndicator(connexion, tab_ref):
     """
     Rôle : créé et calcul un indice d'élongation sur une forme pouvant être dilatée ou erodée
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tablename : nom de la table dans laquelle on calcule l'indicateur de compacité
+        tab_ref : nom de la table dans laquelle on calcule l'indicateur de compacité
     """
 
     # Calcul des valeurs de longueur et de largeur des rectangles orientés englobant minimaux des polygones
-    addColumn(connexion, tablename, 'x0', 'float')
-    addColumn(connexion, tablename, 'y0', 'float')
-    addColumn(connexion, tablename, 'x1', 'float')
-    addColumn(connexion, tablename, 'y1', 'float')
-    addColumn(connexion, tablename, 'x3', 'float')
-    addColumn(connexion, tablename, 'y3', 'float')
+    addColumn(connexion, tab_ref, 'x0', 'float')
+    addColumn(connexion, tab_ref, 'y0', 'float')
+    addColumn(connexion, tab_ref, 'x1', 'float')
+    addColumn(connexion, tab_ref, 'y1', 'float')
+    addColumn(connexion, tab_ref, 'x3', 'float')
+    addColumn(connexion, tab_ref, 'y3', 'float')
 
-    getCoordRectEnglValue(connexion, tablename, 'x0')
-    getCoordRectEnglValue(connexion, tablename, 'x1')
-    getCoordRectEnglValue(connexion, tablename, 'x3')
-    getCoordRectEnglValue(connexion, tablename, 'y0')
-    getCoordRectEnglValue(connexion, tablename, 'y1')
-    getCoordRectEnglValue(connexion, tablename, 'y3')
+    getCoordRectEnglValue(connexion, tab_ref, 'x0')
+    getCoordRectEnglValue(connexion, tab_ref, 'x1')
+    getCoordRectEnglValue(connexion, tab_ref, 'x3')
+    getCoordRectEnglValue(connexion, tab_ref, 'y0')
+    getCoordRectEnglValue(connexion, tab_ref, 'y1')
+    getCoordRectEnglValue(connexion, tab_ref, 'y3')
 
-    addColumn(connexion, tablename, 'largeur', 'float')
-    addColumn(connexion, tablename, 'longueur', 'float')
+    addColumn(connexion, tab_ref, 'largeur', 'float')
+    addColumn(connexion, tab_ref, 'longueur', 'float')
 
     # Calcul des attributs de largeur et longueur du rectangle englobant orienté
     query = """
     UPDATE %s SET largeur= LEAST(sqrt((x1-x0)^2+(y1-y0)^2), sqrt((x3-x0)^2+(y3-y0)^2)) WHERE fid = fid;
-    """ %(tablename)
+    """ %(tab_ref)
 
     query += """
     UPDATE %s SET longueur= GREATEST(sqrt((x1-x0)^2+(y1-y0)^2), sqrt((x3-x0)^2+(y3-y0)^2)) WHERE fid = fid;
-    """ %(tablename)
+    """ %(tab_ref)
 
     # Exécution de la requête SQL
     if debug >= 1:
@@ -874,12 +907,12 @@ def createExtensionIndicator(connexion, tablename):
     executeQuery(connexion, query)
 
     # Création et implémentation de l'indicateur de convexité (id_conv)
-    addColumn(connexion, tablename, 'id_elong', 'float')
+    addColumn(connexion, tab_ref, 'id_elong', 'float')
 
     query = """
     UPDATE %s AS t SET id_elong = (t.longueur/t.largeur)
                         WHERE t.fid = t.fid AND t.largeur <> 0;
-    """ %(tablename)
+    """ %(tab_ref)
 
     # Exécution de la requête SQL
     if debug >= 1:
@@ -887,14 +920,14 @@ def createExtensionIndicator(connexion, tablename):
     executeQuery(connexion, query)
 
     # Suppression des attributs qui ne sont plus utiles
-    dropColumn(connexion, tablename, 'x0')
-    dropColumn(connexion, tablename, 'x1')
-    dropColumn(connexion, tablename, 'x3')
-    dropColumn(connexion, tablename, 'y0')
-    dropColumn(connexion, tablename, 'y1')
-    dropColumn(connexion, tablename, 'y3')
-    dropColumn(connexion, tablename, 'largeur')
-    dropColumn(connexion, tablename, 'longueur')
+    dropColumn(connexion, tab_ref, 'x0')
+    dropColumn(connexion, tab_ref, 'x1')
+    dropColumn(connexion, tab_ref, 'x3')
+    dropColumn(connexion, tab_ref, 'y0')
+    dropColumn(connexion, tab_ref, 'y1')
+    dropColumn(connexion, tab_ref, 'y3')
+    dropColumn(connexion, tab_ref, 'largeur')
+    dropColumn(connexion, tab_ref, 'longueur')
 
     return
 
