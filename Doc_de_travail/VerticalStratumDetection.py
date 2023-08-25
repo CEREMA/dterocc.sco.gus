@@ -89,18 +89,20 @@ def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize
 ###########################################################################################################################################
 # FONCTION classificationVerticalStratum()                                                                                                #
 ###########################################################################################################################################
-def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = False, overwrite = True):
+def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_results_as_layer = False, save_intermediate_result = False, overwrite = True):
     """
     Rôle : classe les segments en trois strates : arborée, arbustive et herbacée
 
     Paramètres :
         connexion : correspond à la variable de connexion à la base de données
         connexion_dic : dictionnaire des paramètres de connexion selon le modèle : {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : 'postgres', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
+        output_layer : couche vectorielle de sortie composée de la strate arborée classée en strate verticale 
         sgts_input : fichier vecteur de segmentation
         raster_dic : dictionnaire associant le type de donnée récupéré avec le fichier raster contenant les informations, par exemple : {"mnh" : filename}
         tab_ref : nom de la table principale. Par défaut : 'segments_vegetation'
         dic_seuil : dictionnaire des seuils de hauteur, de texture, de surface. Le format {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20} 
         format_type : format de la donnée vecteur en entrée, par défaut : GPKG
+        save_result_as_layer : sauvegarde ou non du résultat final en une couche vectorielle, par défaut False
         save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaire. Par défaut : False
         overwrite : paramètre de ré-écriture des fichiers. Par défaut False
 
@@ -287,6 +289,12 @@ def classificationVerticalStratum(connexion, connexion_dic, sgts_input, raster_d
         dropTable(connexion, tab_arbu_de_rgpt)
         dropTable(connexion, tab_arbu_uniq)
     
+    #############################################################
+    ## Sauvegarde des résultats en tant que couche vectorielle ##  
+    #############################################################
+    if save_results_as_layer :
+       exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_ref, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
+
     closeConnection(connexion)
 
     return
