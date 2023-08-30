@@ -249,51 +249,51 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
       # - les segments "isolés" (ne touchant pas d'autres segments arbustifs)
       # - les segments  de "regroupement" (en contact avec d'autres segments arbustifs)
 
-    #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
-    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
+#     #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
+#     tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
 
 
-    ###
-    #1# Première phase de reclassification
-    ###   
+#     ###
+#     #1# Première phase de reclassification
+#     ###   
 
-    #1.0# Reclassification des arbustes isolés selon leur hauteur
-    tab_sgt_arbu_uniq_treat2 = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil) 
-    #il nous reste les segments arbustifs isolés qui n'ont pas pu être retraités par la hauteur 
+#     #1.0# Reclassification des arbustes isolés selon leur hauteur
+#     tab_sgt_arbu_uniq_treat2 = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil) 
+#     #il nous reste les segments arbustifs isolés qui n'ont pas pu être retraités par la hauteur 
 
-    #1.1# Reclassification des segments arbustes "regroupés"
+#     #1.1# Reclassification des segments arbustes "regroupés"
 
-    reclassGroupSegments(connexion, tab_ref, tab_rgpt_arbu, dic_seuil)
-    #il nous reste les segments arbustifs de rgpts qui n'ont pas été reclassés par leur configuration
+#     reclassGroupSegments(connexion, tab_ref, tab_rgpt_arbu, dic_seuil)
+#     #il nous reste les segments arbustifs de rgpts qui n'ont pas été reclassés par leur configuration
 
-    dropTable(connexion, tab_rgpt_arbu)
-    dropTable(connexion, tab_arbu_de_rgpt)
-    dropTable(connexion, tab_arbu_uniq)
+#     dropTable(connexion, tab_rgpt_arbu)
+#     dropTable(connexion, tab_arbu_de_rgpt)
+#     dropTable(connexion, tab_arbu_uniq)
 
-    # SUPPRIMER LES TABLES DE REGROUPEMENTS FAITES AVANT ET TOUT REFONDRE
+#     # SUPPRIMER LES TABLES DE REGROUPEMENTS FAITES AVANT ET TOUT REFONDRE
 
-   tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
+#    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
     
-    ###
-    #2# Deuxième phase de reclassification
-    ### 
+#     ###
+#     #2# Deuxième phase de reclassification
+#     ### 
 
-    #2.0# Reclassification des arbustes "isolés" selon un rapport de surface 
-    reclassIsolatedSgtsByAreaRatio(connexion,  tab_ref, tab_arbu_uniq, dic_seuil)
+#     #2.0# Reclassification des arbustes "isolés" selon un rapport de surface 
+#     reclassIsolatedSgtsByAreaRatio(connexion,  tab_ref, tab_arbu_uniq, dic_seuil)
     
-    # #2.1# Reclassification des arbustes "regroupés" entourés uniquement d'arboré selon un rapport de surface 
-    reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil)
+#     # #2.1# Reclassification des arbustes "regroupés" entourés uniquement d'arboré selon un rapport de surface 
+#     reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil)
 
-    if not save_intermediate_result : 
-        dropTable(connexion, tab_rgpt_arbu)
-        dropTable(connexion, tab_arbu_de_rgpt)
-        dropTable(connexion, tab_arbu_uniq)
+#     if not save_intermediate_result : 
+#         dropTable(connexion, tab_rgpt_arbu)
+#         dropTable(connexion, tab_arbu_de_rgpt)
+#         dropTable(connexion, tab_arbu_uniq)
     
-    #############################################################
-    ## Sauvegarde des résultats en tant que couche vectorielle ##  
-    #############################################################
-    if save_results_as_layer :
-       exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_ref, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
+#     #############################################################
+#     ## Sauvegarde des résultats en tant que couche vectorielle ##  
+#     #############################################################
+#     if save_results_as_layer :
+#        exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_ref, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
 
     closeConnection(connexion)
 
@@ -909,7 +909,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
 
      
     ###
-    #2# Reclassification des arbustes isolés touchant de l arbore uniquement
+    #2# Reclassification des arbustes de regroupement touchant de l arbore uniquement
     ###
     
     #Creation de la table rgpt_arbu_surf_stats contenant pour chaque regroupement arbustif son identifiant, sa surface et la surface totale des segments arborés le touchant
