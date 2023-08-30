@@ -98,12 +98,12 @@ def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, ep
 
     # Préparation du MNS
     print(cyan + "MnhCreation : Début du preprocessing du MNS" + endC)
-    mnsPrepare(file_mns, mns_file_tmp, epsg)
+    mnsPrepare(file_mns, mns_file_tmp, epsg, save_intermediate_results = save_intermediate_results)
     print(cyan + "MnhCreation : Fin du preprocessing du MNS" + endC)
 
     # Préparation du MNT
     print(cyan + "MnhCreation : Début du preprocessing du MNT" + endC)
-    mntPrepare(file_mnt, mnt_file_tmp, epsg, mns_file_tmp)
+    mntPrepare(file_mnt, mnt_file_tmp, epsg, mns_file_tmp, save_intermediate_results = save_intermediate_results)
     print(cyan + "MnhCreation : Fin du preprocessing du MNS" + endC)
 
     # Calcul du MNH
