@@ -373,8 +373,6 @@ def classifySupervised(image_input_list, sample_points_values_input, classificat
     if not save_results_intermediate:
         if model_output == "" and model_input == "" and os.path.isfile(model_file_output) :
             removeFile(model_file_output)
-        removeVectorFile(sample_points_resample_polygons_output)
-
         if nb_input_images > 1 :
             removeFile(list_file_tmp)
             for classification_file_output_tmp in classification_file_output_list :
