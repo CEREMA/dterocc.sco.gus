@@ -56,7 +56,6 @@ def filterImageMajority(image_input, filtered_image_output, umc_pixels, ram_otb=
     #    image_input : nom image à filtrer
     #    filtered_image_output : nom image filtrée de sortie
     #    umc_pixels : taille de l'umc en pixel cas traitement gdal_sieve
-    #    path_time_log : le fichier de log de sortie
     #    ram_otb : memoire RAM disponible pour les applications OTB
     #    save_results_intermediate : fichiers de sorties intermediaires non nettoyées, par defaut = False
     #    overwrite : supprime ou non les fichiers existants ayant le meme nom, par defaut a True
@@ -124,7 +123,7 @@ def filterImageMajority(image_input, filtered_image_output, umc_pixels, ram_otb=
 
     # Mise à jour du Log
     ending_event = "filterImageMajority() : Filter image ending : "
-    timeLine(path_time_log,ending_event)
+    
 
     return
 
