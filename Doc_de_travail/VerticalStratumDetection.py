@@ -5,7 +5,6 @@ from Lib_file import cleanTempData, deleteDir, removeFile
 from CrossingVectorRaster import *
 from rasterstats import *
 from Lib_postgis import *
-from DetectVegetationFormStratum import *
 
 ###########################################################################################################################################
 # FONCTION vegetationMask()                                                                                                               #
@@ -69,14 +68,17 @@ def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize
     file_out_suffix_mask_veg= "_mask_veg"
     mask_veg = repertory_output + os.sep + file_name + file_out_suffix_mask_veg + extension
 
-    if os.path.exists(mask_veg):
-        os.remove(mask_veg)
+    if overwrite: 
+        if os.path.exists(mask_veg):
+            os.remove(mask_veg)
+        if os.path.exists(file_output):
+            os.remove(file_output)
 
     #Création du masque de végétation
     vegetationMask(img_input, mask_veg, num_class)
 
     #Calcul de la segmentation Meanshift
-    sgt_cmd = "otbcli_Segmentation -in %s -mode vector -mode.vector.out %s -mode.vector.inmask %s -filter meanshift  -filter.meanshift.minsize %s" %(img_original, file_output, mask_veg, param_minsize)
+    sgt_cmd = "otbcli_Segmentation -in %s -mode vector -mode.vector.out %s -mode.vector.inmask %s -filter meanshift  -filter.meanshift.minsize %s" %(img_ref, file_output, mask_veg, param_minsize)
 
     exitCode = os.system(sgt_cmd)
 
@@ -115,129 +117,129 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     #####################################################################   
 
     # Fichiers intermédiaires
-    repertory_output = os.path.dirname(sgts_input)
-    file_name = os.path.splitext(os.path.basename(sgts_input))[0]
-    extension_vecteur = os.path.splitext(sgts_input)[1]
+#     repertory_output = os.path.dirname(sgts_input)
+#     file_name = os.path.splitext(os.path.basename(sgts_input))[0]
+#     extension_vecteur = os.path.splitext(sgts_input)[1]
 
-    ## Collecte données de hauteur pour chaque segment  
-    file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
+#     ## Collecte données de hauteur pour chaque segment  
+#     file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
 
-    if os.path.exists(file_mnh_out):
-        os.remove(file_mnh_out)
+#     if os.path.exists(file_mnh_out):
+#         os.remove(file_mnh_out)
 
-    #Calcul de la valeur médiane de hauteur pour chaque segment de végétation 
-    calc_statMedian(sgts_input, raster_dic["MNH"], file_mnh_out)
+#    # Calcul de la valeur médiane de hauteur pour chaque segment de végétation 
+#     calc_statMedian(sgts_input, raster_dic["MNH"], file_mnh_out)
 
-    #Export du fichier vecteur des segments végétation avec une valeur médiane de hauteur dans la BD
-    tablename_mnh = "table_sgts_mnh"
-    importVectorByOgr2ogr(connexion_dic["dbname"], file_mnh_out, tablename_mnh, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
+#     #Export du fichier vecteur des segments végétation avec une valeur médiane de hauteur dans la BD
+#     tablename_mnh = "table_sgts_mnh"
+#     importVectorByOgr2ogr(connexion_dic["dbname"], file_mnh_out, tablename_mnh, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
-    ## Collecte données de texture pour chaque segment
-    file_txt_out = repertory_output + os.sep + file_name + "TXT" + extension_vecteur
+#     # ## Collecte données de texture pour chaque segment
+#     # file_txt_out = repertory_output + os.sep + file_name + "TXT" + extension_vecteur
 
-    if os.path.exists(file_txt_out):
-        os.remove(file_txt_out)
+#     # if os.path.exists(file_txt_out):
+#     #     os.remove(file_txt_out)
     
-    #Calcul de la valeur médiane de texture pour chaque segment de végétation 
-    calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
+#     # #Calcul de la valeur médiane de texture pour chaque segment de végétation 
+#     # calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
 
-    #Export du fichier vecteur des segments végétation avec une valeur médiane de texture dans la BD
-    tablename_txt = "table_sgts_txt"
-    importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
-
-
-    #Supprimer le fichier si on ne veut pas les sauvegarder
-    if not save_intermediate_result :
-        os.remove(file_mnh_out)
-        os.remove(file_txt_out)
+#     #Export du fichier vecteur des segments végétation avec une valeur médiane de texture dans la BD
+#     tablename_txt = "table_sgts_txt"
+#    # importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
 
 
-    #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
-    query = """
-    CREATE TABLE segments_vegetation_ini AS
-        SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
-        FROM %s AS t1, %s AS t2
-        WHERE t1.dn = t2.dn;
-    """ %(tablename_txt, tablename_mnh)
-
-    #Exécution de la requête SQL
-    if debug >= 1:
-        print(query)
-    executeQuery(connexion, query)
-
-    #Suppression des deux tables txt et mnh
-    if tablename_txt != '' :
-        dropTable(connexion, tablename_txt) 
-    if tablename_mnh != '':
-        dropTable(connexion, tablename_mnh) 
-
-    ##################################################################### 
-    ## Prétraitements : transformation de l'ensemble des multipolygones##
-    ##                  en simples polygones ET suppression des        ## 
-    ##                  artefacts au reflet blanc                      ##  
-    #####################################################################
-
-    #Conversion en simples polygones 
-    query = """
-    CREATE TABLE %s AS
-        SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
-        FROM segments_vegetation_ini as t
-    """ %(tab_ref)
-
-    #Exécution de la requête SQL
-    if debug >= 1:
-        print(query)
-    executeQuery(connexion, query)
-
-    #Traitement des artefacts au reflet blanc
-    query = """
-    CREATE TABLE segments_txt_val0 AS
-        SELECT * 
-        FROM %s
-        WHERE txt = 0;
-
-    DELETE FROM %s WHERE txt = 0;
-    """ %(tab_ref, tab_ref)
-
-    #Exécution de la requête SQL
-    if debug >= 1:
-        print(query)
-    executeQuery(connexion, query)
-
-    #Ajout d'un identifiant unique
-    addUniqId(connexion, tab_ref)
-
-    #Ajout d'un index spatial 
-    addSpatialIndex(connexion, tab_ref)
-
-    #Ajout de l'attribut "strate"
-    addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
+#     #Supprimer le fichier si on ne veut pas les sauvegarder
+#     # if not save_intermediate_result :
+#     #     os.remove(file_mnh_out)
+#     #     os.remove(file_txt_out)
 
 
-    if not save_intermediate_result:
-        dropTable(connexion, 'segments_txt_val0')
+#     #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
+#     query = """
+#     CREATE TABLE segments_vegetation_ini AS
+#         SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
+#         FROM %s AS t1, %s AS t2
+#         WHERE t1.dn = t2.dn;
+#     """ %(tablename_txt, tablename_mnh)
 
-    ##################################################################### 
-    ## Première étape : classification générale, à partir de règles de ##
-    ##                  hauteur et de texture                          ##  
-    #####################################################################
+#     #Exécution de la requête SQL
+#     if debug >= 1:
+#         print(query)
+#     executeQuery(connexion, query)
 
-    query = """
-    UPDATE %s as t SET strate = 'arbore' WHERE t.txt < %s AND t.mnh  > %s;
-    """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
+#     #Suppression des deux tables txt et mnh
+#     if tablename_txt != '' :
+#         dropTable(connexion, tablename_txt) 
+#     if tablename_mnh != '':
+#         dropTable(connexion, tablename_mnh) 
 
-    query += """
-    UPDATE %s as t SET strate = 'arbustif' WHERE t.txt < %s AND  t.mnh  <= %s;
-    """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
+#     ##################################################################### 
+#     ## Prétraitements : transformation de l'ensemble des multipolygones##
+#     ##                  en simples polygones ET suppression des        ## 
+#     ##                  artefacts au reflet blanc                      ##  
+#     #####################################################################
 
-    query += """
-    UPDATE %s as t SET strate = 'herbace' WHERE t.txt  >= %s;
-    """ %(tab_ref, dic_seuil["seuil_txt"])
+#     #Conversion en simples polygones 
+#     query = """
+#     CREATE TABLE %s AS
+#         SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
+#         FROM segments_vegetation_ini as t
+#     """ %(tab_ref)
 
-    #Exécution de la requête SQL
-    if debug >= 1:
-        print(query)
-    executeQuery(connexion, query)
+#     #Exécution de la requête SQL
+#     if debug >= 1:
+#         print(query)
+#     executeQuery(connexion, query)
+
+#     #Traitement des artefacts au reflet blanc
+#     query = """
+#     CREATE TABLE segments_txt_val0 AS
+#         SELECT * 
+#         FROM %s
+#         WHERE txt = 0;
+
+#     DELETE FROM %s WHERE txt = 0;
+#     """ %(tab_ref, tab_ref)
+
+#     #Exécution de la requête SQL
+#     if debug >= 1:
+#         print(query)
+#     executeQuery(connexion, query)
+
+#     #Ajout d'un identifiant unique
+#     addUniqId(connexion, tab_ref)
+
+#     #Ajout d'un index spatial 
+#     addSpatialIndex(connexion, tab_ref)
+
+#     #Ajout de l'attribut "strate"
+#     addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
+
+
+#     if not save_intermediate_result:
+#         dropTable(connexion, 'segments_txt_val0')
+
+#     ##################################################################### 
+#     ## Première étape : classification générale, à partir de règles de ##
+#     ##                  hauteur et de texture                          ##  
+#     #####################################################################
+
+#     query = """
+#     UPDATE %s as t SET strate = 'arbore' WHERE t.txt < %s AND t.mnh  > %s;
+#     """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
+
+#     query += """
+#     UPDATE %s as t SET strate = 'arbustif' WHERE t.txt < %s AND  t.mnh  <= %s;
+#     """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
+
+#     query += """
+#     UPDATE %s as t SET strate = 'herbace' WHERE t.txt  >= %s;
+#     """ %(tab_ref, dic_seuil["seuil_txt"])
+
+#     #Exécution de la requête SQL
+#     if debug >= 1:
+#         print(query)
+#     executeQuery(connexion, query)
 
     ##################################################################### 
     ## Deuxième étape : reclassification des segments arbustifs        ##
@@ -249,54 +251,51 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
       # - les segments "isolés" (ne touchant pas d'autres segments arbustifs)
       # - les segments  de "regroupement" (en contact avec d'autres segments arbustifs)
 
-#     #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
-#     tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
+    #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
+    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
 
 
-#     ###
-#     #1# Première phase de reclassification
-#     ###   
+    ###
+    #1# Première phase de reclassification
+    ###   
 
-#     #1.0# Reclassification des arbustes isolés selon leur hauteur
-#     tab_sgt_arbu_uniq_treat2 = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil) 
-#     #il nous reste les segments arbustifs isolés qui n'ont pas pu être retraités par la hauteur 
+    #1.0# Reclassification des arbustes isolés selon leur hauteur
+    tab_sgt_arbu_uniq_treat2 = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil) 
+    #il nous reste les segments arbustifs isolés qui n'ont pas pu être retraités par la hauteur 
 
-#     #1.1# Reclassification des segments arbustes "regroupés"
+    #1.1# Reclassification des segments arbustes "regroupés"
 
-#     reclassGroupSegments(connexion, tab_ref, tab_rgpt_arbu, dic_seuil)
-#     #il nous reste les segments arbustifs de rgpts qui n'ont pas été reclassés par leur configuration
+    reclassGroupSegments(connexion, tab_ref, tab_rgpt_arbu, dic_seuil)
+    #il nous reste les segments arbustifs de rgpts qui n'ont pas été reclassés par leur configuration
 
-#     dropTable(connexion, tab_rgpt_arbu)
-#     dropTable(connexion, tab_arbu_de_rgpt)
-#     dropTable(connexion, tab_arbu_uniq)
+    dropTable(connexion, tab_rgpt_arbu)
+    dropTable(connexion, tab_arbu_de_rgpt)
+    dropTable(connexion, tab_arbu_uniq)
 
-#     # SUPPRIMER LES TABLES DE REGROUPEMENTS FAITES AVANT ET TOUT REFONDRE
+    # SUPPRIMER LES TABLES DE REGROUPEMENTS FAITES AVANT ET TOUT REFONDRE
 
-#    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
+    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
     
-#     ###
-#     #2# Deuxième phase de reclassification
-#     ### 
+    ###
+    #2# Deuxième phase de reclassification
+    ### 
 
-#     #2.0# Reclassification des arbustes "isolés" selon un rapport de surface 
-#     reclassIsolatedSgtsByAreaRatio(connexion,  tab_ref, tab_arbu_uniq, dic_seuil)
+    #2.0# Reclassification des arbustes "isolés" selon un rapport de surface 
+    reclassIsolatedSgtsByAreaRatio(connexion,  tab_ref, tab_arbu_uniq, dic_seuil)
     
-#     # #2.1# Reclassification des arbustes "regroupés" entourés uniquement d'arboré selon un rapport de surface 
-#     reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil)
+    # #2.1# Reclassification des arbustes "regroupés" entourés uniquement d'arboré selon un rapport de surface 
+    reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil)
 
-#     if not save_intermediate_result : 
-#         dropTable(connexion, tab_rgpt_arbu)
-#         dropTable(connexion, tab_arbu_de_rgpt)
-#         dropTable(connexion, tab_arbu_uniq)
+    if not save_intermediate_result : 
+        dropTable(connexion, tab_rgpt_arbu)
+        dropTable(connexion, tab_arbu_de_rgpt)
+        dropTable(connexion, tab_arbu_uniq)
     
-#     #############################################################
-#     ## Sauvegarde des résultats en tant que couche vectorielle ##  
-#     #############################################################
-#     if save_results_as_layer :
-#        exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_ref, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
-
-    closeConnection(connexion)
-
+    #############################################################
+    ## Sauvegarde des résultats en tant que couche vectorielle ##  
+    #############################################################
+    if save_results_as_layer :
+       exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
     return
 
 ###########################################################################################################################################
@@ -448,8 +447,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
     #Création d'un index sur une colonne 
     addIndex(connexion, 'arbu_uniq', 'fid', 'idx_arbu_uniq')
 
-    if not save_intermediate_result:
-        dropTable(connexion, 'tab_interm_arbuste')
+    dropTable(connexion, 'tab_interm_arbuste')
 
     return 'rgpt_arbu', 'arbu_de_rgpt', 'arbu_uniq'
     
