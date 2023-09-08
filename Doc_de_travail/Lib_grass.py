@@ -559,3 +559,79 @@ def convertRGBtoHIS(image_input, image_output, raster_red_input, raster_green_in
 
     return raster_hue_output, raster_intensity_output, raster_saturation_output
 
+#########################################################################
+# FONCTION rasterStatsV()                                            #
+#########################################################################
+def rasterStatsV(image_input, vector_input, stats_list, repository):
+    """
+    #   Rôle : calcul les statistiques d'une couche raster sur une emprise vectorielle
+    #   Paramètres :
+    #       image_input : fichier raster de calcul des statistiques
+    #       vector_input : fichier vecteur sur lequel on calcul les statistiques de l'image_input
+    #       vector_output : fichier vecteur contenant les polygones avec les statistiques calculées en attributs
+    #       stats_list : liste des statistiques à calcule. Par défaut : 
+    #       repository : répertoire de stockage des données intermédiaires. Par défaut : '' 
+    #
+    #   Sortie :
+    #       vector_output : chemin du fichier vecteur contenant les polygones avec les statistiques calculées en attributs
+    #
+    """
+
+    timeinit = time.time()
+
+    # RECUPERATIONS DE DONNEES UTILES
+    if repository == '':
+        repository = os.path.dirname(vector_input)
+    area_pixel =  getPixelSizeImage(image_input)                   # Superficie, en m d'un pixel de l'image. Exemple pour une image à 5m : area_pixel = 25
+    pixel_size_x, pixel_size_y = getPixelWidthXYImage(image_input) # taille d'un pixel
+    epsg, _ = getProjectionImage(image_input)                      # Recuperation de la valeur de la projection du rasteur d'entrée
+    xmin, xmax, ymin, ymax = getEmpriseImage(image_input)          # Recuperation de l'emprise du rasteur d'entrée
+
+    # PARAMETRAGE DES IMAGES TEINTE, SATURATION, INTENSITE
+    file_r, file_extension_r = os.path.splitext(image_input)
+    file_v, file_extension_v = os.path.splitext(vector_input)
+    filename_r =  os.path.splitext(os.path.basename(image_input))[0]
+    filename_v =  os.path.splitext(os.path.basename(vector_input))[0]
+    vector_output = repository + os.sep + "_STATS" + file_extension_v
+
+
+    # INITIALISATION DE LA CONNEXION A L'ENVIRONNEMENT GRASS
+    initializeGrass(repository, xmin, xmax, ymin, ymax, pixel_size_x, pixel_size_y, projection=epsg)
+
+    # PARAMETRAGE
+    name_raster = filename_r 
+    name_vector = filename_v
+
+    # Import des raster
+    # Import de l'image raster
+    importRasterGdal2Grass(image_input, name_raster)
+    timeexp = time.time()
+    if debug >= 20:
+        print(cyan + "rasterStatsV() : " + bold + green + "Import raster dans Grass : " + str(timeexp - timevect) + "seconds" + endC)
+
+    # Import de la couche vecteur
+    importVectorOgr2Grass(vector_input, name_vector)
+    timeexp = time.time()
+    if debug >= 20:
+        print(cyan + "rasterStatsV() : " + bold + green + "Import vecteur dans Grass : " + str(timeexp - timevect) + "seconds" + endC)
+
+    # CREATION DE LA VARIABLE METHOD
+    stats = stats_list[0]
+    for i in range(1,len(stats_list)):
+        stats += "," + stats_list[i]
+
+    # LANCEMENT DE LA CONVERSION
+    grass.run_command('r.rast.stats', map = name_vector, raster = name_raster, method = stats )
+
+
+    # EXPORT DE LA DONNEE VECTEUR
+    exportVectorOgr2Grass(name_vector, vector_output, format_vector="GPKG", overwrite=True)
+
+    timeexp = time.time()
+    if debug >= 202:
+        print(cyan + "rasterStatsV() : " + bold + green + "Export donnée vecteur de statistiques" + str(timeexp - timevect) + "seconds" + endC)
+
+    # SUPPRESSION DES FICHIERS NON UTILES
+    cleanGrass(repository)
+
+    return vector_output
