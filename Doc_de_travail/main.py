@@ -3,7 +3,7 @@ from NeochannelComputation_gus import neochannelComputation
 from DataConcatenation import concatenateData
 #from ImagesAssemblyGUS_ok import cutImageByVector
 from Lib_postgis import *
-from DetectVegetationFormStratumV1 import *
+#from DetectVegetationFormStratumV1 import *
 from Lib_vector import *
 import sys,os,glob
 from osgeo import ogr ,osr
@@ -12,7 +12,7 @@ from CleanCoverClasses import *
 from SampleSelectionRaster import *
 from SupervisedClassification import *
 from MajorityFilter import *
-# from VerticalStratumDetection import *
+from VerticalStratumDetection import *
 
 if __name__ == "__main__":
 
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     #Structurer un dossier qui stockera toutes les données
     
     #Création du repertoire du projet 
-    repertory_prj = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023'
+    repertory_prj = r'/mnt/RAM_disk'
     path_prj = repertory_prj + os.sep + 'ProjetGUS'
     # if  not os.path.exists(path_prj):
     #   os.makedirs(path_prj)
@@ -195,123 +195,126 @@ if __name__ == "__main__":
     rf_parametres_struct.nbtrees_max =  num_tree
     rf_parametres_struct.acc_obb_erreur = obb_erreur
 
-    classifySupervised([img_stack], samplevector, img_classif, img_classif_confid, model_output = '', model_input = '', field_class = 'ROI', classifier_mode = "rf", rf_parametres_struct = rf_parametres_struct,no_data_value = 0, ram_otb=0,  format_raster='GTiff', extension_vector=".shp")
+   # classifySupervised([img_stack], samplevector, img_classif, '', model_output = '', model_input = '', field_class = 'ROI', classifier_mode = "rf", rf_parametres_struct = rf_parametres_struct,no_data_value = 0, ram_otb=0,  format_raster='GTiff', extension_vector=".shp")
     
     #7# Application du filtre majoritaire   
-    filterImageMajority(img_classif, img_classif_filtered, umc_pixels = 8) 
+  #  filterImageMajority(img_classif, img_classif_filtered, umc_pixels = 8) 
     
-  #   ## DISTINCTION DES STRATES VERTICALES DE VÉGÉTATION ## 
-  #    #Dossier de stockage des datas
-  #   path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'  
 
-  #   if not os.path.exists(path_stratesveg):
-  #     os.makedirs(path_stratesveg)
+    ## CREATION ET PREPARATION DE LA BASE DE DONNEES ##  
 
-  #   img_segt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
+    #Paramètres de connexion 
+    dbname = 'projetgus'
+    user_db = 'postgres'
+    password_db = ''
+    server_db = 'localhost'
+    port_number = '5432'
+    schema = ''
 
-  #   img_stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg' 
+    #Dictionnaire des paramètres BD de base
+    connexion_ini_dic = {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : 'postgres', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
 
+    #Dictionnaire des paramètres BD de classification en strates verticales 
+    connexion_stratev_dic = connexion_ini_dic
+    connexion_stratev_dic["schema"] = 'classification_stratev'
+
+    #Dictionnaire des paramètres BD de classsification des formes végétales horizontales
+    connexion_fv_dic = connexion_ini_dic
+    connexion_fv_dic["schema"] = 'classification_fv'
+
+    #Dictionnaire des paramètres BD des données finales (cartographie)
+    connexion_datafinal_dic = connexion_ini_dic
+    connexion_datafinal_dic["schema"] = 'data_final'
+
+    #Création de la base de données 
+    createDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
+
+    #Connexion à la base de données
+    connexion = openConnection(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
+
+    #Création des extensions : postgis et sfc
+    createExtensionPostgis(connexion, ) 
+    createExtensionPostgisSfcgal(connexion, )
+
+    #Création des schémas
+    createSchema(connexion, connexion_stratev_dic["schema"]) 
+    createSchema(connexion, connexion_fv_dic["schema"])
+    createSchema(connexion, connexion_datafinal_dic["schema"])
+
+    #Fermeture de la connexion de base
+    closeConnection(connexion) 
+
+    #1# Distinction des strates verticales de végétation
+
+    #Dossier de stockage des datas
+    path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'  
+
+    if not os.path.exists(path_stratesveg):
+      os.makedirs(path_stratesveg)
+
+    img_sgt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
+
+    img_stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg' 
+
+    #1.1# Segmentation de l'image
+    #Paramètres de segmentation
+    num_class = {"bati" : 1, "route" : 2, "sol nu" : 3, "eau" : 4, "vegetation" : 5}  
+    minsize = 10
+    segmentationImageVegetetation(img_ref, img_classif_filtered, img_sgt_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = True, overwrite = False)
+
+    #1.2# Classification en strates verticales
+
+    #Ouverture connexion 
+    connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
+ 
+    img_txt_SFS = '/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
+    raster_dic = {"MNH" : img_MNH, "TXT" : img_txt_SFS}
+    tab_ref = 'segments_vegetation'
+    dic_seuils_stratesV = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}
+
+    classificationVerticalStratum(connexion, connexion_stratev_dic, img_stratesV, img_sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_results_as_layer = True, save_intermediate_result = True, overwrite = True)
     
-  #   #1# Segmentation de l'image
-  #   #Paramétrage
-  #   num_class = {"bati" : 1, "route" : 2, "sol nu" : 3, "eau" : 4, "vegetation" : 5}  
-  #   minsize = 10
-  #   segmentationImageVegetetation(img_ref, img_classif_filtered, img_segt_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = True, overwrite = False)
+    closeConnection(connexion)
 
-  #   #2# Classification en strates verticales
-  #   ## INITIALISATION POUR CONNEXION AU SERVEUR
+    #2# Détection des formes végétales horizontales
 
-  #   #Paramètres de connexion de base  
-  #   dbname = 'projetgus'
-  #   user_db = 'postgres'
-  #   password_db = ''
-  #   server_db = 'localhost'
-  #   port_number = '5432'
-  #   schema = ''
+    #Dossier de stockage des datas
+    path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'  
 
-  #   connexion_ini_dic = {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : 'postgres', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
+    if not os.path.exists(path_stratesveg):
+      os.makedirs(path_stratesveg)
 
-  #   #Paramètres de connexion au schema de distinction des strates verticales de végétation 
-  #   connexion_stratev_dic = connexion_ini_dic
-  #   connexion_stratev_dic["schema"] = 'classification_stratev'
+    img_sgt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
 
-  #   #connexion_fv_dic = connexion_ini_dic
-  #   #connexion_fv_dic["schema"] = 'classification_fv'
-
-  #   #Création d'une base de donnée
-  #   #createDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
-
-  #   #Connexion à la base de donnée
-  #   #connexion = openConnection(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
-  #   #closeConnection(connexion)
-  #   #Création d'un schema pour la partie classification en strates verticales
-  #   #createSchema(connexion, 'classification_stratev')
-
-  #   #Connexion au schema de classification en strates verticales
-  #   connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
-
-  #   img_txt_SFS = '/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
-  #   raster_dic = {"MNH" : img_MNH, "TXT" : img_txt_SFS}
-  #   classificationVerticalStratum(connexion, connexion_stratev_dic, img_stratesV, img_segt_veg, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_results_as_layer = True, save_intermediate_result = True, overwrite = True)
+    img_stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg'
+  
+    #Ouverture connexion 
+    connexion = openConnection(connexion_fv_dic["dbname"], user_name = connexion_fv_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name = connexion_fv_dic["schema"])
+ 
+    #2.1#Elements arborés
+    treethresholds = {"seuil_surface" : 5, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.5, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 5, "val_buffer" : 1}
+    schrubthresholds ={}
+    dic_thresholds = {"tree" : treethresholds, "shrub" : shrubthresholds} 
     
-  #   # #Test la version de postgres
-  #   # postgresversion = versionPostgreSQL(database_name='postgres', user_name='postgres', password='postgres', ip_host='localhost', num_port='5432', schema_name='')
+    output_layers ={"tree" : , "shrub" : ,"herbaceous" :}# dictionnaire des couches de sauvegarde  
+    #2.2#Elements arbustifs 
 
-  #   # #Test la version de postgis
-  #   # postgisversion = versionPostGIS(database_name='template_postgis', user_name='postgres', password='postgres', ip_host='localhost', num_port='5432', schema_name='')
+    cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False,  save_final_result = False)
 
+    closeConnection(connexion)
 
-  #   # # # Classification en formes végétales horizontales
+    #4# Calcul des indicateurs de végétation
 
-  #   #Création d'un schema pour la partie classification en formes végétales horizontales
-  #   #createSchema(connexion, 'classification_fv')
+    #Dossier de stockage des datas
+    path_datafinal = path_prj + os.sep + '5-'  
 
-  #   #Connexion au schema de classification en strates verticales
+    if not os.path.exists(path_datafinal):
+      os.makedirs(path_datafinal)
 
-  #   #Strate arborée
-  #   #connexion = openConnection('etape2', user_name='postgres', password="", ip_host='localhost', num_port='5432', schema_name='donneelidar')
+    img_sgt_veg = path_datafinal + os.sep + 'img_sgt_vegetation.gpkg' 
 
-  #   # #Initialisation du dictionnaire contenant les valeurs seuils pour la classification des entités de la strate arborée
-  #   #treethresholds = {"seuil_surface" : 5, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.5, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 5, "val_buffer" : 1}
-
-  #   #detectInTreeStratum(connexion, tablename, treethresholds, output_tree_layer, connexion_fv_dic, save_results_as_layer = False, save_intermediate_results = False)
-  #   #connexion_fv_dic = {"dbname" : 'etape2', "user_db" : 'postgres', "password_db" : "", "server_db" : 'localhost', "port_number" : '5432', "schema" : 'donneelidar'}
-  #   #detectInShrubStratum(connexion, 'sgts_veg4',  r'/mnt/RAM_disk/output_vectorshrub.gpkg', connexion_fv_dic = connexion_fv_dic, thresholds = treethresholds, save_results_as_layer = True, save_intermediate_results = True)
-
-  #   #Calcul des indicateurs de végétation
-
-  #  #0. Préparation de la table finale de cartographie qu'on nommera "vegetation" dans un nouveau schema
-  #  # createSchema(connexion, 'data_final')
-  # #  connexion = openConnection('etape2', user_name='postgres', password="", ip_host='localhost', num_port='5432', schema_name='donneelidar')
-
-  #   query = """
-  #   CREATE TABLE vegetation AS
-  #       SELECT t1.geom, t1.strate, t1.fv 
-  #       FROM classification_fv.strate_arboree AS t1
-  #       UNION 
-  #       SELECT t2.geom, t2.strate, t2.fv
-  #       FROM classification_fv.strate_arbustive AS t2 
-  #       UNION 
-  #       SELECT t3.geom, t3.strate, t3.fv
-  #       FROM classification_fv.strate_herbacee AS t3; 
-  #   """
-
-  # #   addUniqId(connexion, 'vegetation')
-
-  # #   addSpatialIndex(connexion, 'vegetation')
-    
-  # #  # Création des colonnes correspondant aux indicateurs descrptifs de la végétation
-  # #  addColumn(connexion, 'vegetation', 'surface', 'float')
-  # #  addColumn(connexion, 'vegetation', 'hauteur_med', 'float')
-  # #  addColumn(connexion, 'vegetation', 'hauteur_et', 'float')
-  # #  addColumn(connexion, 'vegetation', 'hauteur_max', 'float')
-  # #  addColumn(connexion, 'vegetation', 'hauteur_min', 'float')
-  # #  addColumn(connexion, 'vegetation', 'perc_feuillu', 'float')
-  # #  addColumn(connexion, 'vegetation', 'perc_conifere', 'float')
-  # #  addColumn(connexion, 'vegetation', 'perc_persistant', 'float')
-  # #  addColumn(connexion, 'vegetation', 'perc_caduque', 'float')
-  # #  addColumn(connexion, 'vegetation', 'type_sol', 'varchar(100)')
-
-
-
-
+    img_stratesV = path_datafinal + os.sep + 'img_stratesV.gpkg'
+  
+    #Ouverture connexion 
+    connexion = openConnection(connexion_fv_dic["dbname"], user_name = connexion_fv_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name = connexion_fv_dic["schema"])
+ 
