@@ -507,8 +507,9 @@ def addSpatialIndex(connexion, tablename, geomcolumn = 'geom'):
 
     nameindex = 'idx_gist_' + tablename
     query = """
+    DROP INDEX IF EXISTS %s;
     CREATE INDEX %s ON %s USING gist(%s);
-    """ %(nameindex, tablename, geomcolumn)
+    """ %(nameindex,nameindex,  tablename, geomcolumn)
 
     #Exécution de la requête SQL
     if debug >= 1:
