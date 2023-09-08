@@ -69,28 +69,27 @@ def heightIndicators(connexion, connexion_dic, tab_ref, columnnamelist, img_mnh,
     tab_refout = 'tab_stats_hauteur_vegetation'
     
     #Import de la couche vecteur avec les statistiques en tant que table intermédiaire dans la bd
-    importVectorByOgr2ogr(connexion_dic["dbname"], filetablevegout, tab_refout, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
-
+    importVectorByOgr2ogr(connexion_dic["dbname"], filetablevegout, tab_refout, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
     #Implémentation des attributs  
     for id in range(len(columnnamelist)):
-        if "max" in columnnamelist[id] :
+        if "h_max" in columnnamelist[id] :
             query = """
             UPDATE %s as t1 SET %s = t2.max FROM %s AS t2 WHERE t2.ogc_fid = t1.fid;
             """ %(tab_ref, columnnamelist[id], tab_refout)
-        elif "min" in columnnamelist[id] :
+        elif "h_min" in columnnamelist[id] :
             query = """
             UPDATE %s as t1 SET %s = t2.min FROM %s AS t2 WHERE t2.ogc_fid = t1.fid;
             """ %(tab_ref,columnnamelist[id], tab_refout)
-        elif "mean" in columnnamelist[id] :
+        elif "h_moy" in columnnamelist[id] :
             query = """
             UPDATE %s as t1 SET %s = t2.mean FROM %s AS t2 WHERE t2.ogc_fid = t1.fid;
             """ %(tab_ref,columnnamelist[id], tab_refout)
-        elif "median" in columnnamelist[id] :
+        elif "h_med" in columnnamelist[id] :
             query = """
             UPDATE %s as t1 SET %s = t2.median FROM %s AS t2 WHERE t2.ogc_fid = t1.fid;
             """ %(tab_ref,columnnamelist[id], tab_refout)
-        elif "std" in columnnamelist[id] :
+        elif "h_et" in columnnamelist[id] :
             query = """
             UPDATE %s as t1 SET %s = t2.std FROM %s AS t2 WHERE t2.ogc_fid = t1.fid;
             """ %(tab_ref,columnnamelist[id], tab_refout)
@@ -258,10 +257,10 @@ def indicatorEvergreenDeciduous(connexion, connexion_dic, img_ref,img_ndvi_spg, 
         print(query)
     executeQuery(connexion, query)
 
-    #Suppression du dossier temporaire
-    if not save_intermediate_results:
-        if os.path.exists(repertory):
-            removeDir(repertory)
+    # #Suppression du dossier temporaire
+    # if not save_intermediate_results:
+    #     if os.path.exists(repertory):
+    #         removeDir(repertory)
 
     #Suppression des tables intermédiaires
     dropTable(connexion,table_cadu) 
@@ -358,10 +357,10 @@ def indicatorConiferousDeciduous(connexion, connexion_dic, img_ref, tab_ref, seu
         print(query)
     executeQuery(connexion, query)
 
-    #Suppression du dossier temporaire
-    if not save_intermediate_results:
-        if os.path.exists(repertory):
-            removeDir(repertory)
+    # #Suppression du dossier temporaire
+    # if not save_intermediate_results:
+    #     if os.path.exists(repertory):
+    #         os.rmdir(repertory)
 
     #Suppression des tables intermédiaires  
     dropTable(connexion, table_conif)
@@ -406,12 +405,12 @@ def indicatorTypeofGround(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
     
     #Calcul du masque perméable
-    cmd_mask_permeable = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1<%s)?1:0'" %(img_ndvi_wtr, image_permeable, seuil)
+    cmd_mask_permeable = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1>=%s)?1:0'" %(img_ndvi_wtr, image_permeable, seuil)
     os.system(cmd_mask_permeable)
     
 
     #Calcul du masque imperméable
-    cmd_mask_impermeable = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1<=%s)?1:0'" %(img_ndvi_wtr, image_impermeable, seuil)
+    cmd_mask_impermeable = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1<%s)?1:0'" %(img_ndvi_wtr, image_impermeable, seuil)
     os.system(cmd_mask_impermeable)
     
 
@@ -438,19 +437,19 @@ def indicatorTypeofGround(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
         WHERE t1.ogc_fid = t2.ogc_fid;
     """ %(table_perm,table_imperm)
 
-    Exécution de la requête SQL
+   # Exécution de la requête SQL
     if debug >= 1:
         print(query)
-   executeQuery(connexion, query)
+    executeQuery(connexion, query)
 
     #Update de l'attribut perc_caduque et perc_persistant
 
     query = """
-     UPDATE %s AS t SET %s = 'permeable herbace' FROM tab_indic_perm_imperm AS t2 WHERE t.fid = t2.ogc_fid AND t2.perm_count >= 50.0;
+     UPDATE %s AS t SET %s = 'permeable herbace' FROM tab_indic_perm_imperm AS t2 WHERE t.fid = t2.fid AND t2.perm_count >= 50.0;
     """ %(tab_ref, column_indic_name)
     
     query += """
-     UPDATE %s AS t SET %s = 'impermeable' FROM tab_indic_perm_imperm AS t2 WHERE t.fid = t2.ogc_fid AND t2.perm_count < 50.0;
+     UPDATE %s AS t SET %s = 'impermeable' FROM tab_indic_perm_imperm AS t2 WHERE t.fid = t2.fid AND t2.perm_count < 50.0;
     """ %(tab_ref, column_indic_name)
 
     #Exécution de la requête SQL
@@ -469,10 +468,10 @@ def indicatorTypeofGround(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     executeQuery(connexion, query)
     closeConnection(connexion)
 
-    #Suppression du dossier temporaire
-    if not save_intermediate_results:
-        if os.path.exists(repertory):
-            removeDir(repertory)
+    # #Suppression du dossier temporaire
+    # if not save_intermediate_results:
+    #     if os.path.exists(repertory):
+    #         os.rmdir(repertory)
 
     return
 
