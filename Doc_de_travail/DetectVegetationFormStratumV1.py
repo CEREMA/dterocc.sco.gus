@@ -5,7 +5,7 @@ from Lib_postgis import *
 ## une unique cartographie                     ##  
 #################################################
 
-def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False,  save_final_result = False):
+def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False):
     """
     Rôle : concatène les trois tables arboré, arbustive et herbacée en un unique 
            correspondant à la carotgraphie de la végétation
@@ -16,10 +16,9 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         schem_tab_ref : schema et nom de la tabel de référence des segments végétation classés en strates verticales
         dic_thresholds : dictionnaire des seuils à attribuer en fonction de la strate verticale
         output_layers : ditctionnaire des noms de fichier de sauvegarde
-        save_final_result : choix de sauvegarde ou non du résultat final. Par défaut : False
 
     Sortie :
-        nom de la table contenant tous 
+        nom de la table contenant toutes les formes végétales
     """ 
     #1# Formes végétales arborées
     tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["tree"], output_layers["tree"], save_intermediate_results = save_intermediate_results)
@@ -41,11 +40,13 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     SELECT fid, geom, strate, fv FROM %s
     """ %(tab_name, tab_arbore, tab_arbustive, tab_herbace)
     
+    if debug => 1:
+        print(query)
     executeQuery(connexion, query)
 
-    if save_final_result:
-        if output_layers["output_fv"] == '':
-           #envoyer un message qu'il n'y aura pas de sauvegarde du résultat final puisque le chemin de sauvegarde n'est pas fournit 
+    if output_layers["output_fv"] == '':
+        #envoyer un message qu'il n'y aura pas de sauvegarde du résultat final puisque le chemin de sauvegarde n'est pas fournit 
+    else:
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["output_fv"], tab_name, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
     return tab_name
@@ -128,6 +129,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     query = """
     UPDATE %s SET strate = 'arbore' WHERE fid = fid;
     """ %(tab_arb)
+
     if debug >= 1:
         print(query)
     executeQuery(connexion, query)
@@ -146,6 +148,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     sec_class = secClassification(connexion, tab_arb, 'rgpt_arbore', thresholds)
 
     #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
+    tab_arbore = ''
     tab_arbore = createLayerTree(connexion, fst_class, sec_class)
 
     if tab_arbore == '':
@@ -158,8 +161,10 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
         dropTable(connexion, sec_class)
 
     ## SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
-    if save_results_as_layer :
-       exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_arbore, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+    if output_layer == '':
+        #envoyer un message d'erreur 
+    else:
+        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_arbore, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
     return tab_arbore
 
@@ -219,7 +224,7 @@ def firstClassification(connexion, tab_ref, thresholds, typeclass = 'arbore'):
         typeclass : type de classification : 'arbore' ou 'arbustif', par défaut : 'arbore'
 
     Sortie :
-        tab_out : nom de la table en sortie (qui est tab_ref du paramètre)
+        tab_ref : nom de la table en sortie (qui est tab_ref du paramètre)
     """
 
     if typeclass == 'arbore':
@@ -294,7 +299,7 @@ def secClassification(connexion, tab_ref, tab_out, thresholds):
     addSpatialIndex(connexion, tab_out)
 
     #Ajout de l'attribut fv
-    addColumn(connexion,tab_out, 'fv', 'varchar(100)')
+    addColumn(connexion, tab_out, 'fv', 'varchar(100)')
 
     #Suppression des polygones trop petits (artefacts)
     query = """
@@ -325,22 +330,22 @@ def secClassification(connexion, tab_ref, tab_out, thresholds):
     ## CLASSIFICATION ##
 
     query = """
-    UPDATE %s as rgt SET fv='%s'
+    UPDATE %s AS rgt SET fv='%s'
     WHERE  rgt.id_conv >= %s AND rgt.id_elong  >= %s;
     """ %(tab_out, name_algt, thresholds["seuil_convexite"], thresholds["seuil_elongation"])
 
     query += """
-    UPDATE %s as rgt SET fv='%s'
+    UPDATE %s AS rgt SET fv='%s'
     WHERE rgt.id_conv >= %s AND rgt.id_elong < %s;
     """ %(tab_out, name_bst, thresholds["seuil_convexite"], thresholds["seuil_elongation"])
 
     query += """
-    UPDATE %s as rgt SET fv='%s'
+    UPDATE %s AS rgt SET fv='%s'
     WHERE rgt.id_conv < %s AND rgt.id_comp < %s;
     """ %(tab_out, name_algt, thresholds["seuil_convexite"], thresholds["seuil_compacite_2"])
 
     query += """
-    UPDATE %s as rgt SET fv='%s'
+    UPDATE %s AS rgt SET fv='%s'
     WHERE rgt.id_conv < %s AND rgt.id_comp >= %s;
     """ %(tab_out, name_bst, thresholds["seuil_convexite"], thresholds["seuil_compacite_2"])
 
@@ -358,10 +363,10 @@ def secClassification(connexion, tab_ref, tab_out, thresholds):
 ###########################################################################################################################################
 def createLayerTree(connexion, tab_firstclass, tab_secclass):
     """
-    Rôle :
+    Rôle : création de la table/couche contenant les formes végétales arborées
 
     Paramètres :
-        connexion :
+        connexion : connexion à la base donnée et au schéma correspondant
         tab_firstclass : table en sortie de la première classification
         tab_secclass : table en sortie de la dernière classification concernant les éléments de regroupements arborés
 
@@ -435,89 +440,95 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
         tab_arbustive : nom de la table contenant les éléments de la strate arbustive classés horizontalement
     """
 
-    # #0# Attribution de valeurs par défaut pour la connexion
-    # if thresholds == 0:
-    #     thresholds = {"seuil_surface" : 30, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.7, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 7, "val_buffer" : 2}
+    #0# Attribution de valeurs par défaut pour la connexion
+    if thresholds == 0:
+        thresholds = {"seuil_surface" : 5, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.7, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 7, "val_buffer" : 1}
 
-    # print(cyan + "findImagesFile : Fin de la recherche dans le repertoire des images contenues ou intersectant l'emprise" + endC)
 
-    # #1# Récupération de la table composée uniquement des segments arbustifs
-    # query = """
-    # CREATE TABLE arbustif_ini AS
-    #     SELECT *
-    #     FROM %s
-    #     WHERE strate = 'arbustif';
-    # """ %(tab_ref)
+    #1# Récupération de la table composée uniquement des segments arbustifs
+    tab_arbu_ini = 'arbustif_ini'
+
+    query = """
+    CREATE TABLE %s AS
+        SELECT *
+        FROM %s
+        WHERE strate = 'arbustif';
+    """ %(tab_arbu_ini, tab_ref)
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+    
+    #Ajout des indexes 
+    addSpatialIndex(connexion, tab_arbu_ini)
+    addIndex(connexion, tab_arbu_ini, 'fid', 'idx_fid_arbustifini')
+
+    #2# Regroupement et lissage des segments arbustifs
+    tab_arbu = 'arbustif'
+
+    query = """
+    CREATE TABLE %s AS
+        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
+        FROM %s AS t;
+    """ %(tab_arbu, tab_arbu_ini)
 
     # #Exécution de la requête SQL
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-    # addSpatialIndex(connexion, 'arbustif_ini')
-    # addIndex(connexion, 'arbustif_ini', 'fid', 'idx_fid_arbustifini')
+    # #Création d'un identifiant unique
+    addUniqId(connexion, tab_arbu)
 
-    # #2# Regroupement et lissage des segments arbustifs
-    # query = """
-    # CREATE TABLE arbustif AS
-    #     SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbustif_ini.geom)))).geom) AS geom
-    #     FROM arbustif_ini;
-    # """
+    # #Création d'un index spatial
+    addSpatialIndex(connexion, tab_arbu)
 
-    # # #Exécution de la requête SQL
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
+    # #Création de la colonne strate qui correspond à 'arbustif' pour tous les polygones
+    addColumn(connexion, tab_arbu, 'strate', 'varchar(100)')
 
-    # # #Création d'un identifiant unique
-    # addUniqId(connexion, 'arbustif')
-
-    # # #Création d'un index spatial
-    # addSpatialIndex(connexion, 'arbustif')
-
-    # # #Création de la colonne strate qui correspond à 'arbustif' pour tous les polygones
-    # addColumn(connexion, 'arbustif', 'strate', 'varchar(100)')
-
-    # #Ajout de la valeur 'arbore' pour toutes les entités de la table arbore
-    # query = """
-    # UPDATE arbustif SET strate = 'arbustif' WHERE fid = fid;
-    # """ 
+    #Ajout de la valeur 'arbore' pour toutes les entités de la table arbore
+    query = """
+    UPDATE %s SET strate = 'arbustif' WHERE fid = fid;
+    """ %(tab_arbu)
     
-    # executeQuery(connexion, query)
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-    # # #Création de la colonne fv
-    # addColumn(connexion, 'arbustif', 'fv', 'varchar(100)')
+    # #Création de la colonne fv
+    addColumn(connexion, tab_arbu, 'fv', 'varchar(100)')
 
-    # # #Création et calcul de l'indicateur de forme : compacité
-    # createCompactnessIndicator(connexion, 'arbustif', thresholds['val_buffer'])
+    # #Création et calcul de l'indicateur de forme : compacité
+    createCompactnessIndicator(connexion, tab_arbu, thresholds['val_buffer'])
 
     #3# Classement des segments en "arbuste isole", "tache arbustive" et "regroupement arbustif"
        # basé sur un critère de surface et de seuil sur l'indice de compacité
-   # fst_class = firstClassification(connexion, 'arbustif', thresholds["seuil_compacite_1"], thresholds["seuil_surface"],  'arbustif')
-    fst_class = 'arbustif'
+    fst_class = firstClassification(connexion, tab_arbu, thresholds,  'arbustif')
+    
     #4# Travaux sur les "regroupements arborés"
-   # sec_class = secClassification(connexion, 'arbustif','rgpt_arbustif', thresholds["seuil_convexite"], thresholds["seuil_elongation"], thresholds["seuil_surface"], thresholds["seuil_compacite_1"], thresholds["seuil_compacite_2"], thresholds["val_buffer"])
-    sec_class = 'rgpt_arbustif'
-    #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
-    tab_arbustive = ''
-    tab_arbustive = createLayerShrub(connexion, fst_class, sec_class)
+    sec_class = secClassification(connexion, tab_arbu,'rgpt_arbustif', thresholds)
 
-    if tab_arbustive == '':
-        tab_arbustive = 'strate_arbustive'
+    #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
+    tab_arbustif = ''
+    tab_arbustif = createLayerShrub(connexion, fst_class, sec_class)
+
+    if tab_arbustif == '':
+        tab_arbustif = 'strate_arbustive'
 
     ## SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
     if not save_intermediate_results :
-        dropTable(connexion, 'arbustif_ini')
+        dropTable(connexion, tab_arbu_ini)
         dropTable(connexion, fst_class)
         dropTable(connexion, sec_class)
 
     # SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
-    if save_results_as_layer :
-        exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_shrub_layer, tab_arbustive, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
-
-    closeConnection(connexion)
+    if output_layer == '':
+        #renvoie un message  
+    else:
+        exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_arbustif, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
     
-    return tab_arbustive
+    return tab_arbustif
 
 
 ###########################################################################################################################################
@@ -525,10 +536,10 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
 ###########################################################################################################################################
 def createLayerShrub(connexion, tab_firstclass, tab_secclass):
     """
-    Rôle :
+    Rôle : créer une table 'strate_arbustive' qui contient toutes les FV de la strate arbustive
 
     Paramètres :
-        connexion :
+        connexion : connexion à la base de données et au schéma correspondant
         tab_firstclass : table en sortie de la première classification
         tab_secclass : table en sortie de la seconde classification concernant les éléments de regroupements arbustifs
 
@@ -583,16 +594,15 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass):
 ###########################################################################################################################################
 # FONCTION detectInHerbaceousStratum()                                                                                                    #
 ###########################################################################################################################################
-def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layer, save_intermediate_results = False):
+def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layer = '', save_intermediate_results = False):
     """
-    Rôle : détecté les formes végétales horizontales au sein de la strate arborée
+    Rôle : détecter les formes végétales horizontales au sein de la strate herbacée
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
-        tab_ref : nom de la table correspondant aux segments de végétation (inclure le nom du schema si la table appartient à un autre schema)
-        output_herbe_layer : couche vectorielle de sortie composée de la strate herbacée classée en strate verticale ET horizontale
-        connexion_fv_dic : dictionnaire contenant les paramètres de connexion (pour la sauvegarde en fin de fonction)
-        save_result_as_layer : sauvegarde ou non du résultat final en une couche vectorielle, par défaut False
+        connexion_dic : dictionnaire contenant les paramètres de connexion (pour la sauvegarde en fin de fonction)
+        schem_tab_ref : schema.nom de la table
+        output_layer : sauvegarde ou non du résultat final en une couche vectorielle, par défaut ''
         save_intermediate_results : sauvegarde ou non des tables intermédiaires
 
     Sortie :
@@ -603,12 +613,13 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     ####################################################
 
     #1# Récupération de la table composée uniquement des segments herbaces
+    tab_herb_ini = 'herbace_ini'
     query = """
-    CREATE TABLE herbace_ini AS
+    CREATE TABLE %s AS
         SELECT *
         FROM %s
         WHERE strate = 'herbace';
-    """ %(tab_ref)
+    """ %(tab_herb_ini, tab_ref)
 
     #Exécution de la requête SQL
     if debug >= 1:
@@ -616,16 +627,17 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     executeQuery(connexion, query)
 
     #Création des indexes 
-    addSpatialIndex(connexion, 'herbace_ini')
-    addIndex(connexion, 'herbace_ini', 'fid', 'idx_fid_herbeini')
+    addSpatialIndex(connexion, tab_herb_ini)
+    addIndex(connexion, tab_herb_ini, 'fid', 'idx_fid_herbeini')
 
     #2# Regroupement et lissage des segments herbacés
     tab_out = 'herbace'
+
     query = """
     CREATE TABLE %s AS
-        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(herbace_ini.geom)))).geom) AS geom
-        FROM herbace_ini;
-    """ %(tab_out)
+        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
+        FROM %s AS t;
+    """ %(tab_out, tab_herb_ini)
 
     #Exécution de la requête SQL
     if debug >= 1:
@@ -657,13 +669,13 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
 
     # SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
     if not save_intermediate_results :
-        dropTable(connexion, 'herbace_ini')
+        dropTable(connexion, tab_herb_ini)
 
     ## SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
-    if save_results_as_layer :
-       exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_herbe_layer, tab_herbace, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
-
-    closeConnection(connexion)
+    if output_layer == '' :
+       #renvoie message disant qu'il n'y aura pas de sauevagder  
+    else:
+        exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_herbace, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
 
     return tab_herbace  
 
