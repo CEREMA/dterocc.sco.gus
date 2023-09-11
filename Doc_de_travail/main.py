@@ -81,7 +81,13 @@ if __name__ == "__main__":
   #   # cutImageByVector(shp_zone ,img_MNH_si, img_MNH)
 
     #en attendant
-   # neochannels ={"ndvi" : r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_ndvi.tif', "msavi" : r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_msavi2.tif', "ndwi" : r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_ndwi2.tif', "hue" : r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_hue.tif', "sfs" : r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'}  
+  #   neochannels ={
+  #     "ndvi" : r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_ndvi.tif',
+  #     "msavi" : r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_msavi2.tif',
+  #     "ndwi" : r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_ndwi2.tif',
+  #     "hue" : r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_hue.tif',
+  #     "sfs" : r'/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
+  #    }  
 
    # img_to_concatenate =[ img_ref, img_MNH, neochannels["ndvi"], neochannels["msavi"],neochannels["ndwi"], neochannels["hue"],neochannels["sfs"]]
      
@@ -158,13 +164,19 @@ if __name__ == "__main__":
   #   # corr_route = {"ndvi":  [neochannels["ndvi"], 0, 0.35]}
   #   # macroSamplesClean(route_prepare,route_clean, corr_route)
 
-  #   # corr_solnu = {"ndvi" : [neochannels["ndvi"], 0, 0.2], "hue" :[neochannels["hue"],0,50] }
+      # corr_solnu = {
+      #   "ndvi" : [neochannels["ndvi"], 0, 0.2],
+      #   "hue" :[neochannels["hue"],0,50] 
+      #   }
   #   # macroSamplesClean(solnu_prepare, solnu_clean, corr_solnu)
 
   #   # corr_eau = {"ndwi" :[neochannels["ndwi"],-500,1] }
   #   # macroSamplesClean(eau_prepare, eau_clean, corr_eau)
 
-  #   # corr_vegetation = {"ndvi" : [neochannels["ndvi"], 0.35, 1], "msavi" : [neochannels["msavi"],0.4,1] }
+      # corr_vegetation = {
+      #   "ndvi" : [neochannels["ndvi"], 0.35, 1],
+      #   "msavi" : [neochannels["msavi"],0.4,1] 
+      # }
   #   # macroSamplesClean(vegetation_prepare , vegetation_clean, corr_vegetation)
 
   #  # mask_samples_macro_input_list = [bati_clean, route_clean, solnu_clean, eau_clean, vegetation_clean]
@@ -212,7 +224,14 @@ if __name__ == "__main__":
     schema = ''
 
     #Dictionnaire des paramètres BD de base
-    connexion_ini_dic = {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : 'postgres', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
+    connexion_ini_dic = {
+      "dbname" : 'projetgus',
+      "user_db" : 'postgres',
+      "password_db" : 'postgres',
+      "server_db" : 'localhost',
+      "port_number" : '5432',
+      "schema" : ''
+    }
 
     #Dictionnaire des paramètres BD de classification en strates verticales 
     connexion_stratev_dic = connexion_ini_dic
@@ -232,9 +251,9 @@ if __name__ == "__main__":
     #Connexion à la base de données
     connexion = openConnection(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
 
-    #Création des extensions : postgis et sfc
-    createExtensionPostgis(connexion, ) 
-    createExtensionPostgisSfcgal(connexion, )
+    #Création des extensions : postgis et sfcgal
+    createExtension(connexion, 'postgis')
+    createExtension(connexion, 'postgis_sfcgal')
 
     #Création des schémas
     createSchema(connexion, connexion_stratev_dic["schema"]) 
@@ -252,15 +271,21 @@ if __name__ == "__main__":
     if not os.path.exists(path_stratesveg):
       os.makedirs(path_stratesveg)
 
-    img_sgt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
+    sgt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
 
-    img_stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg' 
+    stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg' 
 
     #1.1# Segmentation de l'image
     #Paramètres de segmentation
-    num_class = {"bati" : 1, "route" : 2, "sol nu" : 3, "eau" : 4, "vegetation" : 5}  
+    num_class = {
+      "bati" : 1,
+      "route" : 2,
+      "sol nu" : 3,
+      "eau" : 4,
+      "vegetation" : 5
+    }  
     minsize = 10
-    segmentationImageVegetetation(img_ref, img_classif_filtered, img_sgt_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = True, overwrite = False)
+    segmentationImageVegetetation(img_ref, img_classif_filtered, sgt_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = True, overwrite = False)
 
     #1.2# Classification en strates verticales
 
@@ -268,53 +293,116 @@ if __name__ == "__main__":
     connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
  
     img_txt_SFS = '/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
-    raster_dic = {"MNH" : img_MNH, "TXT" : img_txt_SFS}
+    raster_dic = {
+      "MNH" : img_MNH, 
+      "TXT" : img_txt_SFS
+    }
     tab_ref = 'segments_vegetation'
-    dic_seuils_stratesV = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}
+    dic_seuils_stratesV = {
+      "seuil_h1" : 3,
+      "seuil_h2" : 1, 
+      "seuil_h3" : 2,
+      "seuil_txt" : 11,
+      "seuil_touch_arbo_vs_herba" : 15,
+      "seuil_ratio_surf" : 25,
+      "seuil_arbu_repres" : 20
+    }
 
-    classificationVerticalStratum(connexion, connexion_stratev_dic, img_stratesV, img_sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_results_as_layer = True, save_intermediate_result = True, overwrite = True)
+    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_results_as_layer = True, save_intermediate_result = True, overwrite = True)
     
     closeConnection(connexion)
 
     #2# Détection des formes végétales horizontales
 
     #Dossier de stockage des datas
-    path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'  
+    path_fv = path_prj + os.sep + '2-DistinctionFormesVegetales'  
 
-    if not os.path.exists(path_stratesveg):
-      os.makedirs(path_stratesveg)
+    if not os.path.exists(path_fv):
+      os.makedirs(path_fv)
 
-    img_sgt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
+    output_fv = path_fv + os.sep + 'vegetation_fv.gpkg'
 
-    img_stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg'
-  
+    fv_st_arbore = path_fv + os.sep + 'fv_st_arbore.gpkg'
+    fv_st_arbustif = path_fv + os.sep + 'fv_st_arbustif.gpkg'
+    fv_st_herbace = path_fv + os.sep + 'fv_st_herbace.gpkg'
+    
     #Ouverture connexion 
     connexion = openConnection(connexion_fv_dic["dbname"], user_name = connexion_fv_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name = connexion_fv_dic["schema"])
  
     #2.1#Elements arborés
-    treethresholds = {"seuil_surface" : 5, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.5, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 5, "val_buffer" : 1}
-    schrubthresholds ={}
-    dic_thresholds = {"tree" : treethresholds, "shrub" : shrubthresholds} 
-    
-    output_layers ={"tree" : , "shrub" : ,"herbaceous" :}# dictionnaire des couches de sauvegarde  
+    treethresholds = {
+      "seuil_surface" : 20,
+      "seuil_compacite_1" : 0.7,
+      "seuil_compacite_2" : 0.5,
+      "seuil_convexite" : 0.7,
+      "seuil_elongation" : 2.5,
+      "val_largeur_max_alignement" : 5,
+      "val_buffer" : 1
+    }
+    schrubthresholds = {
+      "seuil_surface" : 5,
+      "seuil_compacite_1" : 0.7,
+      "seuil_compacite_2" : 0.5,
+      "seuil_convexite" : 0.7,
+      "seuil_elongation" : 2.5,
+      "val_largeur_max_alignement" : 5,
+      "val_buffer" : 1
+    }
+    dic_thresholds = {
+      "tree" : treethresholds,
+      "shrub" : shrubthresholds} 
+    schem_tab_ref = output_tab_stratesv
+    output_layers ={
+      "tree" : fv_st_arbore,
+      "shrub" : fv_st_arbustif,
+      "herbaceous" : fv_st_herbace,
+      "output_fv" : output_fv
+    }# dictionnaire des couches de sauvegarde  
     #2.2#Elements arbustifs 
 
-    cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False,  save_final_result = False)
+    tab_veg = cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False)
 
     closeConnection(connexion)
 
     #4# Calcul des indicateurs de végétation
 
     #Dossier de stockage des datas
-    path_datafinal = path_prj + os.sep + '5-'  
+    path_datafinal = path_prj + os.sep + '5-Calcul_attributs_descriptifs'  
 
     if not os.path.exists(path_datafinal):
       os.makedirs(path_datafinal)
 
-    img_sgt_veg = path_datafinal + os.sep + 'img_sgt_vegetation.gpkg' 
+    output_layer = path_datafinal + os.sep + "cartographie_detaillee_vegetation.gpkg"
 
-    img_stratesV = path_datafinal + os.sep + 'img_stratesV.gpkg'
+    #Duplication de la couche tab_veg du schema  classification_fv vers data_final
+    query = """
+    CREATE TABLE %s AS 
+      SELECT * FROM %s.%s;
+    """ %(tab_veg, connexion_fv_dic["schema"], tab_veg)
+
+    output_veg_final = path_datafinal + os.sep + 'cartographie_detaillee_vegetation.gpkg' 
   
     #Ouverture connexion 
-    connexion = openConnection(connexion_fv_dic["dbname"], user_name = connexion_fv_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name = connexion_fv_dic["schema"])
- 
+    connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
+    
+    #Paramètres de calcul des attributs
+    dic_attributs = {
+      "areaIndicator" :[[]], 
+      "heightIndicators" :[[]],
+      "evergreenDeciduousIndicators" :[[]],
+      "coniferousDeciduousIndicators" :[[]],
+      "typeOfGroundIndicator" :[[]]
+    }      
+    dic_params = {
+      "img_mnh" : img_mnh,
+      "img_ref" : img_ref,
+      "img_wtr" : img_wtr,
+      "thresh_evergdecid" : 0.10,
+      "superimpose_choice" : False,
+      "thresh_deciconif" : 1300,
+      "thresh_soltype" : 0.3
+    } 
+
+    createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs, dic_params, output_layer = output_layer, repertory, save_intermediate_result = False)
+
+    closeConnection(connexion)
