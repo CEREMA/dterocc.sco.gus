@@ -1130,3 +1130,25 @@ def versionPostGIS(database_name='template_postgis', user_name='postgres', passw
         print(bold + "Version de PostGIS : " + endC + str(postgis_version))
     return postgis_version
 
+########################################################################
+# FONCTION versionPostGIS()                                            #
+########################################################################
+def createExtension(connexion, extension_name):
+    """
+    Rôle : créer un extension dans la BD
+
+    Paramètres :
+      connexion : nom de la base de données
+      extension_name : nom d'utilisateur du serveur PostgreSQL (par défaut : 'postgres')
+
+    """
+    query = """
+    CREATE EXTENSION IF NOT EXISTS %s;
+    """
+    if debug >= 1:
+        print(query)
+    executeQuery(query)
+
+    print(cyan + "createExtension(): création de l'extension " + extension_name + endC)
+    return
+
