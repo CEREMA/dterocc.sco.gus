@@ -5,7 +5,7 @@ from Lib_postgis import *
 ## une unique cartographie                     ##  
 #################################################
 
-def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False):
+def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False, overwrite = False, debug = 0):
     """
     Rôle : concatène les trois tables arboré, arbustive et herbacée en un unique 
            correspondant à la carotgraphie de la végétation
@@ -13,24 +13,62 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
         connexion_dic : dictionnaire des paramètre de connexion
-        schem_tab_ref : schema et nom de la tabel de référence des segments végétation classés en strates verticales
+        schem_tab_ref : schema et nom de la table de référence des segments végétation classés en strates verticales
         dic_thresholds : dictionnaire des seuils à attribuer en fonction de la strate verticale
-        output_layers : ditctionnaire des noms de fichier de sauvegarde
+        output_layers : dictionnaire des noms de fichier de sauvegarde
+        save_intermediate_results : sauvegarde ou non des fichiers/tables intermédiaires. Par défaut : False
+        overwrite : paramètre de ré-écriture des tables. Par défaut False
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         nom de la table contenant toutes les formes végétales
     """ 
+
+    #Rappel du paramétrage 
+    if debug >= 2 :
+        print(cyan + "cartographyVegetation() : Début de la classification en strates verticales végétales" + endC)
+        print(cyan + "cartographyVegetation : " + endC + "connexion_dic : " + str(connexion_dic) + endC)
+        print(cyan + "cartographyVegetation : " + endC + "schem_tab_ref : " + str(schem_tab_ref) + endC)
+        print(cyan + "cartographyVegetation : " + endC + "dic_thresholds : " + str(dic_thresholds) + endC)
+        print(cyan + "cartographyVegetation : " + endC + "output_layers : " + str(output_layers) + endC)
+        print(cyan + "cartographyVegetation : " + endC + "save_intermediate_result : " + str(save_intermediate_result) + endC)
+        print(cyan + "cartographyVegetation : " + endC + "overwrite : " + str(overwrite) + endC)
+        print(cyan + "cartographyVegetation : " + endC + "debug : " + str(debug) + endC)
+
+    #Nettoyage en base si ré-écriture
+    if overwrite == True:
+        print(bold + "Choix de remise à zéro du schéma " + str(shem_tab_ref))
+        query ="""
+        SELECT format('DROP TABLE %s.%s', table_schema, table_name)
+        FROM information_schema.tables
+        WHERE table_schema = '%s'; 
+        """ %('%I', '%I',connexion_stratev_dic["schema"])
+        cursor = connexion.cursor()
+        cursor.execute(query)
+        tables_schema = cursor.fetchall()
+        for el in tables_schema:
+            executeQuery(connexion, el[0])
+
     #1# Formes végétales arborées
-    tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["tree"], output_layers["tree"], save_intermediate_results = save_intermediate_results)
+    if debug >= 2:
+        print(bold + "Détection des formes végétales au sein de la strate arborée" + endC)
+    tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["tree"], output_layers["tree"], save_intermediate_results = save_intermediate_results, debug = debug)
 
     #2# Formes végétales arbustives
-    tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["schrub"], save_intermediate_results = save_intermediate_results)
+    if debug >= 2:
+        print(bold + "Détection des formes végétales au sein de la strate arbustive" + endC)
+    tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["schrub"], save_intermediate_results = save_intermediate_results, debug = debug)
     
     #3# Formes végétales herbacées
-    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layers["herbaceous"], save_intermediate_results = save_intermediate_results)
+    if debug >= 2:
+        print(bold + "Détection des formes végétales au sein de la strate herbacée" + endC)
+    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layers["herbaceous"], save_intermediate_results = save_intermediate_results, debug = debug)
 
     #4# Concaténation des données en une seule table 'végétation'
     tab_name = 'vegetation'
+    if debug >= 2:
+        print(bold + "Concaténation des données en une seule table " + tab_name + endC)
+
     query = """
     CREATE TABLE %s AS
     SELECT fid, geom, strate, fv FROM %s
@@ -40,12 +78,12 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     SELECT fid, geom, strate, fv FROM %s
     """ %(tab_name, tab_arbore, tab_arbustive, tab_herbace)
     
-    if debug => 1:
+    if debug => 3:
         print(query)
     executeQuery(connexion, query)
 
     if output_layers["output_fv"] == '':
-        #envoyer un message qu'il n'y aura pas de sauvegarde du résultat final puisque le chemin de sauvegarde n'est pas fournit 
+        print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["output_fv"], tab_name, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
@@ -60,7 +98,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
 ###########################################################################################################################################
 # FONCTION detectInTreeStratum()                                                                                                          #
 ###########################################################################################################################################
-def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0, output_layer = '', save_intermediate_results = False):
+def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0, output_layer = '', save_intermediate_results = False, debug = 0):
     """
     Rôle : détecté les formes végétales horizontales au sein de la strate arborée
 
@@ -71,6 +109,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
         thresholds : dictionnaire des seuils à appliquer, par défaut : {"seuil_surface" : 0, "seuil_compacite_1" : 0, "seuil_compacite_2" : 0, "seuil_convexite" : 0, "seuil_elongation" : 0, "val_largeur_max_alignement" : 0, "val_buffer" : 0}
         output_layer : sauvegarde du résultat final en une couche vectorielle, par défaut ''
         save_intermediate_results : sauvegarde ou non des tables intermédiaires
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0 
 
     Sortie :
         tab_arbore : nom de la table contenant les éléments de la strate arborée classés horizontalement
@@ -95,7 +134,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     """ %(tab_arb_ini, schem_tab_ref)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -113,7 +152,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     """ %(tab_arb, tab_arb_ini)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -130,7 +169,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     UPDATE %s SET strate = 'arbore' WHERE fid = fid;
     """ %(tab_arb)
 
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -138,18 +177,18 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     addColumn(connexion, tab_arb, 'fv', 'varchar(100)')
 
     #Création et calcul de l'indicateur de forme : compacité
-    createCompactnessIndicator(connexion, tab_arb, thresholds["val_buffer"])
+    createCompactnessIndicator(connexion, tab_arb, thresholds["val_buffer"], debug = debug)
 
     #3# Classement des segments en "arbre isole", "tache arboree" et "regroupement arbore"
     # basé sur un critère de surface et de seuil sur l'indice de compacité
-    fst_class = firstClassification(connexion, tab_arb,  thresholds, 'arbore')
+    fst_class = firstClassification(connexion, tab_arb,  thresholds, 'arbore', debug = debug)
     
     #4# Travaux sur les "regroupements arborés"
-    sec_class = secClassification(connexion, tab_arb, 'rgpt_arbore', thresholds)
+    sec_class = secClassification(connexion, tab_arb, 'rgpt_arbore', thresholds, debug = debug)
 
     #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
     tab_arbore = ''
-    tab_arbore = createLayerTree(connexion, fst_class, sec_class)
+    tab_arbore = createLayerTree(connexion, fst_class, sec_class, debug = debug)
 
     if tab_arbore == '':
         tab_arbore = 'strate_arboree'
@@ -162,7 +201,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
 
     ## SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
     if output_layer == '':
-        #envoyer un message d'erreur 
+        print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification des FV arborées. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_arbore, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
@@ -174,7 +213,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
 ###########################################################################################################################################
 # FONCTION getCoordRectEnglValue()                                                                                                        #
 ###########################################################################################################################################
-def getCoordRectEnglValue(connexion, tab_ref, attributname = 'x0'):
+def getCoordRectEnglValue(connexion, tab_ref, attributname = 'x0', debug = 0):
     """
     Rôle : récupère et créé les coordonnées des 4 sommet du rectangle englobant
 
@@ -182,6 +221,7 @@ def getCoordRectEnglValue(connexion, tab_ref, attributname = 'x0'):
         connexion : connexion à la base donnée et au schéma correspondant
         tab_ref : nom de la table correspondant aux segments de végétation
         attributname : nom de l'attribut créé, par défaut : 'x0'
+        debug :  niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
     if attributname == 'x0':
         l = [1,1]
@@ -203,7 +243,7 @@ def getCoordRectEnglValue(connexion, tab_ref, attributname = 'x0'):
     """ %(tab_ref, attributname, l[0], l[1])
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -213,7 +253,7 @@ def getCoordRectEnglValue(connexion, tab_ref, attributname = 'x0'):
 ###########################################################################################################################################
 # FONCTION firstClassification()                                                                                                          #
 ###########################################################################################################################################
-def firstClassification(connexion, tab_ref, thresholds, typeclass = 'arbore'):
+def firstClassification(connexion, tab_ref, thresholds, typeclass = 'arbore', debug = 0):
     """
     Rôle : classification en trois classes basée sur un critère de surface et de compacité
 
@@ -222,6 +262,7 @@ def firstClassification(connexion, tab_ref, thresholds, typeclass = 'arbore'):
         tab_ref : nom de la table dans laquelle on calcule l'indicateur de compacité
         thresholds : dictionnaire des seuils de classification des formes végétales arborées
         typeclass : type de classification : 'arbore' ou 'arbustif', par défaut : 'arbore'
+        debug :  niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         tab_ref : nom de la table en sortie (qui est tab_ref du paramètre)
@@ -253,7 +294,7 @@ def firstClassification(connexion, tab_ref, thresholds, typeclass = 'arbore'):
         """ %(tab_ref, thresholds["seuil_surface"])
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -262,7 +303,7 @@ def firstClassification(connexion, tab_ref, thresholds, typeclass = 'arbore'):
 ###########################################################################################################################################
 # FONCTION secClassification()                                                                                                          #
 ###########################################################################################################################################
-def secClassification(connexion, tab_ref, tab_out, thresholds):
+def secClassification(connexion, tab_ref, tab_out, thresholds, debug = 0):
     """
     Rôle : détection et classification du reste des polygones classés "regroupement" lors de la première classification
 
@@ -271,6 +312,7 @@ def secClassification(connexion, tab_ref, tab_out, thresholds):
         tab_ref : nom de la table correspondant aux segments de végétation
         tab_out : nom de la table contenant les polygones re-classés initialement labellisés "regroupement arboré" lors de la firstClassification()
         thresholds : dictionnaire des seuil à appliquer
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         tab_out : nom de la table où tous les polygones classés initialement "regroupement arboré" sont re-classés
@@ -286,7 +328,7 @@ def secClassification(connexion, tab_ref, tab_out, thresholds):
     """ %(tab_out, tab_ref, '%regroupement%')
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -307,15 +349,15 @@ def secClassification(connexion, tab_ref, tab_out, thresholds):
     """ %(tab_out)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
     #Création et calcul de l'indicateur de convexité
-    createConvexityIndicator(connexion, tab_out)
+    createConvexityIndicator(connexion, tab_out, debug = debug)
 
     #Création et calcul de l'indicateur de compacité
-    createCompactnessIndicator(connexion, tab_out, thresholds["val_buffer"])
+    createCompactnessIndicator(connexion, tab_out, thresholds["val_buffer"], debug = debug)
 
     #Création et calcul de l'indicateur d'élongation
     createExtensionIndicator(connexion,tab_out)
@@ -350,7 +392,7 @@ def secClassification(connexion, tab_ref, tab_out, thresholds):
     """ %(tab_out, name_bst, thresholds["seuil_convexite"], thresholds["seuil_compacite_2"])
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -361,7 +403,7 @@ def secClassification(connexion, tab_ref, tab_out, thresholds):
 ###########################################################################################################################################
 # FONCTION classTreeWoodStrict()                                                                                                          #
 ###########################################################################################################################################
-def createLayerTree(connexion, tab_firstclass, tab_secclass):
+def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
     """
     Rôle : création de la table/couche contenant les formes végétales arborées
 
@@ -369,6 +411,7 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass):
         connexion : connexion à la base donnée et au schéma correspondant
         tab_firstclass : table en sortie de la première classification
         tab_secclass : table en sortie de la dernière classification concernant les éléments de regroupements arborés
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         nom de la table contenant tous les polygones de formes végétales arborées 
@@ -390,7 +433,7 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass):
     """ %(tab_firstclass, tab_secclass)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -408,7 +451,7 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass):
     """
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -424,7 +467,7 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass):
 ###########################################################################################################################################
 # FONCTION detectInShrubStratum()                                                                                                         #
 ###########################################################################################################################################
-def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layer = '', save_intermediate_results = False):
+def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layer = '', save_intermediate_results = False, debug = 0):
     """
     Rôle : détecté les formes végétales horizontales au sein de la strate arbustive
 
@@ -435,6 +478,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
         dic_thresholds : dictionnaire des seuils à appliquer, par défaut : {"seuil_surface" : 0, "seuil_compacite_1" : 0, "seuil_compacite_2" : 0, "seuil_convexite" : 0, "seuil_elongation" : 0, "val_largeur_max_alignement" : 0, "val_buffer" : 0}
         output_layer : sauvegarde ou non du résultat final en une couche vectorielle, par défaut ''
         save_intermediate_results : sauvegarde ou non des tables intermédiaires
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         tab_arbustive : nom de la table contenant les éléments de la strate arbustive classés horizontalement
@@ -456,7 +500,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     """ %(tab_arbu_ini, tab_ref)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
     
@@ -474,7 +518,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     """ %(tab_arbu, tab_arbu_ini)
 
     # #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -492,7 +536,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     UPDATE %s SET strate = 'arbustif' WHERE fid = fid;
     """ %(tab_arbu)
     
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -500,18 +544,18 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     addColumn(connexion, tab_arbu, 'fv', 'varchar(100)')
 
     # #Création et calcul de l'indicateur de forme : compacité
-    createCompactnessIndicator(connexion, tab_arbu, thresholds['val_buffer'])
+    createCompactnessIndicator(connexion, tab_arbu, thresholds['val_buffer'], debug = debug)
 
     #3# Classement des segments en "arbuste isole", "tache arbustive" et "regroupement arbustif"
        # basé sur un critère de surface et de seuil sur l'indice de compacité
-    fst_class = firstClassification(connexion, tab_arbu, thresholds,  'arbustif')
+    fst_class = firstClassification(connexion, tab_arbu, thresholds,  'arbustif', debug = debug)
     
     #4# Travaux sur les "regroupements arborés"
-    sec_class = secClassification(connexion, tab_arbu,'rgpt_arbustif', thresholds)
+    sec_class = secClassification(connexion, tab_arbu,'rgpt_arbustif', thresholds, debug = debug)
 
     #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
     tab_arbustif = ''
-    tab_arbustif = createLayerShrub(connexion, fst_class, sec_class)
+    tab_arbustif = createLayerShrub(connexion, fst_class, sec_class, debug = debug)
 
     if tab_arbustif == '':
         tab_arbustif = 'strate_arbustive'
@@ -524,7 +568,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
 
     # SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
     if output_layer == '':
-        #renvoie un message  
+        print(yellow + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification des FV arbustives. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
         exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_arbustif, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
     
@@ -534,7 +578,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
 ###########################################################################################################################################
 # FONCTION createLayerShrub()                                                                                                             #
 ###########################################################################################################################################
-def createLayerShrub(connexion, tab_firstclass, tab_secclass):
+def createLayerShrub(connexion, tab_firstclass, tab_secclass, debug = 0):
     """
     Rôle : créer une table 'strate_arbustive' qui contient toutes les FV de la strate arbustive
 
@@ -542,6 +586,7 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass):
         connexion : connexion à la base de données et au schéma correspondant
         tab_firstclass : table en sortie de la première classification
         tab_secclass : table en sortie de la seconde classification concernant les éléments de regroupements arbustifs
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         nom de la table contenant tous les éléments de la strate arbustive en fv
@@ -562,7 +607,7 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass):
     """ %(tab_firstclass, tab_secclass)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -580,7 +625,7 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass):
     """
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -594,7 +639,7 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass):
 ###########################################################################################################################################
 # FONCTION detectInHerbaceousStratum()                                                                                                    #
 ###########################################################################################################################################
-def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layer = '', save_intermediate_results = False):
+def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layer = '', save_intermediate_results = False, debug = 0):
     """
     Rôle : détecter les formes végétales horizontales au sein de la strate herbacée
 
@@ -604,6 +649,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
         schem_tab_ref : schema.nom de la table
         output_layer : sauvegarde ou non du résultat final en une couche vectorielle, par défaut ''
         save_intermediate_results : sauvegarde ou non des tables intermédiaires
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         tab_herbace : nom de la table contenant les éléments de la strate herbace classés horizontalement
@@ -622,7 +668,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     """ %(tab_herb_ini, tab_ref)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -640,7 +686,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     """ %(tab_out, tab_herb_ini)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -656,6 +702,9 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     query = """
     UPDATE %s SET strate = 'herbace' WHERE fid = fid;
     """ %(tab_out)
+
+    if debug >= 3:
+        print(query)
     executeQuery(connexion, query)
 
     #Création de la colonne fv
@@ -673,7 +722,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
 
     ## SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
     if output_layer == '' :
-       #renvoie message disant qu'il n'y aura pas de sauevagder  
+        print(yellow + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification des FV herbacées. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
         exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_herbace, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
 
@@ -686,7 +735,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
 ########################################################################
 # FONCTION createCompactnessIndicator()                                #
 ########################################################################
-def createCompactnessIndicator(connexion, tab_ref, buffer_value):
+def createCompactnessIndicator(connexion, tab_ref, buffer_value, debug = 0):
     """
     Rôle : créé et calcul un indice de compacité sur une forme pouvant être dilatée ou erodée
 
@@ -694,6 +743,7 @@ def createCompactnessIndicator(connexion, tab_ref, buffer_value):
         connexion : connexion à la base donnée et au schéma correspondant
         tab_ref : nom de la table dans laquelle on calcule l'indicateur de compacité
         buffer_value : valeur attribuée à la bufferisation
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         nom de la colonne créé
@@ -707,7 +757,7 @@ def createCompactnessIndicator(connexion, tab_ref, buffer_value):
     """ %(tab_ref, tab_ref, buffer_value, buffer_value, buffer_value, buffer_value)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -716,13 +766,14 @@ def createCompactnessIndicator(connexion, tab_ref, buffer_value):
 ########################################################################
 # FONCTION createConvexityIndicator()                                  #
 ########################################################################
-def createConvexityIndicator(connexion, tab_ref):
+def createConvexityIndicator(connexion, tab_ref, debug = 0):
     """
     Rôle : créé et calcul un indice de convexité sur une forme pouvant être dilatée ou erodée
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
         tab_ref : nom de la table dans laquelle on calcule l'indicateur de compacité
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
 
     #Création et implémentation de l'indicateur de convexité (id_conv)
@@ -734,7 +785,7 @@ def createConvexityIndicator(connexion, tab_ref):
     """ %(tab_ref, tab_ref)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -744,13 +795,14 @@ def createConvexityIndicator(connexion, tab_ref):
 ########################################################################
 # FONCTION createExtensionIndicator()                                  #
 ########################################################################
-def createExtensionIndicator(connexion, tab_ref):
+def createExtensionIndicator(connexion, tab_ref, debug = 0):
     """
     Rôle : créé et calcul un indice d'élongation sur une forme pouvant être dilatée ou erodée
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
         tab_ref : nom de la table dans laquelle on calcule l'indicateur de compacité
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
 
     # Calcul des valeurs de longueur et de largeur des rectangles orientés englobant minimaux des polygones
@@ -781,7 +833,7 @@ def createExtensionIndicator(connexion, tab_ref):
     """ %(tab_ref)
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -794,7 +846,7 @@ def createExtensionIndicator(connexion, tab_ref):
     """ %(tab_ref)
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 

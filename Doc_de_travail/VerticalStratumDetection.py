@@ -91,122 +91,149 @@ def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize
 ###########################################################################################################################################
 # FONCTION classificationVerticalStratum()                                                                                                #
 ###########################################################################################################################################
-def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = False, overwrite = True):
+def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = 0):
     """
     Rôle : classe les segments en trois strates : arborée, arbustive et herbacée
 
     Paramètres :
         connexion : correspond à la variable de connexion à la base de données
         connexion_dic : dictionnaire des paramètres de connexion selon le modèle : {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : 'postgres', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
-        output_layer : couche vectorielle de sortie composée de la strate arborée classée en strate verticale 
+        output_layer : couche vectorielle de sortie composée des segments 
         sgts_input : fichier vecteur de segmentation
         raster_dic : dictionnaire associant le type de donnée récupéré avec le fichier raster contenant les informations, par exemple : {"mnh" : filename}
         tab_ref : nom de la table principale. Par défaut : 'segments_vegetation'
         dic_seuil : dictionnaire des seuils de hauteur, de texture, de surface. Le format {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20} 
         format_type : format de la donnée vecteur en entrée, par défaut : GPKG
-        save_result_as_layer : sauvegarde ou non du résultat final en une couche vectorielle, par défaut False
         save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaire. Par défaut : False
-        overwrite : paramètre de ré-écriture des fichiers. Par défaut False
+        overwrite : paramètre de ré-écriture des tables. Par défaut False
+        debug : niveau de debug pour l'affichage des commentaires
 
     Sortie :
         file_output : couche vecteur de sortie correspondant au résultat de segmentation
     """
 
+    #Rappel du paramétrage 
+    if debug >= 2 :
+        print(cyan + "classificationVerticalStratum() : Début de la classification en strates verticales végétales" + endC)
+        print(cyan + "classificationVerticalStratum : " + endC + "connexion_dic : " + str(connexion_dic) + endC)
+        print(cyan + "classificationVerticalStratum : " + endC + "output_layer : " + str(output_layer) + endC)
+        print(cyan + "classificationVerticalStratum : " + endC + "sgts_input : " + str(sgts_input) + endC)
+        print(cyan + "classificationVerticalStratum : " + endC + "raster_dic : " + str(raster_dic) + endC)
+        print(cyan + "classificationVerticalStratum : " + endC + "dic_seuil : " + str(dic_seuil) + endC)
+        print(cyan + "classificationVerticalStratum : " + endC + "format_type : " + str(format_type) + endC)
+        print(cyan + "classificationVerticalStratum : " + endC + "save_intermediate_result : " + str(save_intermediate_result) + endC)
+        print(cyan + "classificationVerticalStratum : " + endC + "overwrite : " + str(overwrite) + endC)
+        print(cyan + "/nclassificationVerticalStratum : /nSortie :" + endC + "file_output : " + str(output_layer) + endC)
+
     ##################################################################### 
     ## Création et export en base de la couche des segments végétation ##
     #####################################################################   
+    #Nettoyage en base si ré-écriture
+    if overwrite == True:
+        query ="""
+        SELECT format('DROP TABLE %s.%s', table_schema, table_name)
+        FROM information_schema.tables
+        WHERE table_schema = '%s'; 
+        """ %('%I', '%I',connexion_stratev_dic["schema"])
+        cursor = connexion.cursor()
+        cursor.execute(query)
+        tables_schema = cursor.fetchall()
+        for el in tables_schema:
+            executeQuery(connexion, el[0])
 
-    #Fichiers intermédiaires
-    repertory_output = os.path.dirname(output_layer)
-    file_name = os.path.splitext(os.path.basename(sgts_input))[0]
-    extension_vecteur = os.path.splitext(output_layer)[1]
 
-    ## Collecte données de hauteur pour chaque segment  
-    file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
-
-    if os.path.exists(file_mnh_out):
-        os.remove(file_mnh_out)
-
-    #Calcul de la valeur médiane de hauteur pour chaque segment de végétation 
-    calc_statMedian(sgts_input, raster_dic["MNH"], file_mnh_out)
-
-    #Export du fichier vecteur des segments végétation avec une valeur médiane de hauteur dans la BD
-    tablename_mnh = "table_sgts_mnh"
-    importVectorByOgr2ogr(connexion_dic["dbname"], file_mnh_out, tablename_mnh, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
-
-    ## Collecte données de texture pour chaque segment
-    file_txt_out = repertory_output + os.sep + file_name + "TXT" + extension_vecteur
-
-    if os.path.exists(file_txt_out):
-        os.remove(file_txt_out)
     
-    #Calcul de la valeur médiane de texture pour chaque segment de végétation 
-    calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
+    #Fichiers intermédiaires
+    # repertory_output = os.path.dirname(output_layer)
+    # file_name = os.path.splitext(os.path.basename(sgts_input))[0]
+    # extension_vecteur = os.path.splitext(output_layer)[1]
 
-    #Export du fichier vecteur des segments végétation avec une valeur médiane de texture dans la BD
-    tablename_txt = "table_sgts_txt"
-    importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
+    # ## Collecte données de hauteur pour chaque segment  
+    # file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
+
+    # if os.path.exists(file_mnh_out) and overwrite == True:
+    #     os.remove(file_mnh_out)
+
+    # #Calcul de la valeur médiane de hauteur pour chaque segment de végétation 
+    # calc_statMedian(sgts_input, raster_dic["MNH"], file_mnh_out)
+
+    # #Export du fichier vecteur des segments végétation avec une valeur médiane de hauteur dans la BD
+    # tablename_mnh = "table_sgts_mnh"
+    # importVectorByOgr2ogr(connexion_dic["dbname"], file_mnh_out, tablename_mnh, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
+
+    # ## Collecte données de texture pour chaque segment
+    # file_txt_out = repertory_output + os.sep + file_name + "TXT" + extension_vecteur
+
+    # if os.path.exists(file_txt_out) and overwrite == True:
+    #     os.remove(file_txt_out)
+    
+    # #Calcul de la valeur médiane de texture pour chaque segment de végétation 
+    # calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
+
+    # #Export du fichier vecteur des segments végétation avec une valeur médiane de texture dans la BD
+    # tablename_txt = "table_sgts_txt"
+    # importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
 
 
-    #Supprimer le fichier si on ne veut pas les sauvegarder
-    if not save_intermediate_result :
-        os.remove(file_mnh_out)
-        os.remove(file_txt_out)
+    # #Supprimer le fichier si on ne veut pas les sauvegarder
+    # if not save_intermediate_result :
+    #     os.remove(file_mnh_out)
+    #     os.remove(file_txt_out)
 
 
-    #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
-    tab_sgt_ini = 'segments_vegetation_ini'
-    query = """
-    CREATE TABLE %s AS
-        SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
-        FROM %s AS t1, %s AS t2
-        WHERE t1.dn = t2.dn;
-    """ %(tab_sgt_ini, tablename_txt, tablename_mnh)
+    # #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
+    # tab_sgt_ini = 'segments_vegetation_ini'
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
+    #     FROM %s AS t1, %s AS t2
+    #     WHERE t1.dn = t2.dn;
+    # """ %(tab_sgt_ini, tablename_txt, tablename_mnh)
 
-    #Exécution de la requête SQL
-    if debug >= 1:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 1:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    #Suppression des deux tables txt et mnh
-    if tablename_txt != '' :
-        dropTable(connexion, tablename_txt) 
-    if tablename_mnh != '':
-        dropTable(connexion, tablename_mnh) 
+    # #Suppression des deux tables txt et mnh
+    # if tablename_txt != '' :
+    #     dropTable(connexion, tablename_txt) 
+    # if tablename_mnh != '':
+    #     dropTable(connexion, tablename_mnh) 
 
-    ##################################################################### 
-    ## Prétraitements : transformation de l'ensemble des multipolygones##
-    ##                  en simples polygones ET suppression des        ## 
-    ##                  artefacts au reflet blanc                      ##  
-    #####################################################################
+    # ##################################################################### 
+    # ## Prétraitements : transformation de l'ensemble des multipolygones##
+    # ##                  en simples polygones ET suppression des        ## 
+    # ##                  artefacts au reflet blanc                      ##  
+    # #####################################################################
 
-    #Conversion en simples polygones 
-    query = """
-    CREATE TABLE %s AS
-        SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
-        FROM %s as t
-    """ %(tab_ref, tab_sgt_ini)
+    # #Conversion en simples polygones 
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
+    #     FROM %s as t
+    # """ %(tab_ref, tab_sgt_ini)
 
-    #Exécution de la requête SQL
-    if debug >= 1:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 1:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    #Traitement des artefacts au reflet blanc
-    tab_sgt_txt_val0 = 'segments_txt_val0'
-    query = """
-    CREATE TABLE %s AS
-        SELECT * 
-        FROM %s
-        WHERE txt = 0;
+    # #Traitement des artefacts au reflet blanc
+    # tab_sgt_txt_val0 = 'segments_txt_val0'
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT * 
+    #     FROM %s
+    #     WHERE txt = 0;
 
-    DELETE FROM %s WHERE txt = 0;
-    """ %(tab_sgt_txt_val0, tab_ref, tab_ref)
+    # DELETE FROM %s WHERE txt = 0;
+    # """ %(tab_sgt_txt_val0, tab_ref, tab_ref)
 
-    #Exécution de la requête SQL
-    if debug >= 1:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 1:
+    #     print(query)
+    # executeQuery(connexion, query)
 
     #Ajout d'un identifiant unique
     addUniqId(connexion, tab_ref)
@@ -295,7 +322,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     ## Sauvegarde des résultats en tant que couche vectorielle ##  
     #############################################################
     if output_layer == '' :
-       #renvoie message comme quoi il n'y a pas de sauvegarde du résultat car pas de chemin renseigné 
+        print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
     
