@@ -1,4 +1,4 @@
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
+from Lib_display import bold,black,red,green,yellow,cyan,magenta,cyan,endC,displayIHM
 from MnhCreation import mnhCreation
 from NeochannelComputation_gus import neochannelComputation
 from DataConcatenation import concatenateData
@@ -17,10 +17,10 @@ from VerticalStratumDetection import *
 
 if __name__ == "__main__":
 
-    debugg = 1
+    debug = 1
     #Préparation du parser
     #à faire par la suite
-    print(bold + blue + "*********************************************** \n*** Cartographie détaillée de la végétation *** \n***********************************************" + endC)
+    print(bold + cyan + "*********************************************** \n*** Cartographie détaillée de la végétation *** \n***********************************************" + endC)
 
     #Structurer un dossier qui stockera toutes les données
     #Création du repertoire du projet 
@@ -43,8 +43,8 @@ if __name__ == "__main__":
     # if not os.path.exists(path_data_prod):
     #   os.makedirs(path_data_prod)
 
-    if debugg <= 1:
-      print(bold + blue + "\nCréation structure du dossier de projet" + endC)
+    if debug <= 1:
+      print(bold + cyan + "\nCréation structure du dossier de projet" + endC)
       print("Répertoire : " + repertory_prj)
 
     # DATAS
@@ -55,17 +55,17 @@ if __name__ == "__main__":
     shp_zone = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/MGN_contours.shp'
     
    ## PRE-TRAITEMENTS ##  
-    if debugg <= 1:
-      print(bold + blue + "\n*0* PRÉ-TRAITEMENTS" + endC)
+    if debug <= 1:
+      print(bold + cyan + "\n*0* PRÉ-TRAITEMENTS" + endC)
     # IMAGES ASSEMBLY
-    if debugg <= 1:
-      print(blue + "\nAssemblage des imagettes" + endC)
+    if debug <= 1:
+      print(cyan + "\nAssemblage des imagettes" + endC)
    #NB pour l'instant repertory n'est pas utilisé dans le code --> à revoir 
    # assemblyImages(repertory, img_tiles_repertory, img_ref, no_data_value, epsg, save_results_intermediate = False, ext_txt = '.txt',  format_raster = 'GTiff')
 
     # MNH CREATION  
-    if debugg <= 1:
-      print(blue + "\nCréation du MNH" + endC)
+    if debug <= 1:
+      print(cyan + "\nCréation du MNH" + endC)
 
     img_mnt =  r'/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNT/2021/NANCY/MNT_RGEALTI/MNT_RGEALTI_1M_ZONE_DE_NANCY.tif'
     img_mns = r'/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNS/2022/NANCY/2022_06_14/MNSCARS/DSM_PRODUITS_RGE.tif'
@@ -83,8 +83,8 @@ if __name__ == "__main__":
     img_ref_PAN = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/ORT_P1AP_MGN.tif'
 
     # CALCUL DES NEOCANAUX
-    if debugg <= 1:
-      print(blue + "\nCalcul des néocanaux" + endC)
+    if debug <= 1:
+      print(cyan + "\nCalcul des néocanaux" + endC)
    # img_neocanaux = path_data_prod + os.sep + 'img_neocanaux.tif'
 
    # neochannels = neochannelComputation(img_ref, img_ref_PAN, path_data_prod, shp_zone, save_intermediate_results = False)
@@ -107,8 +107,8 @@ if __name__ == "__main__":
      
     
   #   # CONCATENATION DES NEOCANAUX
-    if debugg <= 1:
-      print(blue + "\nConcaténation des néocanaux" + endC)
+    if debug <= 1:
+      print(cyan + "\nConcaténation des néocanaux" + endC)
 
     img_stack = path_data_prod + os.sep + 'img_stack.tif'
 
@@ -116,8 +116,8 @@ if __name__ == "__main__":
  #  concatenateData(img_to_concatenate, img_stack)
 
   #   ## EXTRACTION DE LA VEGETATION PAR CLASSIFICATION SUPERVISEE ## 
-    if debugg <= 1:
-      print(bold + blue + "\n*1* EXTRACTION DE LA VÉGÉTATION" + endC)
+    if debug <= 1:
+      print(bold + cyan + "\n*1* EXTRACTION DE LA VÉGÉTATION" + endC)
 
   #    #Dossier de stockage des datas
     path_extractveg = path_prj + os.sep + '1-ExtractionVegetation'  
@@ -141,8 +141,8 @@ if __name__ == "__main__":
   #   #   os.makedirs(path_tmp_selectsamples)
 
   #   #1# Création des échantillons d'apprentissage
-    if debugg <= 1:
-      print(blue + "\nCréation des échantillons d'apprentissage" + endC) 
+    if debug <= 1:
+      print(cyan + "\nCréation des échantillons d'apprentissage" + endC) 
   #   #Fournir 5 couches vectorielles
   #   # bati = path_data_entry + os.sep + 'bati_vector.shp'
   #   # route =  path_data_entry + os.sep + 'route_vector.shp'
@@ -173,8 +173,8 @@ if __name__ == "__main__":
     img_classif_filtered = path_extractveg + os.sep + 'img_classification_filtered.tif'
 
   #   #2# Préparation des échantillons d'apprentissage
-    if debugg <= 1:
-      print(blue + "\nPréparation des échantillons d'apprentissage" + endC) 
+    if debug <= 1:
+      print(cyan + "\nPréparation des échantillons d'apprentissage" + endC) 
 
     #Dictionnaire des paramètres de préparation des échantillons d'apprentissage
  
@@ -185,8 +185,8 @@ if __name__ == "__main__":
   #   # macroSamplesPrepare(img_ref, vegetation, vegetation_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
     
   #   #3# Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
-    if debugg <= 1:
-      print(blue + "\nNettoyage des échantillons d'apprentissage" + endC) 
+    if debug <= 1:
+      print(cyan + "\nNettoyage des échantillons d'apprentissage" + endC) 
   #   # corr_bati = {"ndvi" : [neochannels["ndvi"] ,0, 0.35]}
   #   # macroSamplesClean(bati_prepare, bati_clean, corr_bati)
 
@@ -211,20 +211,20 @@ if __name__ == "__main__":
   #  # mask_samples_macro_input_list = [bati_clean, route_clean, solnu_clean, eau_clean, vegetation_clean]
     
   #   #4# Nettoyage recouvrement des échantillons d'apprentissage
-    if debugg <= 1:
-      print(blue + "\nCorrection du recouvrement des échantillons d'apprentissage" + endC) 
+    if debug <= 1:
+      print(cyan + "\nCorrection du recouvrement des échantillons d'apprentissage" + endC) 
   #  # cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merged_output)
     
   #   #5# Sélection des échantillons
-    if debugg <= 1:
-      print(blue + "\nSélection des échantillons d'apprentissage" + endC) 
+    if debug <= 1:
+      print(cyan + "\nSélection des échantillons d'apprentissage" + endC) 
 
    # selectSamples([img_stack], image_samples_merged_output, samplevector, table_statistics_output, sampler_strategy="percent", select_ratio_floor = 10, ratio_per_class_dico = {1:1.37,2:3.40,3:100,4:0.37,5:0.84}, name_column = 'ROI', no_data_value = 0)
     
 
     #6# Classification supervisée RF
-    if debugg <= 1:
-      print(blue + "\nClassification supervisée RF" + endC)
+    if debug <= 1:
+      print(cyan + "\nClassification supervisée RF" + endC)
 
     depth_tree = 50
     sample_min = 20
@@ -246,14 +246,14 @@ if __name__ == "__main__":
    # classifySupervised([img_stack], samplevector, img_classif, '', model_output = '', model_input = '', field_class = 'ROI', classifier_mode = "rf", rf_parametres_struct = rf_parametres_struct,no_data_value = 0, ram_otb=0,  format_raster='GTiff', extension_vector=".shp")
     
     #7# Application du filtre majoritaire 
-    if debugg <= 1:
-      print(blue + "\nApplication du filtre majoritaire" + endC)  
+    if debug <= 1:
+      print(cyan + "\nApplication du filtre majoritaire" + endC)  
   #  filterImageMajority(img_classif, img_classif_filtered, umc_pixels = 8) 
     
 
     ## CREATION ET PREPARATION DE LA BASE DE DONNEES ##  
-    if debugg <= 1:
-      print(bold + blue + "\nCréation de la base de données " + endC)
+    if debug <= 1:
+      print(bold + cyan + "\nCréation de la base de données " + endC)
 
     #Paramètres de connexion 
     dbname = 'projetgus'
@@ -302,21 +302,21 @@ if __name__ == "__main__":
 
     # #Fermeture de la connexion de base
     # closeConnection(connexion) 
-    if debugg <= 1:
-      print(bold + "\nParamètres : ")
+    if debug <= 1:
+      print(bold + "\nParamètres : " + endC)
       print("Nom de la base de données : %s" %(connexion_ini_dic["dbname"]))
       print("Nom d'utilisateur : %s" %(connexion_ini_dic["user_db"]))
       print("Mot de passe : %s" %(connexion_ini_dic["password_db"]))
       print("Serveur: %s" %(connexion_ini_dic["server_db"]))
       print("Num port : %s" %(connexion_ini_dic["port_number"]))
       print("Schéma strates végétales : %s" %(connexion_stratev_dic["schema"]))
-      print("Schéma formes végétales : %s" %(connexion_fv_dic["schema"]))
-      print("Schéma données finales : %s" %(connexion_datafinal_dic["schema"]))
+     # print("Schéma formes végétales : %s" %(connexion_fv_dic["schema"]))
+     # print("Schéma données finales : %s" %(connexion_datafinal_dic["schema"]))
       print("Extensions : postgis, postgis_sfcgal")
 
     #1# Distinction des strates verticales de végétation
-    if debugg <= 1:
-      print(bold + blue + "\nDistinction des strates verticales de végétation " + endC)
+    if debug <= 1:
+      print(bold + cyan + "\nDistinction des strates verticales de végétation " + endC)
 
     #Dossier de stockage des datas
     path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'  
@@ -329,8 +329,8 @@ if __name__ == "__main__":
     stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg' 
 
     #1.1# Segmentation de l'image
-    if debugg <= 1:
-      print(blue + "\nSegmentation de l'image de végétation " + endC)
+    if debug <= 1:
+      print(cyan + "\nSegmentation de l'image de végétation " + endC)
     #Paramètres de segmentation
     num_class = {
       "bati" : 1,
@@ -340,38 +340,38 @@ if __name__ == "__main__":
       "vegetation" : 5
     }  
     minsize = 10
-    segmentationImageVegetetation(img_ref, img_classif_filtered, sgt_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = True, overwrite = False)
+   # segmentationImageVegetetation(img_ref, img_classif_filtered, sgt_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = True, overwrite = False)
 
     #1.2# Classification en strates verticales
-    if debugg <= 1:
-      print(blue + "\nClassification des segments végétation en strates verticales " + endC)
+    if debug <= 1:
+      print(cyan + "\nClassification des segments végétation en strates verticales " + endC)
 
     # #Ouverture connexion 
-    # connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
+    connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
  
-    # img_txt_SFS = '/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
-    # raster_dic = {
-    #   "MNH" : img_MNH, 
-    #   "TXT" : img_txt_SFS
-    # }
-    # tab_ref = 'segments_vegetation'
-    # dic_seuils_stratesV = {
-    #   "seuil_h1" : 3,
-    #   "seuil_h2" : 1, 
-    #   "seuil_h3" : 2,
-    #   "seuil_txt" : 11,
-    #   "seuil_touch_arbo_vs_herba" : 15,
-    #   "seuil_ratio_surf" : 25,
-    #   "seuil_arbu_repres" : 20
-    # }
+    img_txt_SFS = '/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
+    raster_dic = {
+      "MNH" : img_MNH, 
+      "TXT" : img_txt_SFS
+    }
+    tab_ref = 'segments_vegetation'
+    dic_seuils_stratesV = {
+      "seuil_h1" : 3,
+      "seuil_h2" : 1, 
+      "seuil_h3" : 2,
+      "seuil_txt" : 11,
+      "seuil_touch_arbo_vs_herba" : 15,
+      "seuil_ratio_surf" : 25,
+      "seuil_arbu_repres" : 20
+    }
 
-    # output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_results_as_layer = True, save_intermediate_result = True, overwrite = True)
+    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = debug)
     
     # closeConnection(connexion)
 
     # #2# Détection des formes végétales horizontales
-    if debugg <= 1:
-      print(blue + "\nClassification des segments végétation en formes végétales" + endC)
+    if debug <= 1:
+      print(cyan + "\nClassification des segments végétation en formes végétales" + endC)
 
     # #Dossier de stockage des datas
     # path_fv = path_prj + os.sep + '2-DistinctionFormesVegetales'  
@@ -424,8 +424,8 @@ if __name__ == "__main__":
     # closeConnection(connexion)
 
     # #4# Calcul des indicateurs de végétation
-    if debugg <= 1:
-      print(blue + "\nCalcul des attributs descriptifs des formes végétales" + endC)
+    if debug <= 1:
+      print(cyan + "\nCalcul des attributs descriptifs des formes végétales" + endC)
     # #Dossier de stockage des datas
     # path_datafinal = path_prj + os.sep + '5-Calcul_attributs_descriptifs'  
 
@@ -465,7 +465,7 @@ if __name__ == "__main__":
 
     # createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs, dic_params, output_layer = output_layer, repertory, save_intermediate_result = False)
     path_datafinal = "ici" 
-    if debugg <= 1:
+    if debug <= 1:
       print(bold + green + "\nCartographie détaillée de la végétation disponible via le chemin :" + path_datafinal + endC)
 
     # closeConnection(connexion)
