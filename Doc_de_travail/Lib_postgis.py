@@ -1072,9 +1072,9 @@ def addIndex(connexion, table_name, column_name, name_index):
     query = """
     CREATE INDEX %s ON %s(%s);
     """ %(name_index,table_name, column_name )
-
+    if debug >= 3:
+        print(query)
     executeQuery(connexion, query)
-    print(query)
 
     return 
 
@@ -1145,7 +1145,7 @@ def createExtension(connexion, extension_name):
     query = """
     CREATE EXTENSION IF NOT EXISTS %s;
     """
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(query)
 
