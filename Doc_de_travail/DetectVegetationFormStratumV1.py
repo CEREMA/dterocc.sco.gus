@@ -143,6 +143,9 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     addIndex(connexion, tab_arb_ini, 'fid', 'idx_fid_arboreini')
 
     #2# Regroupement et lissage des segments arborés
+    if debug >= 3:
+        print(bold + "Regroupement et lissage des segments arborés" + endC)
+
     tab_arb = 'arbore'
 
     query = """
@@ -181,12 +184,22 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
 
     #3# Classement des segments en "arbre isole", "tache arboree" et "regroupement arbore"
     # basé sur un critère de surface et de seuil sur l'indice de compacité
+
+    if debug >= 3:
+        print(bold + "Classement des segments en 'arbre isole', 'tache arboree' et 'regroupement arbore' basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
+
     fst_class = firstClassification(connexion, tab_arb,  thresholds, 'arbore', debug = debug)
     
     #4# Travaux sur les "regroupements arborés"
+    if debug >= 3:
+        print(bold + "Classement des segments en 'regroupements arborés'" + endC)
+
     sec_class = secClassification(connexion, tab_arb, 'rgpt_arbore', thresholds, debug = debug)
 
     #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
+    if debug >= 3:
+        print(bold + "Regroupement de l'ensemble des entités de la strate arborée en une seule couche" + endC)
+
     tab_arbore = ''
     tab_arbore = createLayerTree(connexion, fst_class, sec_class, debug = debug)
 
@@ -509,6 +522,9 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     addIndex(connexion, tab_arbu_ini, 'fid', 'idx_fid_arbustifini')
 
     #2# Regroupement et lissage des segments arbustifs
+    if debug >= 3:
+        print(bold + "Regroupement et lissage des segments arbustifs" + endC)
+
     tab_arbu = 'arbustif'
 
     query = """
@@ -548,12 +564,22 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
 
     #3# Classement des segments en "arbuste isole", "tache arbustive" et "regroupement arbustif"
        # basé sur un critère de surface et de seuil sur l'indice de compacité
+    if debug >= 3:
+        print(bold + "Classement des segments en 'arbustif isole', 'tache arbustive' et 'regroupement arbustif' basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
+
     fst_class = firstClassification(connexion, tab_arbu, thresholds,  'arbustif', debug = debug)
     
-    #4# Travaux sur les "regroupements arborés"
+    #4# Travaux sur les "regroupements arbustifs"
+    if debug >= 3:
+        print(bold + "Classement des segments en 'regroupements arbustifs'" + endC)
+
     sec_class = secClassification(connexion, tab_arbu,'rgpt_arbustif', thresholds, debug = debug)
 
     #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
+    if debug >= 3:
+        print(bold + "Regroupement de l'ensemble des entités de la strate arbustive en une seule couche" + endC)
+
+
     tab_arbustif = ''
     tab_arbustif = createLayerShrub(connexion, fst_class, sec_class, debug = debug)
 

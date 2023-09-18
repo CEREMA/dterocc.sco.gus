@@ -148,6 +148,14 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     # file_name = os.path.splitext(os.path.basename(sgts_input))[0]
     # extension_vecteur = os.path.splitext(output_layer)[1]
 
+    ##################################################################### 
+    ##    Collect des statistiques de hauteur et texture pour chaque   ##
+    ##                             segment                             ## 
+    #####################################################################
+
+    if debug >= 1:
+        print(bold + "Collecte des valeurs médianes de hauteur et de texture pour chaque segment." + endC)
+
     # ## Collecte données de hauteur pour chaque segment  
     # file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
 
@@ -182,7 +190,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
 
 
     # #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
-    # tab_sgt_ini = 'segments_vegetation_ini'
+    tab_sgt_ini = 'segments_vegetation_ini'
     # query = """
     # CREATE TABLE %s AS
     #     SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
@@ -201,39 +209,42 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     # if tablename_mnh != '':
     #     dropTable(connexion, tablename_mnh) 
 
-    # ##################################################################### 
-    # ## Prétraitements : transformation de l'ensemble des multipolygones##
-    # ##                  en simples polygones ET suppression des        ## 
-    # ##                  artefacts au reflet blanc                      ##  
-    # #####################################################################
+    ##################################################################### 
+    ## Prétraitements : transformation de l'ensemble des multipolygones##
+    ##                  en simples polygones ET suppression des        ## 
+    ##                  artefacts au reflet blanc                      ##  
+    #####################################################################
 
-    # #Conversion en simples polygones 
-    # query = """
-    # CREATE TABLE %s AS
-    #     SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
-    #     FROM %s as t
-    # """ %(tab_ref, tab_sgt_ini)
+    if debug >= 2:
+        print(bold + "Prétraitements : transformation de l'ensemble des multipolygones en simples polygones ET suppression des artefacts au reflet blanc" + endC)
 
-    # #Exécution de la requête SQL
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #Conversion en simples polygones 
+    query = """
+    CREATE TABLE %s AS
+        SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
+        FROM %s as t
+    """ %(tab_ref, tab_sgt_ini)
 
-    # #Traitement des artefacts au reflet blanc
-    # tab_sgt_txt_val0 = 'segments_txt_val0'
-    # query = """
-    # CREATE TABLE %s AS
-    #     SELECT * 
-    #     FROM %s
-    #     WHERE txt = 0;
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-    # DELETE FROM %s WHERE txt = 0;
-    # """ %(tab_sgt_txt_val0, tab_ref, tab_ref)
+    #Traitement des artefacts au reflet blanc
+    tab_sgt_txt_val0 = 'segments_txt_val0'
+    query = """
+    CREATE TABLE %s AS
+        SELECT * 
+        FROM %s
+        WHERE txt = 0;
 
-    # #Exécution de la requête SQL
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
+    DELETE FROM %s WHERE txt = 0;
+    """ %(tab_sgt_txt_val0, tab_ref, tab_ref)
+
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
     #Ajout d'un identifiant unique
     addUniqId(connexion, tab_ref)
@@ -253,6 +264,9 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     ##                  hauteur et de texture                          ##  
     #####################################################################
 
+    if debug >= 2:
+        print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
+
     query = """
     UPDATE %s as t SET strate = 'arbore' WHERE t.txt < %s AND t.mnh  > %s;
     """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
@@ -266,19 +280,24 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     """ %(tab_ref, dic_seuil["seuil_txt"])
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
     ##################################################################### 
     ## Deuxième étape : reclassification des segments arbustifs        ##
     #####################################################################
+    if debug >= 2:
+        print(bold + "Deuxième étape : reclassification des segments arbustifs" + endC)
 
     ### 
     #0# Extraction de deux catégories de segments arbustifs : 
     ### 
       # - les segments "isolés" (ne touchant pas d'autres segments arbustifs)
       # - les segments  de "regroupement" (en contact avec d'autres segments arbustifs)
+
+    if debug >= 2:
+        print(bold + "Deuxième étape :\n0-Extraction des segments 'isolés' et des segments de 'regroupement'" + endC)
 
     #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
     tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
@@ -287,12 +306,18 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     ###
     #1# Première phase de reclassification
     ###   
-
+    
     #1.0# Reclassification des arbustes isolés selon leur hauteur
+    if debug >= 2:
+        print(bold + "Deuxième étape :\n1.0-Reclassification des arbustes isolés selon leur hauteur" + endC)
+
     tab_ref = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil) 
     #il nous reste les segments arbustifs isolés qui n'ont pas pu être retraités par la hauteur 
 
     #1.1# Reclassification des segments arbustes "regroupés"
+    if debug >= 2:
+        print(bold + "Deuxième étape :\n1.1-Reclassification des segments arbustes 'regroupés'" + endC)
+
     reclassGroupSegments(connexion, tab_ref, tab_rgpt_arbu, dic_seuil)
 
     #il nous reste les segments arbustifs de rgpts qui n'ont pas été reclassés par leur configuration
@@ -308,9 +333,15 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     ### 
 
     #2.0# Reclassification des arbustes "isolés" selon un rapport de surface 
+    if debug >= 2:
+        print(bold + "Deuxième étape :\n2.0-Reclassification des arbustes 'isolés' selon un rapport de surface" + endC)
+
     reclassIsolatedSgtsByAreaRatio(connexion,  tab_ref, tab_arbu_uniq, dic_seuil)
     
     # #2.1# Reclassification des arbustes "regroupés" entourés uniquement d'arboré selon un rapport de surface 
+    if debug >= 2:
+        print(bold + "Deuxième étape :\n2.1-Reclassification des arbustes 'regroupés' entourés uniquement d'arboré selon un rapport de surface" + endC)
+
     reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil)
 
     if not save_intermediate_result : 
@@ -358,7 +389,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
     """ %(tab_rgpt_arbu, tab_ref)
         
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -368,7 +399,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
     """ %(tab_rgpt_arbu)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -394,7 +425,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
     """ %(tab_ref)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -418,7 +449,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
         WHERE rgpt_arbu.fid = %s AND public.ST_INTERSECTS(tab_interm_arbuste.geom, rgpt_arbu.geom) 
         GROUP BY rgpt_arbu.fid;
         """ %(tab_rgpt_arbu, fid_rgpt)
-        if debug >= 2:
+        if debug >= 3:
             print(query)
         cursor.execute(query)
         rgpt_count = cursor.fetchall()
@@ -430,7 +461,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
         """ %(tab_rgpt_arbu, rgpt_count[0][1],rgpt_count[0][0])  
 
         #Exécution de la requête SQL
-        if debug >= 2:
+        if debug >= 3:
             print(query)
         executeQuery(connexion, query)
 
@@ -449,7 +480,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
     """ %(tab_arbu_rgpt, tab_ref, tab_rgpt_arbu)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -474,7 +505,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
     """ %(tab_arbu_uniq, tab_ref, tab_rgpt_arbu)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
     
@@ -520,7 +551,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
     """ %(tab_ref, tab_ref)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -544,7 +575,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
     """ %(tab_ref, tab_ref)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -557,7 +588,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
     """
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -574,7 +605,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
     """ %(tab_ref, tab_ref)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -590,7 +621,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
     """
 	
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -601,7 +632,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
     """ %(tab_ref, tab_ref, dic_seuil["seuil_h2"])
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -647,7 +678,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """ %(arbu_uniq, tab_ref, tab_ref, arbu_uniq, arbu_uniq)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -671,7 +702,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """ %(arbu_uniq, tab_ref, tab_ref, arbu_uniq, arbu_uniq)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -689,7 +720,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """ %(tab_ref)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -704,7 +735,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """ %(tab_ref, tab_ref)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -718,7 +749,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """ 
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -735,7 +766,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """ %(tab_ref, dic_seuil["seuil_ratio_surf"], dic_seuil["seuil_ratio_surf"], dic_seuil["seuil_h2"])
 
      #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -761,7 +792,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """
 
      #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -776,7 +807,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """ %(tab_ref)
 
      #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -791,7 +822,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """ %(tab_ref, tab_ref)
 
      #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -809,7 +840,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """
 
      #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -825,7 +856,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     """ %(tab_ref, dic_seuil["seuil_ratio_surf"], dic_seuil["seuil_ratio_surf"], dic_seuil["seuil_h2"], tab_ref)
 
      #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -878,7 +909,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
     """ %(tab_ref)
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -901,7 +932,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
         WHERE public.ST_INTERSECTS(arbore.geom, t.geom);
     """ %(rgpt_arbu)
 
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -918,7 +949,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
         WHERE public.ST_INTERSECTS(herbace.geom, t.geom);
     """  %(rgpt_arbu)
     
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -935,7 +966,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
         WHERE t2.fid not in (select fid from tab_interm_rgptarbu_touch_herbo);                                                          
     """
 
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -956,7 +987,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
 	    WHERE public.ST_INTERSECTS(t1.geom, t2.geom)
 	    GROUP BY t1.fid, public.ST_AREA(t1.geom);
     """ 
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -970,7 +1001,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
             WHERE t1.fid = t2.fid ;
     """ %(tab_ref, arbu_de_rgpt, dic_seuil["seuil_ratio_surf"], dic_seuil["seuil_arbu_repres"])
 
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1017,7 +1048,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     """ %(tab_ref)
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1041,6 +1072,9 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         WHERE public.ST_INTERSECTS(arbore.geom, t.geom);
     """ %(rgpt_arbu)
 
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
     executeQuery(connexion, query)
 
     #Création des indexes
@@ -1056,6 +1090,9 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         WHERE public.ST_INTERSECTS(herbace.geom, t.geom);
     """  %(rgpt_arbu)
     
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
     executeQuery(connexion, query)
 
     #Création des indexes
@@ -1071,6 +1108,9 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         WHERE t2.fid not in (select fid from tab_interm_rgptarbu_touch_herbo);                                                          
     """
 
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
     executeQuery(connexion, query)
 
     #Création des indexes
@@ -1085,6 +1125,9 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         WHERE t2.fid in (select fid from tab_interm_rgptarbu_touch_herbo);                                                          
     """
 
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
     executeQuery(connexion, query)
 
 
@@ -1121,7 +1164,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     """  
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1142,7 +1185,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     """ %(tab_ref, tab_ref, dic_seuil["seuil_touch_arbo_vs_herba"], tab_ref, dic_seuil["seuil_h2"])
     
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1152,7 +1195,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     """ %(dic_seuil["seuil_touch_arbo_vs_herba"])
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1166,7 +1209,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     """ 
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1178,7 +1221,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     """
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1240,7 +1283,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
 
     
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1258,7 +1301,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     """ %(tab_ref, dic_seuil["seuil_h2"])
 
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1268,7 +1311,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     """ %(dic_seuil["seuil_h2"])
    
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1281,7 +1324,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     DROP TABLE IF EXISTS sgt_rgpt_bordure
     """
     # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1335,7 +1378,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         """ %(tab_ref, tab_ref, tab_ref, tab_ref)
 
         # Exécution de la requête SQL
-        if debug >= 1:
+        if debug >= 3:
             print(query)
         executeQuery(connexion, query)
 
@@ -1350,7 +1393,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         """ %(tab_ref, tab_ref, dic_seuil["seuil_h2"])
 
          # Exécution de la requête SQL
-        if debug >= 1:
+        if debug >= 3:
             print(query)
         executeQuery(connexion, query)
 
@@ -1361,7 +1404,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         """ %( dic_seuil["seuil_h2"])
         
         # Exécution de la requête SQL
-        if debug >= 1:
+        if debug >= 3:
             print(query)
         executeQuery(connexion, query)
 
@@ -1375,7 +1418,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         DROP TABLE IF EXISTS sgt_rgpt_bordure
         """
         # Exécution de la requête SQL
-        if debug >= 1:
+        if debug >= 3:
             print(query)
         executeQuery(connexion, query)
 
