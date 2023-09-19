@@ -203,11 +203,28 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     #     print(query)
     # executeQuery(connexion, query)
 
+    # #Traitement des artefacts au reflet blanc
+    # tab_sgt_txt_val0 = 'segments_txt_val0'
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT * 
+    #     FROM %s
+    #     WHERE txt = 0;
+
+    # DELETE FROM %s WHERE txt = 0;
+    # """ %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
+
+    # #Exécution de la requête SQL
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
+
     # #Suppression des deux tables txt et mnh
     # if tablename_txt != '' :
     #     dropTable(connexion, tablename_txt) 
     # if tablename_mnh != '':
     #     dropTable(connexion, tablename_mnh) 
+
 
     ##################################################################### 
     ## Prétraitements : transformation de l'ensemble des multipolygones##
@@ -218,71 +235,55 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     if debug >= 2:
         print(bold + "Prétraitements : transformation de l'ensemble des multipolygones en simples polygones ET suppression des artefacts au reflet blanc" + endC)
 
-    #Conversion en simples polygones 
-    query = """
-    CREATE TABLE %s AS
-        SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
-        FROM %s as t
-    """ %(tab_ref, tab_sgt_ini)
+    # #Conversion en simples polygones 
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
+    #     FROM %s as t
+    # """ %(tab_ref, tab_sgt_ini)
 
-    #Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    #Traitement des artefacts au reflet blanc
-    tab_sgt_txt_val0 = 'segments_txt_val0'
-    query = """
-    CREATE TABLE %s AS
-        SELECT * 
-        FROM %s
-        WHERE txt = 0;
+    # #Ajout d'un identifiant unique
+    # addUniqId(connexion, tab_ref)
 
-    DELETE FROM %s WHERE txt = 0;
-    """ %(tab_sgt_txt_val0, tab_ref, tab_ref)
+    # #Ajout d'un index spatial 
+    # addSpatialIndex(connexion, tab_ref)
 
-    #Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
-
-    #Ajout d'un identifiant unique
-    addUniqId(connexion, tab_ref)
-
-    #Ajout d'un index spatial 
-    addSpatialIndex(connexion, tab_ref)
-
-    #Ajout de l'attribut "strate"
-    addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
+    # #Ajout de l'attribut "strate"
+    # addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
 
 
-    if not save_intermediate_result:
-        dropTable(connexion, tab_sgt_txt_val0)
+    # if not save_intermediate_result:
+    #     dropTable(connexion, tab_sgt_txt_val0)
 
-    ##################################################################### 
-    ## Première étape : classification générale, à partir de règles de ##
-    ##                  hauteur et de texture                          ##  
-    #####################################################################
+    # ##################################################################### 
+    # ## Première étape : classification générale, à partir de règles de ##
+    # ##                  hauteur et de texture                          ##  
+    # #####################################################################
 
-    if debug >= 2:
-        print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
+    # if debug >= 2:
+    #     print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
 
-    query = """
-    UPDATE %s as t SET strate = 'arbore' WHERE t.txt < %s AND t.mnh  > %s;
-    """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
+    # query = """
+    # UPDATE %s as t SET strate = 'arbore' WHERE t.txt < %s AND t.mnh  > %s;
+    # """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
 
-    query += """
-    UPDATE %s as t SET strate = 'arbustif' WHERE t.txt < %s AND  t.mnh  <= %s;
-    """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
+    # query += """
+    # UPDATE %s as t SET strate = 'arbustif' WHERE t.txt < %s AND  t.mnh  <= %s;
+    # """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
 
-    query += """
-    UPDATE %s as t SET strate = 'herbace' WHERE t.txt  >= %s;
-    """ %(tab_ref, dic_seuil["seuil_txt"])
+    # query += """
+    # UPDATE %s as t SET strate = 'herbace' WHERE t.txt  >= %s;
+    # """ %(tab_ref, dic_seuil["seuil_txt"])
 
-    #Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
     ##################################################################### 
     ## Deuxième étape : reclassification des segments arbustifs        ##
