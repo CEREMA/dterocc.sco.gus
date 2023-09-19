@@ -172,18 +172,46 @@ if __name__ == "__main__":
 
     img_classif_filtered = path_extractveg + os.sep + 'img_classification_filtered.tif'
 
+    # vectors_samples_output ={
+    #   "bati" : ,
+    #   "route" : ,
+    #   "solnu" : ,
+    #   "eau" : ,
+    #   "vegetation" :
+    # }  
+    # rasters_samples_output ={
+    #   "bati" : '',
+    #   "route" : '',
+    #   "solnu" : '',
+    #   "eau" : '',
+    #   "vegetation" : ''
+    # }
+    # params_to_find_samples = {
+    #   "bati" : ['',,],
+    #   "route" : ['',,],
+    #   "solnu" : ['',,],
+    #   "eau" : ['',,],
+    #   "vegetation" : ['',,]
+    # } 
+
+    # createAllSamples(img_ref, shp_zone, vectors_samples_output, rasters_samples_output, params_to_find_samples, simplify_vector_param=10.0, format_vector='ESRI Shapefile', extension_vector=".shp", save_results_intermediate=False, overwrite=True)
+
+
   #   #2# Préparation des échantillons d'apprentissage
     if debug >= 1:
       print(cyan + "\nPréparation des échantillons d'apprentissage" + endC) 
 
-    #Dictionnaire des paramètres de préparation des échantillons d'apprentissage
+    # #Dictionnaire des paramètres de préparation des échantillons d'apprentissage
+    # dic_preparesamples ={
+    #   "bati" :[bati, bati_prepare, True],
+    #   "route" : [route, route_prepare, False],
+    #   "sol nu" : [solnu, solnu_prepare, True],
+    #   "eau" : [eau, eau_prepare, True],
+    #   "vegetation" : [vegetation, vegetation_prepare, True]  
+    # } 
+
+    # prepareAllSamples(img_ref, dic_preparesamples, shp_zone, format_vector = 'ESRI Shapefile')
  
-  #   # macroSamplesPrepare(img_ref, bati, bati_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
-  #   # macroSamplesPrepare(img_ref, route, route_prepare, shp_zone, erosionoption = False, format_vector='ESRI Shapefile')
-  #   # macroSamplesPrepare(img_ref, solnu, solnu_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
-  #   # macroSamplesPrepare(img_ref, eau, eau_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
-  #   # macroSamplesPrepare(img_ref, vegetation, vegetation_prepare, shp_zone, erosionoption = True, format_vector='ESRI Shapefile')
-    
   #   #3# Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
     if debug >= 1:
       print(cyan + "\nNettoyage des échantillons d'apprentissage" + endC) 
@@ -275,7 +303,7 @@ if __name__ == "__main__":
 
     #Dictionnaire des paramètres BD de classification en strates verticales 
     connexion_stratev_dic = connexion_ini_dic
-    connexion_stratev_dic["schema"] = 'classification_stratev'
+    connexion_stratev_dic["schema"] = 'classification_stratesv'
 
     # #Dictionnaire des paramètres BD de classsification des formes végétales horizontales
     # connexion_fv_dic = connexion_ini_dic

@@ -22,6 +22,338 @@ from ImagesAssemblyGUS import  *
 # debug = 2 : affichage supérieur de commentaires lors de l'execution du script etc...
 debug = 3
 
+###########################################################################################################################################
+# FONCTION createAllSamples()                                                                                                             #
+###########################################################################################################################################
+def createAllSamples(image_input, vector_to_cut_input, vectors_samples_output, rasters_samples_output, params_to_find_samples, simplify_vector_param=10.0, format_vector='ESRI Shapefile', extension_vector=".shp", save_results_intermediate=False, overwrite=True):
+    """
+    Rôle : crééer tous les échantillons d'apprentissage à partir de BD exogènes
+
+    Paramètres :
+        image_input : image d'entrée brute
+        vector_to_cut_input : vecteur de découpage (zone d'étude)
+        vectors_samples_output : dictionnaire contenant, par classe, le chemin de sauvegarde du fichier de sortie au format vecteur
+        rasters_samples_output : dictionnaire contenant, par classe, le chemin de sauvegarde du fichier de sortie au format raster (optionnel)
+        params_to_find_samples : dictionnaire contenant, par classe, les paramètres de recherche des échantillons d'apprentissage au format {"nom_classe":[['chemin premier base', buffer, requêtesql],['chemin deuxieme base]] } . 
+                                Ex :{"bâti":[['/mnt/RAM_disk/BDTOPO/BATIMENT.shp', 2, 'select *']] } 
+        simplify_vector_param : parmetre de simplification des polygones
+        format_vector : format du fichier vecteur. Optionnel, par default : 'ESRI Shapefile'
+        extension_vector : extension du fichier vecteur de sortie, par defaut = '.shp'
+        save_results_intermediate : fichiers de sorties intermediaires nettoyees, par defaut = False
+        overwrite : boolen ecrasement ou non des fichiers ayant un nom similaire, par defaut à True      
+    """
+    for key in vectros_samples_output.keys():
+        bd_vector_list = [params_to_find_samples[key][i][0] for i in range(len(params_to_find_samples[key]))]  
+        bd_buff_list = [params_to_find_samples[key][i][1] for i in range(len(params_to_find_samples[key]))]    
+        sql_expression_list = [params_to_find_samples[key][i][2] for i in range(len(params_to_find_samples[key]))]   
+        createMacroSamples(image_input, vector_samples_output[key], rasters_samples_output[key], bd_vector_list, bd_buff_list, sql_expression_list, key,simplify_vector_param, format_vector, extension_vector, save_results_intermediate, overwrite)
+
+    return 
+
+
+
+
+
+
+
+###########################################################################################################################################
+# FONCTION createMacroSamples()                                                                                                           #
+###########################################################################################################################################
+def createMacroSamples(image_input, vector_to_cut_input, vector_sample_output, raster_sample_output, bd_vector_input_list, bd_buff_list, sql_expression_list, macro_sample_name="", simplify_vector_param=10.0, format_vector='ESRI Shapefile', extension_vector=".shp", save_results_intermediate=False, overwrite=True) :
+    """
+    Rôle : créé une couche d'échantillons d'apprentissage à partir de une ou plusieurs BD exogènes
+        
+    
+    Paramètres :
+        image_input : image d'entrée brute
+        vector_to_cut_input : le vecteur pour le découpage (zone d'étude)
+        vector_sample_output : fichier vecteur au format shape de sortie contenant l'echantillon
+        raster_sample_output : optionel fichier raster au format GTiff de sortie contenant l'echantillon
+        bd_vector_input_list : liste des vecteurs de la bd exogene pour créer l'échantillon
+        bd_buff_list : liste des valeurs des buffers associés au traitement à appliquer aux vecteurs de bd exogenes
+        sql_expression_list : liste d'expression sql pour le filtrage des fichiers vecteur de bd exogenes
+        macro_sample_name : nom de l'echantillon macro
+        simplify_vector_param : parmetre de simplification des polygones
+        format_vector : format du fichier vecteur. Optionnel, par default : 'ESRI Shapefile'
+        extension_vector : extension du fichier vecteur de sortie, par defaut = '.shp'
+        save_results_intermediate : fichiers de sorties intermediaires nettoyees, par defaut = False
+        overwrite : boolen ecrasement ou non des fichiers ayant un nom similaire, par defaut à True
+    """
+
+    starting_event = "createMacroSamples() : create macro samples starting : "
+
+    if debug >= 3:
+        print(bold + green + "createMacroSamples() : Variables dans la fonction" + endC)
+        print(cyan + "createMacroSamples() : " + endC + "image_input : " + str(image_input) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "vector_to_cut_input : " + str(vector_to_cut_input) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "vector_sample_output : " + str(vector_sample_output) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "raster_sample_output : " + str(raster_sample_output) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "bd_vector_input_list : " + str(bd_vector_input_list) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "bd_buff_list : " + str(bd_buff_list) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "sql_expression_list : " + str(sql_expression_list) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "macro_sample_name : " + str(macro_sample_name) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "simplify_vector_param : " + str(simplify_vector_param) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "format_vector : " + str(format_vector))
+        print(cyan + "createMacroSamples() : " + endC + "extension_vector : " + str(extension_vector) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "save_results_intermediate : " + str(save_results_intermediate) + endC)
+        print(cyan + "createMacroSamples() : " + endC + "overwrite : " + str(overwrite) + endC)
+
+    # Constantes
+    FOLDER_MASK_TEMP = "Mask_"
+    FOLDER_CUTTING_TEMP = "Cut_"
+    FOLDER_FILTERING_TEMP = "Filter_"
+    FOLDER_BUFF_TEMP = "Buff_"
+
+    SUFFIX_MASK_CRUDE = "_crude"
+    SUFFIX_MASK = "_mask"
+    SUFFIX_VECTOR_CUT = "_cut"
+    SUFFIX_VECTOR_FILTER = "_filt"
+    SUFFIX_VECTOR_BUFF = "_buff"
+
+    CODAGE = "uint8"
+
+    # ETAPE 1 : NETTOYER LES DONNEES EXISTANTES
+
+    print(cyan + "createMacroSamples() : " + bold + green + "Nettoyage de l'espace de travail..." + endC)
+
+    # Nom du repertoire de calcul
+    repertory_macrosamples_output = os.path.dirname(vector_sample_output)
+
+    # Test si le vecteur echantillon existe déjà et si il doit être écrasés
+    check = os.path.isfile(vector_sample_output) or os.path.isfile(raster_sample_output)
+
+    if check and not overwrite: # Si les fichiers echantillons existent deja et que overwrite n'est pas activé
+        print(bold + yellow + "File sample : " + vector_sample_output + " already exists and will not be created again." + endC)
+    else :
+        if check:
+            try:
+                removeVectorFile(vector_sample_output)
+                removeFile(raster_sample_output)
+            except Exception:
+                pass # si le fichier n'existe pas, il ne peut pas être supprimé : cette étape est ignorée
+
+        # Définition des répertoires temporaires
+        repertory_mask_temp = repertory_macrosamples_output + os.sep + FOLDER_MASK_TEMP + macro_sample_name
+        repertory_samples_cutting_temp = repertory_macrosamples_output + os.sep + FOLDER_CUTTING_TEMP + macro_sample_name
+        repertory_samples_filtering_temp = repertory_macrosamples_output + os.sep + FOLDER_FILTERING_TEMP + macro_sample_name
+        repertory_samples_buff_temp = repertory_macrosamples_output + os.sep + FOLDER_BUFF_TEMP + macro_sample_name
+
+        if debug >= 4:
+            print(cyan + "createMacroSamples() : " + endC + "Création du répertoire : " + str(repertory_mask_temp))
+            print(cyan + "createMacroSamples() : " + endC + "Création du répertoire : " + str(repertory_samples_cutting_temp))
+            print(cyan + "createMacroSamples() : " + endC + "Création du répertoire : " + str(repertory_samples_buff_temp))
+
+        # Création des répertoires temporaire qui n'existent pas
+        if not os.path.isdir(repertory_macrosamples_output):
+            os.makedirs(repertory_macrosamples_output)
+        if not os.path.isdir(repertory_mask_temp):
+            os.makedirs(repertory_mask_temp)
+        if not os.path.isdir(repertory_samples_cutting_temp):
+            os.makedirs(repertory_samples_cutting_temp)
+        if not os.path.isdir(repertory_samples_filtering_temp):
+            os.makedirs(repertory_samples_filtering_temp)
+        if not os.path.isdir(repertory_samples_buff_temp):
+            os.makedirs(repertory_samples_buff_temp)
+
+        # Nettoyage des répertoires temporaire qui ne sont pas vide
+        cleanTempData(repertory_mask_temp)
+        cleanTempData(repertory_samples_cutting_temp)
+        cleanTempData(repertory_samples_filtering_temp)
+        cleanTempData(repertory_samples_buff_temp)
+
+        print(cyan + "createMacroSamples() : " + bold + green + "... fin du nettoyage" + endC)
+
+        # ETAPE 2 : DECOUPAGE DES VECTEURS
+
+        print(cyan + "createMacroSamples() : " + bold + green + "Decoupage des echantillons ..." + endC)
+
+        if vector_to_cut_input == None :
+            # 2.1 : Création du masque délimitant l'emprise de la zone par image
+            image_name = os.path.splitext(os.path.basename(image_input))[0]
+            vector_mask = repertory_mask_temp + os.sep + image_name + SUFFIX_MASK_CRUDE + extension_vector
+            cols, rows, num_band = getGeometryImage(image_input)
+            no_data_value = getNodataValueImage(image_input, num_band)
+            if no_data_value == None :
+                no_data_value = 0
+            createVectorMask(image_input, vector_mask, no_data_value, format_vector)
+
+            # 2.2 : Simplification du masque
+            vector_simple_mask = repertory_mask_temp + os.sep + image_name + SUFFIX_MASK + extension_vector
+            simplifyVector(vector_mask, vector_simple_mask, simplify_vector_param, format_vector)
+        else :
+            vector_simple_mask = vector_to_cut_input
+
+        # 2.3 : Découpage des vecteurs de bd exogenes avec le masque
+        vectors_cut_list = []
+        for vector_input in bd_vector_input_list :
+            vector_name = os.path.splitext(os.path.basename(vector_input))[0]
+            vector_cut = repertory_samples_cutting_temp + os.sep + vector_name + SUFFIX_VECTOR_CUT + extension_vector
+            vectors_cut_list.append(vector_cut)
+        cutoutVectors(vector_simple_mask, bd_vector_input_list, vectors_cut_list, format_vector)
+
+        print(cyan + "createMacroSamples() : " + bold + green + "... fin du decoupage" + endC)
+
+        # ETAPE 3 : FILTRAGE DES VECTEURS
+
+        print(cyan + "createMacroSamples() : " + bold + green + "Filtrage des echantillons ..." + endC)
+
+        vectors_filtered_list = []
+        if sql_expression_list != [] :
+            for idx_vector in range (len(bd_vector_input_list)):
+                vector_name = os.path.splitext(os.path.basename(bd_vector_input_list[idx_vector]))[0]
+                vector_cut = vectors_cut_list[idx_vector]
+                if idx_vector < len(sql_expression_list) :
+                    sql_expression = sql_expression_list[idx_vector]
+                else :
+                    sql_expression = ""
+                vector_filtered = repertory_samples_filtering_temp + os.sep + vector_name + SUFFIX_VECTOR_FILTER + extension_vector
+                vectors_filtered_list.append(vector_filtered)
+
+                # Filtrage par ogr2ogr
+                if sql_expression != "":
+                    names_attribut_list = getAttributeNameList(vector_cut, format_vector)
+                    column = "'"
+                    for name_attribut in names_attribut_list :
+                        column += name_attribut + ", "
+                    column = column[0:len(column)-2]
+                    column += "'"
+                    ret = filterSelectDataVector(vector_cut, vector_filtered, column, sql_expression, format_vector)
+                    if not ret :
+                        print(cyan + "createMacroSamples() : " + bold + yellow + "Attention problème lors du filtrage des BD vecteurs l'expression SQL %s est incorrecte" %(sql_expression) + endC)
+                        copyVectorFile(vector_cut, vector_filtered)
+                else :
+                    print(cyan + "createMacroSamples() : " + bold + yellow + "Pas de filtrage sur le fichier du nom : " + endC + vector_filtered)
+                    copyVectorFile(vector_cut, vector_filtered)
+
+        else :
+            print(cyan + "createMacroSamples() : " + bold + yellow + "Pas de filtrage demandé" + endC)
+            for idx_vector in range (len(bd_vector_input_list)):
+                vector_cut = vectors_cut_list[idx_vector]
+                vectors_filtered_list.append(vector_cut)
+
+        print(cyan + "createMacroSamples() : " + bold + green + "... fin du filtrage" + endC)
+
+        # ETAPE 4 : BUFFERISATION DES VECTEURS
+
+        print(cyan + "createMacroSamples() : " + bold + green + "Mise en place des tampons..." + endC)
+
+        vectors_buffered_list = []
+        if bd_buff_list != [] :
+            # Parcours des vecteurs d'entrée
+            for idx_vector in range (len(bd_vector_input_list)):
+                vector_name = os.path.splitext(os.path.basename(bd_vector_input_list[idx_vector]))[0]
+                buffer_str = bd_buff_list[idx_vector]
+
+                buff = 0.0
+                col_name_buf = ""
+                is_buff_str = False
+                try:
+                    buff = float(buffer_str)
+                except :
+                    is_buff_str = True
+                    col_name_buf = buffer_str
+                    print(cyan + "createMacroSamples() : " + bold + green + "Pas de valeur buffer mais un nom de colonne pour les valeur à bufferiser : " + endC + col_name_buf)
+
+                vector_filtered = vectors_filtered_list[idx_vector]
+                vector_buffered = repertory_samples_buff_temp + os.sep + vector_name + SUFFIX_VECTOR_BUFF + extension_vector
+
+                if is_buff_str or buff != 0:
+                    if os.path.isfile(vector_filtered):
+                        if debug >= 3:
+                            print(cyan + "createMacroSamples() : " + endC + "vector_filtered : " + str(vector_filtered) + endC)
+                            print(cyan + "createMacroSamples() : " + endC + "vector_buffered : " + str(vector_buffered) + endC)
+                            print(cyan + "createMacroSamples() : " + endC + "buff : " + str(buff) + endC)
+                        bufferVector(vector_filtered, vector_buffered, buff, col_name_buf, 0.5, 10, format_vector)
+                    else :
+                        print(cyan + "createMacroSamples() : " + bold + yellow + "Pas de fichier du nom : " + endC + vector_filtered)
+
+                else :
+                    print(cyan + "createMacroSamples() : " + bold + yellow + "Pas de tampon sur le fichier du nom : " + endC + vector_filtered)
+                    copyVectorFile(vector_filtered, vector_buffered)
+
+                vectors_buffered_list.append(vector_buffered)
+
+        else :
+            print(cyan + "createMacroSamples() : " + bold + yellow + "Pas de tampon demandé" + endC)
+            for idx_vector in range (len(bd_vector_input_list)):
+                vector_filtered = vectors_filtered_list[idx_vector]
+                vectors_buffered_list.append(vector_filtered)
+
+        print(cyan + "createMacroSamples() : " + bold + green + "... fin de la mise en place des tampons" + endC)
+
+        # ETAPE 5 : FUSION DES SHAPES
+
+        print(cyan + "createMacroSamples() : " + bold + green + "Fusion par macroclasse ..." + endC)
+
+        # si une liste de fichier shape à fusionner existe
+        if not vectors_buffered_list:
+            print(cyan + "createMacroSamples() : " + bold + yellow + "Pas de fusion sans donnee à fusionner" + endC)
+        # s'il n'y a qu'un fichier shape en entrée
+        elif len(vectors_buffered_list) == 1:
+            print(cyan + "createMacroSamples() : " + bold + yellow + "Pas de fusion pour une seule donnee à fusionner" + endC)
+            copyVectorFile(vectors_buffered_list[0], vector_sample_output)
+        else :
+            # Fusion des fichiers shape
+            vectors_buffered_controled_list = []
+            for vector_buffered in vectors_buffered_list :
+                if os.path.isfile(vector_buffered) and (getGeometryType(vector_buffered, format_vector) in ('POLYGON', 'MULTIPOLYGON')) and (getNumberFeature(vector_buffered, format_vector) > 0):
+                    vectors_buffered_controled_list.append(vector_buffered)
+                else :
+                    print(cyan + "createMacroSamples() : " + bold + red + "Attention fichier bufferisé est vide il ne sera pas fusionné : " + endC + vector_buffered, file=sys.stderr)
+
+            fusionVectors(vectors_buffered_controled_list, vector_sample_output, format_vector)
+
+        print(cyan + "createMacroSamples() : " + bold + green + "... fin de la fusion" + endC)
+
+    # ETAPE 6 : CREATION DU FICHIER RASTER RESULTAT SI DEMANDE
+
+    # Creation d'un masque binaire
+    if raster_sample_output != "" and image_input != "" :
+        repertory_output = os.path.dirname(raster_sample_output)
+        if not os.path.isdir(repertory_output):
+            os.makedirs(repertory_output)
+        rasterizeBinaryVector(vector_sample_output, image_input, raster_sample_output, 1, CODAGE)
+
+    # ETAPE 7 : SUPPRESIONS FICHIERS INTERMEDIAIRES INUTILES
+
+    # Suppression des données intermédiaires
+    if not save_results_intermediate:
+
+        # Supression du fichier de decoupe si celui ci a été créer
+        if vector_simple_mask != vector_to_cut_input :
+            if os.path.isfile(vector_simple_mask) :
+                removeVectorFile(vector_simple_mask)
+
+        # Suppression des repertoires temporaires
+        deleteDir(repertory_mask_temp)
+        deleteDir(repertory_samples_cutting_temp)
+        deleteDir(repertory_samples_filtering_temp)
+        deleteDir(repertory_samples_buff_temp)
+
+    # Mise à jour du Log
+    ending_event = "createMacroSamples() : create macro samples ending : "
+
+    return
+
+
+###########################################################################################################################################
+# FONCTION prepareAllSamples()                                                                                                            #
+###########################################################################################################################################
+def prepareAllSamples(image_input, dic_classes_params, vector_to_cut_input, format_vector = 'ESRI Shapefile'):
+    """
+    Rôle : centralise la découpe des couches d'échantillons d'apprentissage selon l'emprise de la zone d'étude et d'une potentielle érosion
+
+    Paramètres :
+        image_input : image d'entrée brute
+        dic_classes_params : dictionnaire des paramètres de préparation des échantillons d'apprentissage par classe.
+                            Format :{"nomclasse" :[vector_class_input, raster_class_output, erosionoption]} 
+        vector_to_cut_input : vecteur de découpage (zone d'étude)
+        format_vector : format de la donnée vectorielle, par défaut : 'ESRI Shapefile'  
+    """
+    for key, value in dic_classes_params.items():
+        macroSamplesPrepare(image_input, value[0], value[1], vector_to_cut_input, value[2], format_vector)
+    
+    return
 
 ###########################################################################################################################################
 # FONCTION macroSamplesPrepare()                                                                                                          #
@@ -40,7 +372,7 @@ def macroSamplesPrepare(image_ref, input_vector_class, output_raster_class, empr
 
     """
 
-    if debug >= 3:
+    if debug >= 2:
         print(" ")
         print(bold + green + "macroSamplesPrepare() : Variables dans la fonction" + endC)
         print(cyan + "macroSamplesPrepare() : " + endC + "image de référence : " + str(image_ref) + endC)
@@ -50,7 +382,8 @@ def macroSamplesPrepare(image_ref, input_vector_class, output_raster_class, empr
         print(cyan + "macroSamplesPrepare() : " + endC + "Erosion des polygones échantillons de 1m : " + str(erosionoption) + endC)
         print(cyan + "macroSamplesPrepare() : " + endC + "Format de la donnée vecteur en entrée : " + str(format_vector) + endC)
 
-    print(cyan + "macroSamplesPrepare() : " + bold + green + "Traitement en cours..." + endC)
+    if debug >= 3:
+        print(cyan + "macroSamplesPrepare() : " + bold + green + "Traitement en cours..." + endC)
 
     # Création d'un fichier intermédiaire
     repertory_output = os.path.dirname(output_raster_class)
@@ -85,7 +418,8 @@ def macroSamplesPrepare(image_ref, input_vector_class, output_raster_class, empr
         rasterizeBinaryVector(erosion_file_tmp, image_ref, cutcut_file_tmp, 1)
         cutImageByVector(emprisevector ,cutcut_file_tmp, output_raster_class)
 
-    print(cyan + "macroSamplesPrepare() : " + bold + green + "Fin du traitement." + endC)
+    if debug >= 3:
+        print(cyan + "macroSamplesPrepare() : " + bold + green + "Fin du traitement." + endC)
 
 
     return
