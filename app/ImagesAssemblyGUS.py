@@ -32,12 +32,10 @@ from Lib_file import removeVectorFile, removeFile
 from Lib_text import appendTextFileCR
 
 
-debug = 3
-
 #########################################################################
 # FONCTION assembleRasters()                                            #
 #########################################################################
-def assembleRasters(empriseVector, repRasterAssemblyList, output_rasterAssembly, format_raster = 'GTiff', format_vector = 'GPKG', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = False):
+def assemblyRasters(empriseVector, repRasterAssemblyList, output_rasterAssembly, format_raster = 'GTiff', format_vector = 'GPKG', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = False):
     """
     Rôle :
          Rechercher dans un repertoire toutes les images qui sont contenues ou qui intersectent l'emprise
@@ -261,131 +259,4 @@ def assemblyImages(repertory, images_list, output_file, no_data_value, epsg, sav
         if os.path.exists(list_file_tmp):
             removeFile(list_file_tmp)
     return
-
-#########################################################################
-# FONCTION cutImageByVector()                                           #
-#########################################################################
-def cutImageByVector(cut_shape_file ,input_image, output_image, pixel_size_x=None, pixel_size_y=None, no_data_value=0, epsg=0, format_raster="GTiff", format_vector='ESRI Shapefile'):
-    """
-    Rôle :
-        Cette fonction découpe une image (.tif) par un vecteur (.shp)
-
-    Paramètres :
-           cut_shape_file : le nom du shapefile de découpage (exple : "/chemin/path_clipper.shp"
-           input_image    : le nom de l'image à traiter (exmple : "/users/images/image_raw.tif")
-           output_image   : le nom de l'image resultat découpée (exmple : "/users/images/image_cut.tif")
-           pixel_size_x   : taille du pixel de sortie en x
-           pixel_size_y   : taille du pixel de sortie en y
-           no_data_value  : valeur de l'image d'entrée à transformer en NoData dans l'image de sortie
-           epsg           : valeur de la projection par défaut 0, si à 0 c'est la valeur de projection du fichier raster d'entrée qui est utilisé automatiquement
-           format_raster  : le format du fichier de sortie, par defaut : 'GTiff'
-           format_vector  : format du fichier vecteur, par defaut : 'ESRI Shapefile'
-
-    Sortie :
-           True si l'operataion c'est bien passé, False sinon
-    """
-
-    if debug >= 3:
-        print(cyan + "cutImageByVector() : Vecteur de découpe des l'image : " + cut_shape_file + endC)
-        print(cyan + "cutImageByVector() : L'image à découper : " + input_image + endC)
-
-    # Constante
-    EPSG_DEFAULT = 2154
-
-    ret = True
-
-    # Récupération de la résolution du raster d'entrée
-    if pixel_size_x == None or pixel_size_y == None :
-        pixel_size_x, pixel_size_y = getPixelWidthXYImage(input_image)
-
-
-    if debug >= 5:
-        print("Taille des pixels : ")
-        print("pixel_size_x = " + str(pixel_size_x))
-        print("pixel_size_y = " + str(pixel_size_y))
-        print("\n")
-
-    # Récuperation de l'emprise de l'image
-    ima_xmin, ima_xmax, ima_ymin, ima_ymax = getEmpriseImage(input_image)
-
-    if debug >= 5:
-        print("Emprise raster : ")
-        print("ima_xmin = " + str(ima_xmin))
-        print("ima_xmax = " + str(ima_xmax))
-        print("ima_ymin = " + str(ima_ymin))
-        print("ima_ymax = " + str(ima_ymax))
-        print("\n")
-
-    # Récuperation de la projection de l'image
-    if epsg == 0:
-        epsg_proj, _ = getProjectionImage(input_image)
-    else :
-        epsg_proj = epsg
-    if epsg_proj == 0:
-        epsg_proj = EPSG_DEFAULT
-
-    if debug >= 3:
-        print(cyan + "cutImageByVector() : EPSG : " + str(epsg_proj) + endC)
-
-    # Identification de l'emprise de vecteur de découpe
-    empr_xmin, empr_xmax, empr_ymin, empr_ymax = getEmpriseFile(cut_shape_file, format_vector)
-    if debug >= 5:
-        print("Emprise vector : ")
-        print("empr_xmin = " + str(empr_xmin))
-        print("empr_xmax = " + str(empr_xmax))
-        print("empr_ymin = " + str(empr_ymin))
-        print("empr_ymax = " + str(empr_ymax))
-        print("\n")
-
-    # Calculer l'emprise arrondi
-    xmin, xmax, ymin, ymax = roundPixelEmpriseSize(pixel_size_x, pixel_size_y, empr_xmin, empr_xmax, empr_ymin, empr_ymax)
-
-    if debug >= 5:
-        print("Emprise vecteur arrondi a la taille du pixel : ")
-        print("xmin = " + str(xmin))
-        print("xmax = " + str(xmax))
-        print("ymin = " + str(ymin))
-        print("ymax = " + str(ymax))
-        print("\n")
-
-    # Trouver l'emprise optimale
-    opt_xmin = xmin
-    opt_xmax = xmax
-    opt_ymin = ymin
-    opt_ymax = ymax
-
-    if ima_xmin > xmin :
-        opt_xmin = ima_xmin
-    if ima_xmax < xmax :
-        opt_xmax = ima_xmax
-    if ima_ymin > ymin :
-        opt_ymin = ima_ymin
-    if ima_ymax < ymax :
-        opt_ymax = ima_ymax
-
-    if debug >= 5:
-        print("Emprise retenu : ")
-        print("opt_xmin = " + str(opt_xmin))
-        print("opt_xmax = " + str(opt_xmax))
-        print("opt_ymin = " + str(opt_ymin))
-        print("opt_ymax = " + str(opt_ymax))
-        print("\n")
-
-    # Découpage grace à gdal
-    command = 'gdalwarp -t_srs EPSG:%s  -te %s %s %s %s -tap -multi -wo "NUM_THREADS=ALL_CPUS" -tr %s %s -dstnodata %s -cutline %s -overwrite -of %s %s %s' %(str(epsg_proj), opt_xmin, opt_ymin, opt_xmax, opt_ymax, pixel_size_x, pixel_size_y, str(no_data_value), cut_shape_file, format_raster, input_image, output_image)
-
-    if debug >= 4:
-        print(command)
-
-    exit_code = os.system(command)
-    if exit_code != 0:
-        print(command)
-        print(cyan + "cutImageByVector() : " + bold + red + "!!! Une erreur c'est produite au cours du decoupage de l'image : " + input_image + ". Voir message d'erreur." + endC, file=sys.stderr)
-        ret = False
-
-    else :
-        if debug >= 4:
-            print(cyan + "cutImageByVector() : L'image résultat découpée : " + output_image + endC)
-
-    return ret
 

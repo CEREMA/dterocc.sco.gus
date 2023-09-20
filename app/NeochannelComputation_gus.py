@@ -11,8 +11,6 @@ from Lib_file import removeVectorFile, removeFile
 from Lib_text import appendTextFileCR
 from Lib_grass import convertRGBtoHIS
 
-from ImagesAssemblyGUS import cutImageByVector
-
 debug = 2
 PRECISION = 0.0000001
 

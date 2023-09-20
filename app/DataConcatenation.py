@@ -2,11 +2,8 @@ import os, sys, glob
 from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
 from Lib_file import removeFile
 
-
-
-debug = 3
 ###########################################################################################################################################
-# FONCTION concatenateData()                                                                                                          #
+# FONCTION concatenateData()                                                                                                              #
 ###########################################################################################################################################
 def concatenateData(images_input_list, stack_image_output, code = "float", save_intermediate_results = False, overwrite = True):
     """

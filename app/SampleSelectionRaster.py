@@ -51,9 +51,9 @@ from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displ
 debug = 3
 
 ###########################################################################################################################################
-# STRUCTURE StructInfoMicoClass                                                                                                           #
+# STRUCTURE StructInfoMicroClass                                                                                                           #
 ###########################################################################################################################################
-class StructInfoMicoClass:
+class StructInfoMicroClass:
     """
     # Structure contenant contenant les informations nombre de points, valeur du label microclass et liste de points associé à une micro classe
     """
@@ -197,7 +197,7 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
                 min_micro_class_nb_points = nb_pixels
                 min_micro_class_label = id_micro
 
-            infoStructPointSource_dico[id_micro] = StructInfoMicoClass()
+            infoStructPointSource_dico[id_micro] = StructInfoMicroClass()
             infoStructPointSource_dico[id_micro].label_class = id_micro
             infoStructPointSource_dico[id_micro].nb_points = nb_pixels
             infoStructPointSource_dico[id_micro].info_points_list = []

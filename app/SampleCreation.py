@@ -14,7 +14,7 @@ from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displ
 from Lib_file import cleanTempData, deleteDir, removeFile
 from Lib_raster import createBinaryMaskThreshold, filterBinaryRaster, applyMaskAnd, applyMaskOr, rasterizeBinaryVector
 from Lib_vector import *
-from ImagesAssemblyGUS import  *
+#from ImagesAssemblyGUS import  *
 
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script

@@ -172,7 +172,9 @@ def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, ep
 
     return file_out_mnh
 
-
+#########################################################################
+# FONCTION mnsPrepare()                                                 #
+#########################################################################
 def mnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 'GTiff', save_intermediate_results = False):
     """
     Rôle : prépare la donnée MNS
@@ -225,6 +227,9 @@ def mnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 
             removeFile(interpol_file_tmp)
     return
 
+#########################################################################
+# FONCTION mntPrepare()                                                 #
+#########################################################################
 def mntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100, format_raster = 'GTiff', save_intermediate_results = False):
     """
     Rôle : prépare la donnée MNT
