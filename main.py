@@ -1,19 +1,19 @@
-from Lib_display import bold,black,red,green,yellow,cyan,magenta,cyan,endC,displayIHM
-from MnhCreation import mnhCreation
-from NeochannelComputation_gus import neochannelComputation
-from DataConcatenation import concatenateData
+from libs.Lib_display import bold,black,red,green,yellow,cyan,magenta,cyan,endC,displayIHM
+from app.MnhCreation import mnhCreation
+from app.NeochannelComputation_gus import neochannelComputation
+from app.DataConcatenation import concatenateData
 #from ImagesAssemblyGUS_ok import cutImageByVector
-from Lib_postgis import *
+from libs.Lib_postgis import *
 #from DetectVegetationFormStratumV1 import *
-from Lib_vector import *
+from libs.Lib_vector import *
 import sys,os,glob
 from osgeo import ogr ,osr
-from SampleCreation import *
-from CleanCoverClasses import * 
-from SampleSelectionRaster import *
-from SupervisedClassification import *
-from MajorityFilter import *
-from VerticalStratumDetection import *
+from app.SampleCreation import *
+from app.CleanCoverClasses import * 
+from app.SampleSelectionRaster import *
+from app.SupervisedClassification import *
+from app.MajorityFilter import *
+from app.VerticalStratumDetection import *
 
 if __name__ == "__main__":
 
@@ -216,21 +216,21 @@ if __name__ == "__main__":
     if debug >= 1:
       print(cyan + "\nNettoyage des échantillons d'apprentissage" + endC) 
 
-      images_in_output = {
-        "bâti" : [bati_prepare, bati_clean],
-        "route" : [route_prepare, route_clean],
-        "solnu" : [solnu_prepare, solnu_clean],
-        "eau" : [eau_prepare, eau_clean],
-        "vegetation" : [vegetation_prepare, vegetation_clean]     
-      } 
+      # images_in_output = {
+      #   "bâti" : [bati_prepare, bati_clean],
+      #   "route" : [route_prepare, route_clean],
+      #   "solnu" : [solnu_prepare, solnu_clean],
+      #   "eau" : [eau_prepare, eau_clean],
+      #   "vegetation" : [vegetation_prepare, vegetation_clean]     
+      # } 
 
-      correction_images_dic = {
-        "bâti" :[["ndvi", neochannels["ndvi"] ,0, 0.35]],
-        "route" : [["ndvi", neochannels["ndvi"] ,0, 0.35]],
-        "solnu" : [["ndvi", neochannels["ndvi"] ,0, 0.2], ["hue", neochannels["hue"], 0, 50]],
-        "eau" : [["ndwi", neochannels["ndwi"], -500, 1]],
-        "vegetation" : [["ndvi", neochannels["ndvi"] ,0.35,1], ["msavi", neochannels["msavi"] ,0.4,1]]
-      } 
+      # correction_images_dic = {
+      #   "bâti" :[["ndvi", neochannels["ndvi"] ,0, 0.35]],
+      #   "route" : [["ndvi", neochannels["ndvi"] ,0, 0.35]],
+      #   "solnu" : [["ndvi", neochannels["ndvi"] ,0, 0.2], ["hue", neochannels["hue"], 0, 50]],
+      #   "eau" : [["ndwi", neochannels["ndwi"], -500, 1]],
+      #   "vegetation" : [["ndvi", neochannels["ndvi"] ,0.35,1], ["msavi", neochannels["msavi"] ,0.4,1]]
+      # } 
 
       # cleanAllSamples(images_in_output, correction_images_dic, extension_raster = ".tif", save_results_intermediate = False, overwrite = False)
 
