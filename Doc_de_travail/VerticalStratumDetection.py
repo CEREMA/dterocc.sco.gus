@@ -301,7 +301,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
         print(bold + "Deuxième étape :\n0-Extraction des segments 'isolés' et des segments de 'regroupement'" + endC)
 
     #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
-    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
+   # tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
 
 
     ###
@@ -312,7 +312,11 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     if debug >= 2:
         print(bold + "Deuxième étape :\n1.0-Reclassification des arbustes isolés selon leur hauteur" + endC)
 
-    tab_ref = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil) 
+   # tab_ref = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil) 
+
+    tab_arbu_de_rgpt = 'arbu_de_rgpt'
+    tab_arbu_uniq = 'arbu_uniq'
+    tab_rgpt_arbu = 'rgpt_arbu'
     #il nous reste les segments arbustifs isolés qui n'ont pas pu être retraités par la hauteur 
 
     #1.1# Reclassification des segments arbustes "regroupés"
