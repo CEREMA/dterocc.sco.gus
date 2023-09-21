@@ -33,17 +33,17 @@ A Reflechir/A faire :
 """
 
 # Import des bibliothèques python
-from __future__ import print_function
+#from __future__ import print_function
 import os, sys, glob, argparse, copy, random, math, threading
 from osgeo import gdal, ogr
-from Lib_raster import identifyPixelValues, countPixelsOfValue, getRawDataImage, getGeometryImage, getEmpriseImage, getPixelWidthXYImage, getProjectionImage
-from Lib_vector import createPointsFromCoordList, getAttributeValues, getAttributeNameList, createEmpriseShapeReduced, fusionVectors
-from Lib_text import writeTextFile, appendTextFileCR
-from Lib_file import removeVectorFile, removeFile
-from Lib_operator import switch, case
-from Lib_math import average, standardDeviation
-from Lib_log import timeLine
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
+from libs.Lib_raster import identifyPixelValues, countPixelsOfValue, getRawDataImage, getGeometryImage, getEmpriseImage, getPixelWidthXYImage, getProjectionImage
+from libs.Lib_vector import createPointsFromCoordList, getAttributeValues, getAttributeNameList, createEmpriseShapeReduced, fusionVectors
+from libs.Lib_text import writeTextFile, appendTextFileCR
+from libs.Lib_file import removeVectorFile, removeFile
+from libs.Lib_operator import switch, case
+from libs.Lib_math import average, standardDeviation
+from libs.Lib_log import timeLine
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 1 : affichage intermédiaire de commentaires lors de l'execution du script

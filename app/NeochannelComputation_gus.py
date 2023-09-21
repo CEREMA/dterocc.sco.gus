@@ -3,13 +3,11 @@ import os, sys, glob, argparse, shutil, numpy, time, errno, fnmatch
 from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from Lib_operator import getExtensionApplication
-from Lib_vector import getEmpriseFile, createEmpriseShapeReduced
-from Lib_raster import getPixelWidthXYImage, changeDataValueToOtherValue, getProjectionImage, updateReferenceProjection, roundPixelEmpriseSize, cutImageByVector, getNodataValueImage, getDataTypeImage, getEmpriseImage
-from Lib_file import removeVectorFile, removeFile
-from Lib_text import appendTextFileCR
-from Lib_grass import convertRGBtoHIS
+from libs.Lib_display import bold,red,green,blue,cyan,endC
+from libs.Lib_vector import getEmpriseFile, createEmpriseShapeReduced
+from libs.Lib_raster import cutImageByVector
+from libs.Lib_file import removeFile
+from libs.Lib_grass import convertRGBtoHIS
 
 debug = 2
 PRECISION = 0.0000001

@@ -1,4 +1,4 @@
-from Lib_postgis import *
+from libs.Lib_postgis import *
 
 ################################################
 ## Classification des FV de la strate arborée ## 

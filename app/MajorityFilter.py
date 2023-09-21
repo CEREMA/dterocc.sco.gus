@@ -35,9 +35,8 @@ sauvegarder les résultats dans un autre dossier que le dossier en entree ?
 
 from __future__ import print_function
 import os,sys,glob,string,argparse
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from Lib_log import timeLine
-from Lib_file import removeFile
+from libs.Lib_display import bold,red,green,cyan,endC
+from libs.Lib_file import removeFile
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 1 : affichage intermédiaire de commentaires lors de l'execution du script
@@ -67,17 +66,10 @@ def filterImageMajority(image_input, filtered_image_output, umc_pixels, ram_otb=
     #
     """
 
-    # Mise à jour du Log
-    starting_event = "filterImageMajority() : Filter image starting : "
-
-    print(endC)
-    print(bold + green + "## START : MAP REGULARIZATION" + endC)
-    print(endC)
-
     CODAGE = "uint16"
 
     if debug >= 2:
-        print(bold + green + "filterImageMajority() : Variables dans la fonction" + endC)
+        print(bold + green + "filterImageMajority() : applique un filtre majoritaire à une image" + endC)
         print(cyan + "filterImageMajority() : " + endC + "image_input : " + str(image_input) + endC)
         print(cyan + "filterImageMajority() : " + endC + "filtered_image_output : " + str(filtered_image_output) + endC)
         print(cyan + "filterImageMajority() : " + endC + "umc_pixels : " + str(umc_pixels) + endC)
@@ -116,14 +108,6 @@ def filterImageMajority(image_input, filtered_image_output, umc_pixels, ram_otb=
     directory_output = os.path.dirname(filtered_image_output)
     for to_delete in glob.glob(directory_output + os.sep + "*.geom"):
         removeFile(to_delete)
-
-    print(endC)
-    print(bold + green + "## END :  MAP REGULARIZATION" + endC)
-    print(endC)
-
-    # Mise à jour du Log
-    ending_event = "filterImageMajority() : Filter image ending : "
-    
 
     return
 

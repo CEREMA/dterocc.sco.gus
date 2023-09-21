@@ -16,7 +16,7 @@
 
 import filecmp, os, sys, shutil, copy, glob, time
 from osgeo import ogr
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 
 debug = 1
 

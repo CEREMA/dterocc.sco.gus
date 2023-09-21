@@ -1,10 +1,11 @@
 from __future__ import print_function
 import os,sys,glob,shutil,string, argparse
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from Lib_file import cleanTempData, deleteDir, removeFile
-from CrossingVectorRaster import *
-from rasterstats import *
-from Lib_postgis import *
+import libs
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
+from libs.Lib_file import cleanTempData, deleteDir, removeFile
+from libs.CrossingVectorRaster import *
+from libs.rasterstats import *
+from libs.Lib_postgis import *
 
 ###########################################################################################################################################
 # FONCTION vegetationMask()                                                                                                               #

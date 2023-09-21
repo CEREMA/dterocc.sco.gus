@@ -1,6 +1,6 @@
 import os, sys, glob
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from Lib_file import removeFile
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
+from libs.Lib_file import removeFile
 
 ###########################################################################################################################################
 # FONCTION concatenateData()                                                                                                              #
@@ -22,12 +22,8 @@ def concatenateData(images_input_list, stack_image_output, code = "float", save_
 
     """
 
-    print(endC)
-    print(bold + green + "## Début : Concaténation des bandes" + endC)
-    print(endC)
-
     if debug >= 3:
-        print(bold + green + "Variables dans la fonction" + endC)
+        print(bold + green + "concatenateData() : fonction de concaténtaion des images en une unique image à plusieurs bandes." + endC)
         print(cyan + "concatenateData() : " + endC + "images_input_list : " + str(images_input_list) + endC)
         print(cyan + "concatenateData() : " + endC + "stack_image_output : " + str(stack_image_output) + endC)
         print(cyan + "concatenateData() : " + endC + "code : " + str(code) + endC)
@@ -79,10 +75,5 @@ def concatenateData(images_input_list, stack_image_output, code = "float", save_
                 print(command)
                 raise NameError(cyan + "concatenateChannels() : " + bold + red + "An error occured during otbcli_ConcatenateImages command. See error message above." + endC)
             print(bold + green + "concatenateChannels() : Channels successfully assembled" + endC)
-
-    print(endC)
-    print(bold + green + "## Fin : Concaténation des bandes " + endC)
-    print(endC)
-
 
     return

@@ -20,10 +20,10 @@ import sys,os,glob
 from osgeo import ogr ,osr
 import geopandas
 from rasterstats2 import raster_stats
-from Lib_operator import *
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
-from Lib_file import renameVectorFile, removeVectorFile, removeFile
-from Lib_text import writeTextFile, appendTextFileCR
+from libs.Lib_operator import *
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_file import renameVectorFile, removeVectorFile, removeFile
+from libs.Lib_text import writeTextFile, appendTextFileCR
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire

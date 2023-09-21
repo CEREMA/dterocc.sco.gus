@@ -37,12 +37,12 @@ A Reflechir/A faire :
 
 from __future__ import print_function
 import os,sys,glob,string,shutil,time,argparse
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from Lib_log import timeLine
-from Lib_operator import getExtensionApplication
-from Lib_raster import updateReferenceProjection, getGeometryImage, computeStatisticsImage
-from Lib_file import removeVectorFile, removeFile
-from Lib_text import appendTextFileCR
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
+from libs.Lib_log import timeLine
+from libs.Lib_operator import getExtensionApplication
+from libs.Lib_raster import updateReferenceProjection, getGeometryImage, computeStatisticsImage
+from libs.Lib_file import removeVectorFile, removeFile
+from libs.Lib_text import appendTextFileCR
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 1 : affichage intermédiaire de commentaires lors de l'execution du script

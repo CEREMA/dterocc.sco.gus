@@ -14,12 +14,11 @@
  Ce module défini des fonctions faisant  l'outil GRASS.
 """
 import sys,os,shutil,glob, time, subprocess
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
-from Lib_file import deleteDir
-from Lib_operator import switch, case
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_file import deleteDir
 import grass.script as grass
 import grass.script.setup as gsetup
-from Lib_raster import getPixelSizeImage, getProjectionImage, getEmpriseImage, getPixelWidthXYImage
+from libs.Lib_raster import getPixelSizeImage, getProjectionImage, getEmpriseImage, getPixelWidthXYImage
 
 # debug = 0 : affichage minimum de commentaires lors de l'exécution du script
 # debug = 3 : affichage maximum de commentaires lors de l'exécution du script. Intermédiaire : affichage intermédiaire
@@ -40,15 +39,17 @@ export PYTHONPATH="$PYTHONPATH:$GISBASE/etc/python"
 #########################################################################
 # FONCTION connectionGrass()                                            #
 #########################################################################
-#   Rôle : Permet l'initialisation si la base GRASS avant création ou la connexion à une base GRASS déjà créer
-#   Paramètres :
-#       gisbase : variable d'environnement de GRASS. Par défaut, os.environ['GISBASE'].
-#       gisdb : nom de la géodatabase, 1er niveau. Par défaut, "GRASS_database".
-#       location : nom du secteur de la géodatabase, 2ème niveau. Par défaut, "".
-#       mapset : nom du jeu de cartes de la géodatabase, 3ème niveau. Par défaut, "PERMANENT".
-#       projection : code EPSG (entier), de l'espace de travail. Par défaut, 2154.
-
 def connectionGrass(gisbase, gisdb, location="", mapset="PERMANENT", projection=2154) :
+    """
+    Rôle : Permet l'initialisation si la base GRASS avant création ou la connexion à une base GRASS déjà créer
+   
+    Paramètres :
+       gisbase : variable d'environnement de GRASS. Par défaut, os.environ['GISBASE'].
+       gisdb : nom de la géodatabase, 1er niveau. Par défaut, "GRASS_database".
+       location : nom du secteur de la géodatabase, 2ème niveau. Par défaut, "".
+       mapset : nom du jeu de cartes de la géodatabase, 3ème niveau. Par défaut, "PERMANENT".
+       projection : code EPSG (entier), de l'espace de travail. Par défaut, 2154.
+    """
     if location == "" :
         gsetup.init(gisbase, gisdb)
     else :
@@ -213,111 +214,6 @@ def exportRasterGdal2Grass(input_name, output_raster, format_raster="GTiff", ove
     return
 
 #########################################################################
-# FONCTION smoothGeomGrass()                                            #
-#########################################################################
-def smoothGeomGrass(input_vector, output_vector, param_generalize_dico, format_vector="ESRI_Shapefile", overwrite=True):
-    """
-    #   Role : Permet de lisser une géometrie par fonction de GRASS, après connexion à Grass
-    #   Paramètres :
-    #       input_vector : fichier vecteur d'entrée contenant les géometrie à lisser
-    #       output_vector : fichier vecteur de sortie, après traitement GRASS
-    #       param_generalize_dico : dictionnaire associant le nom du paramètre à sa valeur. Ex : {"method":"chaiken", "threshold":1}
-    #       format_vector : format du vecteur de sortie (par défaut, 'ESRI_Shapefile')
-    #       overwrite : (option) supprime ou non les fichiers existants ayant le meme nom.
-    #
-    #   # Exemple d'exécution :
-    #   xmin, xmax, ymin, ymax = getEmpriseFile(input_vector, format_vector)
-    #   initializeGrass(work_dir, xmin, xmax, ymin, ymax, pixel_size_x, pixel_size_y, projection, gisbase, gisdb, location, mapset, True)
-    #   param_generalize_dico = {"method":"chaiken", "threshold":1}
-    #   smoothGeomGrass(input_vector, output_vector, param_generalize_dico, gisbase, gisdb, location, mapset, "ESRI_Shapefile")
-    #
-    #  ATTENTION :
-    #      dans le switch, ajouter les noms des nouveaux paramètres qui n'y sont pas encore
-    """
-
-    if debug >= 2:
-        print(cyan + "smoothGeomGrass() : " + bold + green + "Lancement de la fonction de lissage par GRASS v.generalize" + endC)
-
-    format_vector = format_vector.replace(' ', '_')
-
-    # Import du vecteur d'entrée
-    leng_name_vector_input = len(os.path.splitext(os.path.basename(input_vector))[0])
-    if leng_name_vector_input > 16 :
-        leng_name_vector_input = 16
-    input_name = "VI" + os.path.splitext(os.path.basename(input_vector))[0][0:leng_name_vector_input]
-    input_name = input_name.replace('-','_')
-    leng_name_vector_output = len(os.path.splitext(os.path.basename(output_vector))[0])
-    if leng_name_vector_output > 16 :
-        leng_name_vector_output = 16
-    output_name = "VO" + os.path.splitext(os.path.basename(output_vector))[0][0:leng_name_vector_output]
-    output_name = output_name.replace('-','_')
-
-    importVectorOgr2Grass(input_vector, input_name, overwrite)
-
-    # Traitement avec la fonction v.generalize
-    method = None
-    threshold = None
-    for key in param_generalize_dico:
-        while switch(key):
-            if case("method"):
-                method = param_generalize_dico[key]
-                break
-            if case("threshold"):
-                threshold = param_generalize_dico[key]
-                break
-    grass.run_command('v.generalize', input=input_name, output=output_name, method=method, threshold=threshold, overwrite=overwrite, stderr=subprocess.PIPE)
-
-    # Export du jeu de données traité
-    exportVectorOgr2Grass(output_name, output_vector, format_vector, overwrite)
-
-    return
-
-#########################################################################
-# FONCTION splitGrass()                                                 #
-#########################################################################
-def splitGrass(input_vector, output_vector, param_split_length, format_vector="ESRI_Shapefile", overwrite=True):
-    """
-    #   Role : Permet de diviser une géometrie par fonction de GRASS, après connexion à Grass
-    #   Paramètres :
-    #       input_vector : fichier vecteur d'entrée contenant les géometrie à diviser
-    #       output_vector : fichier vecteur de sortie, après traitement GRASS
-    #       param_split_length : distance entre les segments pour la division (en metre)
-    #       format_vector : format du vecteur de sortie (par défaut, 'ESRI_Shapefile')
-    #       overwrite : (option) supprime ou non les fichiers existants ayant le meme nom.
-    #
-    #   # Exemple d'exécution :
-    #   xmin, xmax, ymin, ymax = getEmpriseFile(input_vector, format_vector)
-    #   initializeGrass(work_dir, xmin, xmax, ymin, ymax, pixel_size_x, pixel_size_y, projection, gisbase, gisdb, location, mapset, True)
-    #   splitGrass(input_vector, output_vector, 10, gisbase, gisdb, location, mapset, "ESRI_Shapefile")
-    #
-    """
-
-    if debug >= 2:
-        print(cyan + "smoothGeomGrass() : " + bold + green + "Lancement de la fonction de lissage par GRASS v.generalize" + endC)
-
-    format_vector = format_vector.replace(' ', '_')
-
-    # Import du vecteur d'entrée
-    leng_name_vector_input = len(os.path.splitext(os.path.basename(input_vector))[0])
-    if leng_name_vector_input > 16 :
-        leng_name_vector_input = 16
-    input_name = "VI" + os.path.splitext(os.path.basename(input_vector))[0][0:leng_name_vector_input]
-    leng_name_vector_output = len(os.path.splitext(os.path.basename(output_vector))[0])
-    if leng_name_vector_output > 16 :
-        leng_name_vector_output = 16
-    output_name = "VO" + os.path.splitext(os.path.basename(output_vector))[0][0:leng_name_vector_output]
-
-    importVectorOgr2Grass(input_vector, input_name, overwrite)
-
-    # Traitement avec la fonction v.split
-    grass.run_command('v.split', input=input_name, output=output_name, length=param_split_length, overwrite=overwrite, stderr=subprocess.PIPE)
-
-    # Export du jeu de données traité
-    exportVectorOgr2Grass(output_name, output_vector, format_vector, overwrite)
-
-    return
-
-#########################################################################
 # FONCTION vectorisationGrass()                                         #
 #########################################################################
 def vectorisationGrass(raster_input, vector_output, mmu, douglas=None, hermite=None, angle=True, format_vector='ESRI_Shapefile', overwrite=True):
@@ -406,61 +302,6 @@ def vectorisationGrass(raster_input, vector_output, mmu, douglas=None, hermite=N
 
     return
 
-#########################################################################
-# FONCTION pointsAlongPolylines()                                       #
-#########################################################################
-def pointsAlongPolylines(vector_input, vector_output, use='node', dmax=100, percent=False, overwrite=True):
-    """
-    #   Rôle : génération de points le long de polylignes
-    #   Documentation : https://grass.osgeo.org/grass76/manuals/v.to.points.html
-    #   Paramètres :
-    #       vector_input : nom du fichier polylignes en entrée
-    #       vector_output : nom du fichier points en sortie
-    #       use : méthode utilisée ['node', 'vertex'] (par défaut, 'node')
-    #       dmax : distance entre les points (par défaut, 100)
-    #       percent : utilise 'dmax' comme un pourcentage du polyligne plutôt qu'une distance (par défaut, False)
-    #       overwrite : (option) supprime ou non les fichiers existants ayant le même nom
-    """
-
-
-    if debug >= 2:
-        print(cyan + "pointsAlongPolylines() : " + bold + green + "Génération de points le long de polylignes : " + endC + vector_input + " vers " + vector_output)
-
-    flags = ''
-    # Si méthode des sommets
-    if use == 'vertex':
-        flags += 'i'
-    # Si distance en pourcentage
-    if percent:
-        flags += 'p'
-
-    if flags != '':
-        grass.run_command('v.to.points', flags = flags, input = vector_input, output = vector_output, use = use, dmax = dmax, overwrite = overwrite, stderr = subprocess.PIPE)
-    else:
-        grass.run_command('v.to.points', input = vector_input, output = vector_output, use = use, dmax = dmax, overwrite = overwrite, stderr = subprocess.PIPE)
-
-    return
-
-#########################################################################
-# FONCTION sampleRasterUnderPoints()                                    #
-#########################################################################
-def sampleRasterUnderPoints(vector_input, raster_input, column, overwrite=True):
-    """
-    #   Rôle : échantillonnage d'un raster sous un fichier points
-    #   Documentation : https://grass.osgeo.org/grass76/manuals/v.what.rast.html
-    #   Paramètres :
-    #       vector_input : nom du fichier points en entrée (mis à jour en sortie)
-    #       raster_input : nom du raster en entrée
-    #       column : colonne du fichier points dans laquelle seront récupérées les valeurs du raster
-    #       overwrite : (option) supprime ou non les fichiers existants ayant le même nom
-    """
-
-    if debug >= 2:
-        print(cyan + "sampleRasterUnderPoints() : " + bold + green + "Echantillonnage d'un raster sous un fichier points : " + endC + vector_input + " à partir de " + raster_input)
-
-    grass.run_command('v.what.rast', map = vector_input, raster = raster_input, column = column, overwrite = overwrite, stderr = subprocess.PIPE)
-
-    return
 
 #########################################################################
 # FONCTION convertRGBtoHIS()                                            #
@@ -560,7 +401,7 @@ def convertRGBtoHIS(image_input, image_output, raster_red_input, raster_green_in
     return raster_hue_output, raster_intensity_output, raster_saturation_output
 
 #########################################################################
-# FONCTION rasterStatsV()                                            #
+# FONCTION rasterStatsV()                                               #
 #########################################################################
 def rasterStatsV(image_input, vector_input, stats_list, repository):
     """

@@ -15,9 +15,9 @@
 """
 
 import sys,os
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
-from Lib_operator import *
-from Lib_file import cleanTempData, deleteDir
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_operator import *
+from libs.Lib_file import cleanTempData, deleteDir
 
 # debug = 0 : affichage minimum de commentaires lors de l'exécution du script
 # debug = 3 : affichage maximum de commentaires lors de l'exécution du script. Intermédiaire : affichage intermédiaire

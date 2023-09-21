@@ -25,11 +25,11 @@ import os, sys, glob
 from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from Lib_vector import getEmpriseFile, createEmpriseShapeReduced
-from Lib_raster import getPixelWidthXYImage, changeDataValueToOtherValue, getProjectionImage, updateReferenceProjection, roundPixelEmpriseSize, cutImageByVector, getNodataValueImage, getDataTypeImage, getEmpriseImage
-from Lib_file import removeVectorFile, removeFile
-from Lib_text import appendTextFileCR
+from libs.Lib_display import bold,black,red,cyan,endC
+from libs.Lib_vector import getEmpriseFile, createEmpriseShapeReduced
+from libs.Lib_raster import getPixelWidthXYImage, getProjectionImage, updateReferenceProjection, cutImageByVector, getNodataValueImage, getDataTypeImage
+from libs.Lib_file import removeFile
+from libs.Lib_text import appendTextFileCR
 
 
 #########################################################################

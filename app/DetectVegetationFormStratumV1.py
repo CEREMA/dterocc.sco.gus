@@ -1,5 +1,5 @@
-from Lib_postgis import *
-
+from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr
+from libs.Lib_display import endC, bold, yellow, cyan, red
 #################################################
 ## Concaténation des trois tables pour obtenir ##
 ## une unique cartographie                     ##  

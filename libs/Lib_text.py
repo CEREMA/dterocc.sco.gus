@@ -28,13 +28,10 @@ else:
     except Exception:
         import pysal
         IS_libpysal = False
-import csv
 import numpy
 import pandas
-from simpledbf import Dbf5
-
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
-from Lib_math import findPositionList
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_math import findPositionList
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire
@@ -216,167 +213,8 @@ def appendTextFileCR(text_file_name, text):
 
     return
 
-#########################################################################
-# FONCTION convertDbf2Csv()                                             #
-#########################################################################
-def convertDbf2Csv(dbf_file, csv_file):
-    """
-    #   Role : Conversion de format de fichier DBF en format CSV (passe tous les noms des colonnes en majuscule)
-    #   Paramètres :
-    #      dbf_file : Nom du fichier DBF d'entrée
-    #      csv_file : Nom du fichier CSV de sortie
-    """
 
-    if os.path.exists(dbf_file):
 
-        in_db = dbf.Dbf(dbf_file)
-        fieldnames_list = []
-        for field in in_db.header.fields:
-            fieldnames_list.append(field.name)
-
-        if six.PY2:
-            out_csv = csv.writer(open(csv_file,'wb'))
-            out_csv.writerow(fieldnames_list)
-            for rec in in_db:
-                out_csv.writerow(rec.fieldData)
-        else :
-            with open(csv_file, 'w', newline='') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames_list)
-                writer.writeheader()
-                for rec in in_db:
-                    fieldData_dico = {}
-                    for index in range(len(fieldnames_list)):
-                        name_col = fieldnames_list[index]
-                        value = rec.fieldData[index]
-                        fieldData_dico[name_col] = value
-                    writer.writerow(fieldData_dico)
-
-        in_db.close()
-
-    else :
-        print(cyan + "convertDbf2Csv() : " + endC +bold + yellow + "Impossible de lire le fichier dbf : " + dbf_file + " . Fichier inexistant!" + endC)
-    return
-
-#########################################################################
-# FONCTION convertDbf2CsvBis()                                          #
-#########################################################################
-def convertDbf2CsvBis(dbf_file, csv_file, sep=",", encoding="cp1252"):
-    """
-    #   Role : Conversion de format de fichier DBF en format CSV en passant par les dataframes
-    #          AVANTAGE concerve les minuscule majuscule sur les noms des colonnes
-    #   Paramètres :
-    #      dbf_file : Nom du fichier DBF d'entrée
-    #      csv_file : Nom du fichier CSV de sortie
-    #      sep : caractere sparateur du fichier csv, par defaut : ","
-    #      encoding : encodage du fichier DBF, par defaut : "cp1252"
-    """
-
-    if os.path.exists(dbf_file):
-        dbf_data = Dbf5(dbf_file, codec=encoding)
-        dataframe_dbf = dbf_data.to_dataframe()
-        dataframe_dbf.to_csv(csv_file)
-
-        csv_file_tmp = os.path.splitext(csv_file)[0] +  "_tmp" +  os.path.splitext(csv_file)[1]
-
-        # On va recopier toutes les lignes du CSV
-        # dans un nouveau CSV en supprimant la 1ere colonne
-        in_file = open(csv_file)
-        in_csv = csv.reader(in_file, delimiter=sep)
-
-        out_file = open(csv_file_tmp, 'w+')
-        out_csv = csv.writer(out_file, delimiter=sep, quoting=csv.QUOTE_NONNUMERIC)
-
-        for row in in_csv:
-            # Ici, petite feinte pk Python copie par référence,
-            # donc on prend la valeur de la ligne et non la ligne directement
-            current_row = row[:]
-            current_row.pop(0)
-            out_csv.writerow(current_row)
-        in_file.close()
-        out_file.close()
-
-        # On supprime le CSV original
-        os.remove(csv_file)
-        # On renomme le nouveau CSV avec le nom de l'ancien
-        os.rename(csv_file_tmp, csv_file)
-
-    else :
-        print(cyan + "convertDbf2CsvBis() : " + endC +bold + yellow + "Impossible de lire le fichier dbf : " + dbf_file + " . Fichier inexistant!" + endC)
-    return
-
-#########################################################################
-# FONCTION saveDataFrame2Dbf()                                          #
-#########################################################################
-def saveDataFrame2Dbf(data_frame_input, dbf_file, sep=","):
-    """
-    #   Role : Sauve garde une dataframe en fichier au format DBF
-    #   Paramètres :
-    #      data_frame_input : La dataframe d'entrée
-    #      dbf_file : Nom du fichier DBF de sortie
-    #      sep : caractere sparateur du fichier csv, par defaut : ","
-    """
-
-    if six.PY2:
-        type2spec = {int: ('N', 20, 0),
-                     numpy.int64: ('N', 20, 0),
-                     float: ('N', 36, 15),
-                     numpy.float64: ('N', 36, 15),
-                     str: ('C', 14, 0),
-                     unicode: ('C', 14, 0)}
-    else :
-        type2spec = {int: ('N', 20, 0),
-                     numpy.int64: ('N', 20, 0),
-                     float: ('N', 36, 15),
-                     numpy.float64: ('N', 36, 15),
-                     str: ('C', 14, 0) }
-
-    # Ecriture du contenu de la dataframe vers un fichier dbf
-    types = [type(data_frame_input[i].iloc[0]) for i in data_frame_input.columns]
-    specs = [type2spec[t] for t in types]
-
-    if six.PY2:
-        db_desc = pysal.open(dbf_file, 'w')
-    else :
-        if IS_libpysal :
-            db_desc = libpysal.io.fileio.FileIO.open(dbf_file, 'w')
-        else :
-            db_desc = pysal.lib.io.fileio.FileIO.open(dbf_file, 'w')
-    db_desc.header = list(data_frame_input.columns)
-    db_desc.field_spec = specs
-    for i, row in data_frame_input.T.iteritems():
-        db_desc.write(row)
-    db_desc.close()
-
-    return
-
-#########################################################################
-# FONCTION convertCsv2Dbf()                                             #
-#########################################################################
-def convertCsv2Dbf(csv_file, dbf_file, sep=","):
-    """
-    #   Role : Conversion de format de fichier CSV en format DBF
-    #   Paramètres :
-    #      csv_file : Nom du fichier CSV d'entrée
-    #      dbf_file : Nom du fichier DBF de sortie
-    #      sep : caractere sparateur du fichier csv, par defaut : ","
-    """
-
-    if os.path.exists(csv_file):
-
-        if debug >=3:
-            print(cyan + "convertCsv2Dbf() : " + endC + bold + green + "Start " + endC)
-
-        # Lecture du fichier csv
-        data_frame_csv = pandas.read_csv(csv_file, sep)
-
-        # Ecriture du contenu de la dataframe issu du fichier csv vers un fichier dbf
-        saveDataFrame2Dbf(data_frame_csv, dbf_file)
-
-        if debug >=3:
-            print(cyan + "convertCsv2Dbf() : " + endC + bold + green + "End " + endC)
-    else :
-        print(cyan + "convertCsv2Dbf() : " + endC + bold + yellow + "Impossible de lire le fichier csv : " + csv_file + " . Fichier inexistant!" + endC)
-    return
 
 #########################################################################
 # FONCTION readQueryFile()                                              #

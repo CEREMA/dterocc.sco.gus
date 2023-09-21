@@ -2,7 +2,7 @@
 # from NeochannelComputation_gus import neochannelComputation
 # from DataConcatenation import concatenateData
 # #from ImagesAssemblyGUS_ok import cutImageByVector
-from Lib_postgis import *
+from libs.Lib_postgis import *
 # from DetectVegetationFormStratumV1 import *
 # from Lib_vector import *
 import sys,os,glob

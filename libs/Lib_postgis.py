@@ -32,8 +32,8 @@
 from __future__ import print_function
 import os, sys, csv, psycopg2, re, platform
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
-from Lib_text import readTextFile, appendTextFileCR
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_text import readTextFile, appendTextFileCR
 
 debug = 3
 

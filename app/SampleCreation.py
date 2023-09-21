@@ -9,12 +9,11 @@ Choses à faire :
 
 # Import des bibliothèques python
 from __future__ import print_function
-import os,sys,glob,shutil,string, argparse
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from Lib_file import cleanTempData, deleteDir, removeFile
-from Lib_raster import createBinaryMaskThreshold, filterBinaryRaster, applyMaskAnd, applyMaskOr, rasterizeBinaryVector
-from Lib_vector import *
-#from ImagesAssemblyGUS import  *
+import os,sys,glob,shutil
+from libs.Lib_display import bold,red,green,yellow,cyan,endC
+from libs.Lib_file import cleanTempData, deleteDir, removeFile, removeVectorFile, copyVectorFile
+from libs.Lib_raster import createBinaryMaskThreshold, applyMaskAnd, rasterizeBinaryVector
+from libs.Lib_vector import simplifyVector, cutoutVectors, bufferVector, fusionVectors, filterSelectDataVector, getAttributeNameList, getNumberFeature, getGeometryType
 
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
@@ -50,14 +49,8 @@ def createAllSamples(image_input, vector_to_cut_input, vectors_samples_output, r
 
     return 
 
-
-
-
-
-
-
 ###########################################################################################################################################
-# FONCTION createSamples()                                                                                                           #
+# FONCTION createSamples()                                                                                                                #
 ###########################################################################################################################################
 def createSamples(image_input, vector_to_cut_input, vector_sample_output, raster_sample_output, bd_vector_input_list, bd_buff_list, sql_expression_list, sample_name="", simplify_vector_param=10.0, format_vector='ESRI Shapefile', extension_vector=".shp", save_results_intermediate=False, overwrite=True) :
     """
@@ -356,7 +349,7 @@ def prepareAllSamples(image_input, dic_classes_params, vector_to_cut_input, form
     return
 
 ###########################################################################################################################################
-# FONCTION prepareSamples()                                                                                                          #
+# FONCTION prepareSamples()                                                                                                               #
 ###########################################################################################################################################
 def prepareSamples(image_ref, input_vector_class, output_raster_class, emprisevector, erosionoption = True, format_vector='ESRI Shapefile'):
     """
@@ -555,7 +548,7 @@ def cleanSamples(image_input, image_output, correction_images_input_dic, extensi
 
 
 ###########################################################################################################################################
-# FONCTION processSamples()                                                                                                          #
+# FONCTION processSamples()                                                                                                               #
 ###########################################################################################################################################
 def processingSample(sample_raster_file_input, sample_raster_file_output, file_mask_input, threshold_min, threshold_max, repertory_temp) :
     """

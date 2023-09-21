@@ -1,7 +1,10 @@
 
-from Lib_raster import *
+from libs.Lib_raster import  deletePixelsSuperpositionMasks, mergeListRaster, updateReferenceProjection 
 import os, string
 
+###########################################################################################################################################
+# FONCTION cleanCoverClasses()                                                                                                            #
+###########################################################################################################################################
 def cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merged_output):
     """
     Rôle : nettoie les pixels d'apprentissage de classes différentes se recouvrants
@@ -50,7 +53,6 @@ def cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merg
     #Attribution des valeurs de label aux masques de chaque classe pour les pixels valant 1
     length = len(images_mask_cleaned_list)  
     for img in range(len(images_mask_cleaned_list)):
-        print(images_mask_cleaned_list[img],images_mask_cleaned_list[img],img)
         command = "otbcli_BandMath -il %s -out %s -exp '(im1b1==1)?%s:0'" %(images_mask_cleaned_list[img],images_list_out[img], str(img+1))
         exitCode = os.system(command)
         if exitCode != 0:

@@ -1,10 +1,9 @@
 from __future__ import print_function
 import os,sys,glob,shutil,string, argparse
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from Lib_file import cleanTempData, deleteDir, removeFile
-from CrossingVectorRaster import *
-from rasterstats import *
-from Lib_postgis import *
+from libs.Lib_display import green,endC
+from libs.Lib_file import removeFile
+from app.CrossingVectorRaster import statisticsVectorRaster
+from libs.Lib_postgis import addColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr
 
 ###########################################################################################################################################
 # FONCTION createFeatures()                                                                                                             #

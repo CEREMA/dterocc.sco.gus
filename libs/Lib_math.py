@@ -16,7 +16,7 @@
 """
 
 import sys, math
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 
 #########################################################################
 # FONCTION average()                                                    #

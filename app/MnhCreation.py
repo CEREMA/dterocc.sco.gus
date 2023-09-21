@@ -25,9 +25,9 @@ import os, sys, string
 from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from Lib_raster import  getProjectionImage, cutImageByVector, getNodataValueImage
-from Lib_file import removeVectorFile, removeFile
+from libs.Lib_display import bold,red,cyan,endC
+from libs.Lib_raster import  getProjectionImage, cutImageByVector, getNodataValueImage
+from libs.Lib_file import removeFile
 debug = 3
 
 #########################################################################
@@ -50,9 +50,6 @@ def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, ep
         overwrite : ré-écriture des fichiers. Par défaut : True
         save_intermediate_results : sauvegarde des résultats intermédiaire. Par défaut : False
     """
-
-
-    print(cyan + "MnhCreation : Début création du MNH" + endC)
     if debug >= 3:
         print(cyan + "MnhCreation() : Début de la sélection des dossiers images" + endC)
         print(cyan + "MnhCreation() : " + endC + "MNS : " + str(file_mns) + endC)
