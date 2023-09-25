@@ -12,7 +12,7 @@ from app.SampleSelectionRaster import selectSamples
 from app.SupervisedClassification import classifySupervised, StructRFParameter
 from app.MajorityFilter import filterImageMajority
 from app.VerticalStratumDetection import classificationVerticalStratum, segmentationImageVegetetation
-from app.DetectVegetationFormStratumV1 import cartographyVegetation
+from app.DetectVegetationFormStratumV2 import cartographyVegetation
 from app.MnhCreation import mnhCreation
 from app.NeochannelComputation_gus import neochannelComputation
 from app.DataConcatenation import concatenateData
@@ -303,12 +303,12 @@ if __name__ == "__main__":
     }
 
     #Dictionnaire des paramètres BD de classification en strates verticales 
-    connexion_stratev_dic = connexion_ini_dic
-    connexion_stratev_dic["schema"] = 'classif_stratesv_t1'
+    # connexion_stratev_dic = connexion_ini_dic
+    # connexion_stratev_dic["schema"] = 'classif_stratesv_t1'
 
     # #Dictionnaire des paramètres BD de classsification des formes végétales horizontales
-    # connexion_fv_dic = connexion_ini_dic
-    # connexion_fv_dic["schema"] = 'classification_fv'
+    connexion_fv_dic = connexion_ini_dic
+    connexion_fv_dic["schema"] = 'classification_fv_t0'
 
     # #Dictionnaire des paramètres BD des données finales (cartographie)
     # connexion_datafinal_dic = connexion_ini_dic
@@ -338,8 +338,8 @@ if __name__ == "__main__":
       print("Mot de passe : %s" %(connexion_ini_dic["password_db"]))
       print("Serveur: %s" %(connexion_ini_dic["server_db"]))
       print("Num port : %s" %(connexion_ini_dic["port_number"]))
-      print("Schéma strates végétales : %s" %(connexion_stratev_dic["schema"]))
-     # print("Schéma formes végétales : %s" %(connexion_fv_dic["schema"]))
+     # print("Schéma strates végétales : %s" %(connexion_stratev_dic["schema"]))
+      print("Schéma formes végétales : %s" %(connexion_fv_dic["schema"]))
      # print("Schéma données finales : %s" %(connexion_datafinal_dic["schema"]))
       print("Extensions : postgis, postgis_sfcgal")
 
@@ -348,109 +348,112 @@ if __name__ == "__main__":
       print(bold + cyan + "\nDistinction des strates verticales de végétation " + endC)
 
     #Dossier de stockage des datas
-    path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'  
+    # path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'  
 
-    if not os.path.exists(path_stratesveg):
-      os.makedirs(path_stratesveg)
+    # if not os.path.exists(path_stratesveg):
+    #   os.makedirs(path_stratesveg)
 
-    sgt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
+    # sgt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
 
-    stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg' 
+    # stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg' 
 
-    #1.1# Segmentation de l'image
-    if debug >= 1:
-      print(cyan + "\nSegmentation de l'image de végétation " + endC)
-    #Paramètres de segmentation
-    num_class = {
-      "bati" : 1,
-      "route" : 2,
-      "sol nu" : 3,
-      "eau" : 4,
-      "vegetation" : 5
-    }  
-    minsize = 10
+    # #1.1# Segmentation de l'image
+    # if debug >= 1:
+    #   print(cyan + "\nSegmentation de l'image de végétation " + endC)
+    # #Paramètres de segmentation
+    # num_class = {
+    #   "bati" : 1,
+    #   "route" : 2,
+    #   "sol nu" : 3,
+    #   "eau" : 4,
+    #   "vegetation" : 5
+    # }  
+    # minsize = 10
    # segmentationImageVegetetation(img_ref, img_classif_filtered, sgt_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = True, overwrite = False)
 
     #1.2# Classification en strates verticales
     if debug >= 1:
       print(cyan + "\nClassification des segments végétation en strates verticales " + endC)
 
-    # #Ouverture connexion 
-    connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
+    # # #Ouverture connexion 
+    # connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
  
-    img_txt_SFS = '/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
-    raster_dic = {
-      "MNH" : img_MNH, 
-      "TXT" : img_txt_SFS
-    }
-    tab_ref = 'segments_vegetation_t1'
-    dic_seuils_stratesV = {
-      "seuil_h1" : 3,
-      "seuil_h2" : 1, 
-      "seuil_h3" : 2,
-      "seuil_txt" : 11,
-      "seuil_touch_arbo_vs_herba" : 15,
-      "seuil_ratio_surf" : 25,
-      "seuil_arbu_repres" : 20
-    }
+    # img_txt_SFS = '/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
+    # raster_dic = {
+    #   "MNH" : img_MNH, 
+    #   "TXT" : img_txt_SFS
+    # }
+    # tab_ref = 'segments_vegetation_t1'
+    # dic_seuils_stratesV = {
+    #   "seuil_h1" : 3,
+    #   "seuil_h2" : 1, 
+    #   "seuil_h3" : 2,
+    #   "seuil_txt" : 11,
+    #   "seuil_touch_arbo_vs_herba" : 15,
+    #   "seuil_ratio_surf" : 25,
+    #   "seuil_arbu_repres" : 20
+    # }
 
-    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
+    # output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
     
-    closeConnection(connexion)
+    # closeConnection(connexion)
 
     # #2# Détection des formes végétales horizontales
     if debug >= 1:
       print(cyan + "\nClassification des segments végétation en formes végétales" + endC)
 
     # #Dossier de stockage des datas
-    # path_fv = path_prj + os.sep + '2-DistinctionFormesVegetales'  
+    path_fv = path_prj + os.sep + '2-DistinctionFormesVegetales'  
 
-    # if not os.path.exists(path_fv):
-    #   os.makedirs(path_fv)
+    if not os.path.exists(path_fv):
+      os.makedirs(path_fv)
 
-    # output_fv = path_fv + os.sep + 'vegetation_fv.gpkg'
+    output_fv = path_fv + os.sep + 'vegetation_fv.gpkg'
 
-    # fv_st_arbore = path_fv + os.sep + 'fv_st_arbore.gpkg'
-    # fv_st_arbustif = path_fv + os.sep + 'fv_st_arbustif.gpkg'
-    # fv_st_herbace = path_fv + os.sep + 'fv_st_herbace.gpkg'
+    fv_st_arbore = path_fv + os.sep + 'fv_st_arbore.gpkg'
+    fv_st_arbustif = path_fv + os.sep + 'fv_st_arbustif.gpkg'
+    fv_st_herbace = path_fv + os.sep + 'fv_st_herbace.gpkg'
     
     # #Ouverture connexion 
-    # connexion = openConnection(connexion_fv_dic["dbname"], user_name = connexion_fv_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name = connexion_fv_dic["schema"])
+    connexion = openConnection(connexion_fv_dic["dbname"], user_name = connexion_fv_dic["user_db"], password=connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port=connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"])
  
 
-    # treethresholds = {
-    #   "seuil_surface" : 20,
-    #   "seuil_compacite_1" : 0.7,
-    #   "seuil_compacite_2" : 0.5,
-    #   "seuil_convexite" : 0.7,
-    #   "seuil_elongation" : 2.5,
-    #   "val_largeur_max_alignement" : 5,
-    #   "val_buffer" : 1
-    # }
-    # schrubthresholds = {
-    #   "seuil_surface" : 5,
-    #   "seuil_compacite_1" : 0.7,
-    #   "seuil_compacite_2" : 0.5,
-    #   "seuil_convexite" : 0.7,
-    #   "seuil_elongation" : 2.5,
-    #   "val_largeur_max_alignement" : 5,
-    #   "val_buffer" : 1
-    # }
-    # dic_thresholds = {
-    #   "tree" : treethresholds,
-    #   "shrub" : shrubthresholds} 
-    # schem_tab_ref = output_tab_stratesv
-    # output_layers ={
-    #   "tree" : fv_st_arbore,
-    #   "shrub" : fv_st_arbustif,
-    #   "herbaceous" : fv_st_herbace,
-    #   "output_fv" : output_fv
-    # }# dictionnaire des couches de sauvegarde  
-    # #2.2#Elements arbustifs 
+    treethresholds = {
+      "seuil_surface" : 20,
+      "seuil_compacite_1" : 0.7,
+      "seuil_compacite_2" : 0.5,
+      "seuil_convexite" : 0.7,
+      "seuil_elongation" : 3,
+      "val_largeur_max_alignement" : 12,
+      "val_buffer" : 1
+    }
+    shrubthresholds = {
+      "seuil_surface" : 5,
+      "seuil_compacite_1" : 0.7,
+      "seuil_compacite_2" : 0.5,
+      "seuil_convexite" : 0.7,
+      "seuil_elongation" : 3,
+      "val_largeur_max_alignement" : 8,
+      "val_buffer" : 1
+    }
+    dic_thresholds = {
+      "tree" : treethresholds,
+      "shrub" : shrubthresholds} 
 
-    # tab_veg = cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False, overwrite = False,  debug = debug)
+    schem_tab_ref = 'classif_stratesv_t0.segments_vegetation_t0'
 
-    # closeConnection(connexion)
+    output_layers ={
+      "tree" : fv_st_arbore,
+      "shrub" : fv_st_arbustif,
+      "herbaceous" : fv_st_herbace,
+      "output_fv" : output_fv
+    }# dictionnaire des couches de sauvegarde  
+
+    #2.2#Elements arbustifs 
+
+    tab_veg = cartographyVegetation(connexion, connexion_fv_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = True, overwrite = False,  debug = debug)
+
+    closeConnection(connexion)
 
     # #4# Calcul des indicateurs de végétation
     if debug >= 1:
