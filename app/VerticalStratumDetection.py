@@ -1,7 +1,7 @@
 from __future__ import print_function
 import os,sys,glob,shutil,string, argparse
 from libs.Lib_display import bold,red,yellow,cyan,endC
-from app.CrossingVectorRaster import statisticsVectorRaster
+from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_postgis import readTable, executeQuery, addColumn, addUniqId, addIndex, addSpatialIndex, dropTable, dropColumn, exportVectorByOgr2ogr, importVectorByOgr2ogr
 
 ###########################################################################################################################################

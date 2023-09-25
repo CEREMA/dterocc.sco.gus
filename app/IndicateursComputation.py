@@ -2,7 +2,7 @@ from __future__ import print_function
 import os,sys,glob,shutil,string, argparse
 from libs.Lib_display import green,endC
 from libs.Lib_file import removeFile
-from app.CrossingVectorRaster import statisticsVectorRaster
+from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_postgis import addColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr
 
 ###########################################################################################################################################
