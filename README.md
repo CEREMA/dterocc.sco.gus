@@ -35,19 +35,13 @@ Version Python 3. 10. 12
 | :-------- | :------------------------- |
 | OTB | 8. 0. 1 |
 | GDAL | 3. 4. 1 |
-| GRASS GIS | 7. 8. 7Sa |
+| GRASS GIS | 7. 8. 7 |
 | SAGA | 7. 3. 0 |
 | PostgreSQL | 14. 9 |
 
 
-
-### Grass
-
-### OTB
-
-### Grass
-
-## Diagramme de classe 
+## Diagramme de classe
+![Diagramme de structure](https://github.com/CEREMA/dterocc.sco.gus/blob/main/README.md)
 
 ## Utilisation du main
 
@@ -55,6 +49,6 @@ Version Python 3. 10. 12
 
 ### Lancement des étapes
 
-#### 
-## Screenshots
-![Diagramme de structure](https://github.com/CEREMA/dterocc.sco.gus/blob/main/README.md)
+
+
+
