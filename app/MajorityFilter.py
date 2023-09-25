@@ -33,7 +33,6 @@ A Reflechir/A faire :
 sauvegarder les résultats dans un autre dossier que le dossier en entree ?
 """
 
-from __future__ import print_function
 import os,sys,glob,string,argparse
 from libs.Lib_display import bold,red,green,cyan,endC
 from libs.Lib_file import removeFile

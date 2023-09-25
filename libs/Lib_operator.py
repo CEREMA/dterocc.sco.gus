@@ -1,7 +1,29 @@
 # IMPORTS DIVERS
 import os, subprocess, platform, psutil, multiprocessing, threading ,ctypes, re, inspect
 
+#########################################################################
+# FONCTION getExtensionApplication()                                    #
+#########################################################################
+def getExtensionApplication():
+    """
+    # ROLE :
+    #   La fonction retourne le type d'extension approprier pour certaines applications
+    #   en fonction du systeme d'environement
+    # ENTREES :
+    # SORTIES :
+    #   Return l'extension
+    """
 
+    extend_cmd = ""
+    os_system = platform.system()
+    if 'Windows' in os_system :
+        extend_cmd = ".bat"
+    elif 'Linux' in os_system :
+        extend_cmd = ".py"
+    else :
+        raise NameError ("!!! Erreur le type de systeme n'a pu être déterminer : " + os_system)
+    return extend_cmd
+    
 #########################################################################
 # CLASSE QUI SIMULE UN SWITCH CASE                                      #
 #########################################################################

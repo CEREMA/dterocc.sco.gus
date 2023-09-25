@@ -20,7 +20,6 @@ Objectif   : Assemble et/ou découpe des images raster
 Date de creation : 07/06/2023
 """
 # Import des bibliothèques python
-from __future__ import print_function
 import os, sys, glob
 from os import chdir
 from osgeo import gdal, ogr

@@ -30,12 +30,10 @@ A Reflechir/A faire :
 
 """
 # Import des bibliothèques python
-from __future__ import print_function
 import os,sys,glob,argparse,shutil
 from osgeo import ogr
 from rasterstats2 import raster_stats
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from Lib_log import timeLine
+from Lib_display import bold,red,green,yellow,cyan,endC,displayIHM
 from Lib_raster import getPixelSizeImage, getEmpriseImage, identifyPixelValues
 from Lib_vector import getEmpriseFile, cleanMiniAreaPolygons
 from Lib_file import copyVectorFile, removeVectorFile, renameVectorFile
@@ -99,7 +97,6 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
 
     # Mise à jour du Log
     starting_event = "statisticsVectorRaster() : Compute statistic crossing starting : "
-    timeLine(path_time_log,starting_event)
 
     # creation du fichier vecteur de sortie
     if vector_output == "":
@@ -489,7 +486,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
 
     # Mise à jour du Log
     ending_event = "statisticsVectorRaster() : Compute statistic crossing ending : "
-    timeLine(path_time_log,ending_event)
+    
 
     return
 

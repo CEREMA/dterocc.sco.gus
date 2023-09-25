@@ -1,6 +1,5 @@
-from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr
+from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr
 from libs.Lib_display import endC, bold, yellow, cyan, red
-
 #################################################
 ## Concaténation des trois tables pour obtenir ##
 ## une unique cartographie                     ##  
@@ -79,7 +78,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     SELECT fid, geom, strate, fv FROM %s
     """ %(tab_name, tab_arbore, tab_arbustive, tab_herbace)
     
-    if debug >= 3:
+    if debug => 3:
         print(query)
     executeQuery(connexion, query)
 

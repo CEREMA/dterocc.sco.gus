@@ -29,7 +29,7 @@ def createFeatures(connexion, connexion_dic, tab_ref, dic_attributs):
 ###########################################################################################################################################
 # FONCTION createAndImplementFeatures()                                                                                                             #
 ###########################################################################################################################################
-def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs, dic_params, output_layer = '', repertory, save_intermediate_result = False):
+def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs, dic_params, output_layer = '', repertory, save_intermediate_result = False, debug = 0):
     """
     Rôle :
 
@@ -42,6 +42,7 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
         output_layer : chemin de sauvegarde du fichier final de la cartographie. Par défaut : ''
         repertory : répertoire de calcul des attributs descriptifs
         save_intermediate_result : choix de sauvegarde des fichiers intermédiaires. Par défaut : False
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
     #Création du répertoire temporaire dans le dossier de travail
     repertory_tmp = repertory + os.sep + 'TMP_FEATURES_IMPLEMENTATION' 
@@ -55,32 +56,32 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
 
     #Implémentation de la surface de la FV 
-    areaIndicator(connexion, tab_ref, dic_columname["areaIndicator"][0])
+    areaIndicator(connexion, tab_ref, dic_columname["areaIndicator"][0], debug = debug)
 
     #Implémentation des attributs de hauteur des FV 
-    heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["heightIndicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result)
+    heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["heightIndicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, , debug = debug)
     
     #Implémentation du type "persistant" ou "caduc" des FV 
-    evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["thresh_evergdecid"], columns_indics_name = dic_columname["evergreenDeciduousIndicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_results = save_intermediate_result)
+    evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["thresh_evergdecid"], columns_indics_name = dic_columname["evergreenDeciduousIndicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_results = save_intermediate_result, debug = debug)
     
     #Implémentation du type "conifère" ou "feuillu" des FV 
-    coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["thresh_deciconif"], columns_indics_name = dic_columname["coniferousDeciduousIndicators"], repertory = repertory_tmp,save_intermediate_results = save_intermediate_result)
+    coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["thresh_deciconif"], columns_indics_name = dic_columname["coniferousDeciduousIndicators"], repertory = repertory_tmp,save_intermediate_results = save_intermediate_result, debug = debug)
     
     #Implémentation du type de sol support des FV 
-    typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["thresh_soltype"], column_indic_name = dic_columname["typeOfGroundIndicator"][0], repertory = repertory_tmp, save_intermediate_results = save_intermediate_result)
+    typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["thresh_soltype"], column_indic_name = dic_columname["typeOfGroundIndicator"][0], repertory = repertory_tmp, save_intermediate_results = save_intermediate_result, debug = debug)
 
     #Export résultat au format GPKG
     if output_layer != '':
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
     else :
-       #renvoyer un message comme quoi nous ne l'avons pas exporter car le chemin de sauvegarde n'a pas été indiqué 
+        print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur de la cartographie finale de la végétation (détaillée). Vous n'avez pas fournit de chemin de sauvegarde." + endC) 
     
     return 
 
 ###########################################################################################################################################
 # FONCTION areaIndicator()                                                                                                        #
 ###########################################################################################################################################
-def areaIndicator(connexion, tab_ref, columnname):
+def areaIndicator(connexion, tab_ref, columnname, debug = 0):
     """
     Rôle : calcul l'attribut de surface
 
@@ -88,6 +89,7 @@ def areaIndicator(connexion, tab_ref, columnname):
         connexion : connexion à la base donnée et au schéma correspondant
         tab_ref : nom de la table de référence contenant les formes végétalisées
         columnname : nom de l'attribut de surface
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
 
     query = """
@@ -104,7 +106,7 @@ def areaIndicator(connexion, tab_ref, columnname):
 ###########################################################################################################################################
 # FONCTION heightIndicators()                                                                                                             #
 ###########################################################################################################################################
-def heightIndicators(connexion, connexion_dic, tab_ref, columnnamelist, img_mnh, repertory = '', save_intermediate_result = False):
+def heightIndicators(connexion, connexion_dic, tab_ref, columnnamelist, img_mnh, repertory = '', save_intermediate_result = False, debug = 0):
 
     """
     Rôle : calcul les attributs de hauteur
@@ -117,6 +119,7 @@ def heightIndicators(connexion, connexion_dic, tab_ref, columnnamelist, img_mnh,
         img_mnh : image MNH 
         repertory : repertoire temporaire dans lequel on sauvegarde les données intermédiaires; Par défaut : ''
         save_intermediate_result : sauvegarde des résultat intermédiaires. Par défaut : False
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
     #Création d'un fichier vecteur temporaire              
     filetablevegin = repertory + os.sep + 'couche_vegetation_bis.gpkg'
@@ -189,6 +192,7 @@ def calculateSpringAndWinterNdviImage(img_spg_input, img_wtr_input, repertory = 
         img_spg_input : image Pléiades printemps/été
         img_wtr_input : image Pléiades hiver
         repertory : repertoire de sauvegarde des fichiers. Par défaut : ''
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         img_ndvi_spg : le chemin du fichier de sauvegarde de l'image NDVI de printemps/été
@@ -215,7 +219,7 @@ def calculateSpringAndWinterNdviImage(img_spg_input, img_wtr_input, repertory = 
 ###########################################################################################################################################
 # FONCTION evergreenDeciduousIndicators()                                                                                                  #
 ###########################################################################################################################################
-def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg, img_ndvi_wtr, tab_ref, seuil = 0.10, columns_indics_name = ['perc_persistant', 'perc_caduque'], superimpose_choice = False, repertory = '', save_intermediate_results = False):
+def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg, img_ndvi_wtr, tab_ref, seuil = 0.10, columns_indics_name = ['perc_persistant', 'perc_caduque'], superimpose_choice = False, repertory = '', save_intermediate_results = False, debug = 0):
     """
     Rôle : calcul le pourçentage de persistants et de caduques sur les polygones en entrée
 
@@ -231,6 +235,7 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
         superimpose_choice : choix d'appliquer un superimpose sur une des deux images ndvi produites pour qu'elles se superposent parfaitement. Par défaut : False
         repertory : répertoire de sauvegarde des fichiers intermédiaires. Par défaut : ''
         save_intermediate_results : garder ou non les fichiers temporaires. Par défaut : False
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
 
     """
@@ -340,7 +345,7 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
 ###########################################################################################################################################
 # FONCTION coniferousDeciduousIndicators()                                                                                                 #
 ###########################################################################################################################################
-def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, seuil = 1300, columns_indics_name = ['perc_conifere', 'perc_feuillu'], repertory = '',save_intermediate_results = False):
+def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, seuil = 1300, columns_indics_name = ['perc_conifere', 'perc_feuillu'], repertory = '',save_intermediate_results = False, debug = 0):
     """
     Rôle : cette fonction permet de calculer le pourçentage de feuillus et de conifères sur les polygones en entrée
 
@@ -353,6 +358,7 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
         columns_indics_name : liste des noms de colonne des indicateurs à implémenter. Par défaut :['perc_conifere', 'perc_feuillu'] 
         repertory : repertoire de sauvegarde des fichiers intermédiaire. Par défaut : ''
         save_intermediate_results : garder ou non les fichiers temporaires
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     """
     #Création du dossier temporaire et des fichiers temporaires
@@ -439,7 +445,7 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
 ###########################################################################################################################################
 # FONCTION typeOfGroundIndicator()                                                                                                        #
 ###########################################################################################################################################
-def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_ref, seuil  = 0.3, column_indic_name = 'type_sol', repertory = '', save_intermediate_results = False):
+def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_ref, seuil  = 0.3, column_indic_name = 'type_sol', repertory = '', save_intermediate_results = False, debug = 0):
     """
     Rôle : cette fonction permet d'indiquer si le sol sous-jacent à la végétation est de type perméable ou imperméable
 
@@ -452,6 +458,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
         column_indic_name : nom de la colonne de l'indicateur de type de sol. Par défaut : 'type_sol'
         repertory : repertoire de sauvegarde des fichiers intermédiaires. Par défaut : ''
         save_intermediate_results : garder ou non les fichiers temporaires
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     """
     #Création du dossier temporaire et des fichiers temporaires

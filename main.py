@@ -1,23 +1,26 @@
-from libs.Lib_display import bold,black,red,green,yellow,cyan,magenta,cyan,endC,displayIHM
+### IMPORTS ###
+#Librairies Python
+import sys,os,glob
+from osgeo import ogr ,osr
+#Librairies
+from libs.Lib_display import bold,red,green,cyan,endC
+from libs.Lib_postgis import createDatabase, openConnection, createExtension, closeConnection
+#Applications
+from app.SampleCreation import createAllSamples, prepareAllSamples
+from app.CleanCoverClasses import cleanCoverClasses
+from app.SampleSelectionRaster import selectSamples
+from app.SupervisedClassification import classifySupervised, StructRFParameter
+from app.MajorityFilter import filterImageMajority
+from app.VerticalStratumDetection import classificationVerticalStratum, segmentationImageVegetetation
+from app.DetectVegetationFormStratumV1 import cartographyVegetation
 from app.MnhCreation import mnhCreation
 from app.NeochannelComputation_gus import neochannelComputation
 from app.DataConcatenation import concatenateData
-#from ImagesAssemblyGUS_ok import cutImageByVector
-from libs.Lib_postgis import *
-#from DetectVegetationFormStratumV1 import *
-from libs.Lib_vector import *
-import sys,os,glob
-from osgeo import ogr ,osr
-from app.SampleCreation import *
-from app.CleanCoverClasses import * 
-from app.SampleSelectionRaster import *
-from app.SupervisedClassification import *
-from app.MajorityFilter import *
-from app.VerticalStratumDetection import *
+from app.ImagesAssembly import assemblyRasters
 
 if __name__ == "__main__":
 
-    debug = 1
+    debug = 3
     #Préparation du parser
     #à faire par la suite
     print(bold + cyan + "*********************************************** \n*** Cartographie détaillée de la végétation *** \n***********************************************" + endC)
@@ -301,7 +304,7 @@ if __name__ == "__main__":
 
     #Dictionnaire des paramètres BD de classification en strates verticales 
     connexion_stratev_dic = connexion_ini_dic
-    connexion_stratev_dic["schema"] = 'classification_stratesv'
+    connexion_stratev_dic["schema"] = 'classif_stratesv_t1'
 
     # #Dictionnaire des paramètres BD de classsification des formes végétales horizontales
     # connexion_fv_dic = connexion_ini_dic
@@ -380,7 +383,7 @@ if __name__ == "__main__":
       "MNH" : img_MNH, 
       "TXT" : img_txt_SFS
     }
-    tab_ref = 'segments_vegetation'
+    tab_ref = 'segments_vegetation_t1'
     dic_seuils_stratesV = {
       "seuil_h1" : 3,
       "seuil_h2" : 1, 
@@ -393,7 +396,7 @@ if __name__ == "__main__":
 
     output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
     
-    # closeConnection(connexion)
+    closeConnection(connexion)
 
     # #2# Détection des formes végétales horizontales
     if debug >= 1:
@@ -445,7 +448,7 @@ if __name__ == "__main__":
     # }# dictionnaire des couches de sauvegarde  
     # #2.2#Elements arbustifs 
 
-    # tab_veg = cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False)
+    # tab_veg = cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False, overwrite = False,  debug = debug)
 
     # closeConnection(connexion)
 

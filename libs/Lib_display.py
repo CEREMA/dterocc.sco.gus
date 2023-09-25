@@ -16,6 +16,15 @@ Ce module défini des fonctions d'affichage utiles a la chaine.
 
 import os, platform
 
+import six
+if six.PY2:
+    from PyQt4 import QtGui
+    from Tkinter import *
+    import argparseui
+else :
+    from PyQt5 import QtGui
+    from tkinter import *
+
 ##############################################################
 # MISE EN FORME DES MESSAGES DANS LA CONSOLE                 #
 ##############################################################
@@ -83,3 +92,30 @@ elif 'Linux' in osSystem :
     BGwhite = "\033[47m"
 
     endC = "\033[0m"
+
+
+#########################################################################
+# FONCTION displayIHM()                                                 #
+#########################################################################
+def displayIHM(gui, parser):
+    """
+    #   Rôle : Cette fonction permet d'appeler les applications version IHM plutôt qu'en ligne de commande
+    #   Paramètres :
+    #       gui : boolen active ou desactive la version IHM (activé = True)
+    #       parser : le parseur argpase
+    #   Retour : args (les arguments)
+    """
+
+    args = None
+    if gui and six.PY2 :
+        app = QtGui.QApplication(sys.argv)
+        a = argparseui.ArgparseUi(parser, window_title=parser.prog, use_save_load_button=True)
+        a.show()
+        app.exec_()
+        if a.result() == 1: # Ok pressed
+            args = a.parse_args() # ask argparse to parse the options
+        else:
+            sys.exit(0) # Cancel exit app
+    else :
+        args = parser.parse_args()
+    return args

@@ -1,11 +1,8 @@
 from __future__ import print_function
 import os,sys,glob,shutil,string, argparse
-import libs
-from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
-from libs.Lib_file import cleanTempData, deleteDir, removeFile
-from libs.CrossingVectorRaster import *
-from libs.rasterstats import *
-from libs.Lib_postgis import *
+from libs.Lib_display import bold,red,yellow,cyan,endC
+from app.CrossingVectorRaster import statisticsVectorRaster
+from libs.Lib_postgis import readTable, executeQuery, addColumn, addUniqId, addIndex, addSpatialIndex, dropTable, dropColumn, exportVectorByOgr2ogr, importVectorByOgr2ogr
 
 ###########################################################################################################################################
 # FONCTION vegetationMask()                                                                                                               #
@@ -191,7 +188,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
 
 
     # #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
-    tab_sgt_ini = 'segments_vegetation_ini'
+    tab_sgt_ini = 'segments_vegetation_ini_t1'
     # query = """
     # CREATE TABLE %s AS
     #     SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
@@ -204,26 +201,26 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     #     print(query)
     # executeQuery(connexion, query)
 
-    # #Traitement des artefacts au reflet blanc
-    # tab_sgt_txt_val0 = 'segments_txt_val0'
-    # query = """
-    # CREATE TABLE %s AS
-    #     SELECT * 
-    #     FROM %s
-    #     WHERE txt = 0;
+    #Traitement des artefacts au reflet blanc
+    tab_sgt_txt_val0 = 'segments_txt_val0'
+    query = """
+    CREATE TABLE %s AS
+        SELECT * 
+        FROM %s
+        WHERE txt = 0;
 
-    # DELETE FROM %s WHERE txt = 0;
-    # """ %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
+    DELETE FROM %s WHERE txt = 0;
+    """ %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
 
-    # #Exécution de la requête SQL
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-    # #Suppression des deux tables txt et mnh
-    # if tablename_txt != '' :
+    #Suppression des deux tables txt et mnh
+   # if tablename_txt != '' :
     #     dropTable(connexion, tablename_txt) 
-    # if tablename_mnh != '':
+   # if tablename_mnh != '':
     #     dropTable(connexion, tablename_mnh) 
 
 
@@ -236,55 +233,55 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     if debug >= 2:
         print(bold + "Prétraitements : transformation de l'ensemble des multipolygones en simples polygones ET suppression des artefacts au reflet blanc" + endC)
 
-    # #Conversion en simples polygones 
-    # query = """
-    # CREATE TABLE %s AS
-    #     SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
-    #     FROM %s as t
-    # """ %(tab_ref, tab_sgt_ini)
+    #Conversion en simples polygones 
+    query = """
+    CREATE TABLE %s AS
+        SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
+        FROM %s as t
+    """ %(tab_ref, tab_sgt_ini)
 
-    # #Exécution de la requête SQL
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-    # #Ajout d'un identifiant unique
-    # addUniqId(connexion, tab_ref)
+    #Ajout d'un identifiant unique
+    addUniqId(connexion, tab_ref)
 
-    # #Ajout d'un index spatial 
-    # addSpatialIndex(connexion, tab_ref)
+    #Ajout d'un index spatial 
+    addSpatialIndex(connexion, tab_ref)
 
-    # #Ajout de l'attribut "strate"
-    # addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
+    #Ajout de l'attribut "strate"
+    addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
 
 
-    # if not save_intermediate_result:
-    #     dropTable(connexion, tab_sgt_txt_val0)
+    if not save_intermediate_result:
+        dropTable(connexion, tab_sgt_txt_val0)
 
-    # ##################################################################### 
-    # ## Première étape : classification générale, à partir de règles de ##
-    # ##                  hauteur et de texture                          ##  
-    # #####################################################################
+    ##################################################################### 
+    ## Première étape : classification générale, à partir de règles de ##
+    ##                  hauteur et de texture                          ##  
+    #####################################################################
 
-    # if debug >= 2:
-    #     print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
+    if debug >= 2:
+        print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
 
-    # query = """
-    # UPDATE %s as t SET strate = 'arbore' WHERE t.txt < %s AND t.mnh  > %s;
-    # """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
+    query = """
+    UPDATE %s as t SET strate = 'arbore' WHERE t.txt < %s AND t.mnh  > %s;
+    """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
 
-    # query += """
-    # UPDATE %s as t SET strate = 'arbustif' WHERE t.txt < %s AND  t.mnh  <= %s;
-    # """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
+    query += """
+    UPDATE %s as t SET strate = 'arbustif' WHERE t.txt < %s AND  t.mnh  <= %s;
+    """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
 
-    # query += """
-    # UPDATE %s as t SET strate = 'herbace' WHERE t.txt  >= %s;
-    # """ %(tab_ref, dic_seuil["seuil_txt"])
+    query += """
+    UPDATE %s as t SET strate = 'herbace' WHERE t.txt  >= %s OR (t.txt > %s AND t.mnh <= %s);
+    """ %(tab_ref, dic_seuil["seuil_txt"], dic_seuil["seuil_txt"], 1)
 
-    # #Exécution de la requête SQL
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
     ##################################################################### 
     ## Deuxième étape : reclassification des segments arbustifs        ##
@@ -302,7 +299,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
         print(bold + "Deuxième étape :\n0-Extraction des segments 'isolés' et des segments de 'regroupement'" + endC)
 
     #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
-   # tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
+    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result, debug)
 
 
     ###
@@ -313,7 +310,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     if debug >= 2:
         print(bold + "Deuxième étape :\n1.0-Reclassification des arbustes isolés selon leur hauteur" + endC)
 
-   # tab_ref = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil) 
+    tab_ref = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate_result, debug) 
 
     tab_arbu_de_rgpt = 'arbu_de_rgpt'
     tab_arbu_uniq = 'arbu_uniq'
@@ -324,7 +321,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     if debug >= 2:
         print(bold + "Deuxième étape :\n1.1-Reclassification des segments arbustes 'regroupés'" + endC)
 
-    reclassGroupSegments(connexion, tab_ref, tab_rgpt_arbu, dic_seuil)
+    reclassGroupSegments(connexion, tab_ref, tab_rgpt_arbu, dic_seuil, save_intermediate_result, debug)
 
     #il nous reste les segments arbustifs de rgpts qui n'ont pas été reclassés par leur configuration
     #Suppression des tables intermédiaires 
@@ -332,7 +329,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     dropTable(connexion, tab_arbu_de_rgpt)
     dropTable(connexion, tab_arbu_uniq)
 
-    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result)
+    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result, debug)
     
     ###
     #2# Deuxième phase de reclassification
@@ -342,13 +339,13 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     if debug >= 2:
         print(bold + "Deuxième étape :\n2.0-Reclassification des arbustes 'isolés' selon un rapport de surface" + endC)
 
-    reclassIsolatedSgtsByAreaRatio(connexion,  tab_ref, tab_arbu_uniq, dic_seuil)
+    reclassIsolatedSgtsByAreaRatio(connexion,  tab_ref, tab_arbu_uniq, dic_seuil, save_intermediate_result, debug)
     
     # #2.1# Reclassification des arbustes "regroupés" entourés uniquement d'arboré selon un rapport de surface 
     if debug >= 2:
         print(bold + "Deuxième étape :\n2.1-Reclassification des arbustes 'regroupés' entourés uniquement d'arboré selon un rapport de surface" + endC)
 
-    reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil)
+    reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil, save_intermediate_result, debug)
 
     if not save_intermediate_result : 
         dropTable(connexion, tab_rgpt_arbu)
@@ -368,7 +365,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
 ###########################################################################################################################################
 # FONCTION pretreatment_arbu()                                                                                                            #
 ###########################################################################################################################################
-def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
+def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False, debug = 0):
     """
     Rôle : calculer et créer des tables intermédiaires pour la strate arbustive à traiter : 
             - une table constituée des géométries de regroupements arbustifs et du nombre de segments les composants (rgpt_arbu)
@@ -379,7 +376,8 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
         connexion : paramètres de connexion
         tab_ref : nom de la table contenant tous les semgents végétation d'origine avec l'attribut 'strate' en prime 
         save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
-
+        debug : niveau de debug pour l'affichage des commentaires
+    
     Sortie :
         liste des noms des tables créée
     """
@@ -528,7 +526,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False):
 ###########################################################################################################################################
 # FONCTION reclassIsolatedSgtsByHeight()                                                                                                  #
 ###########################################################################################################################################
-def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate_result = False):
+def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate_result = False, debug = 0):
     """
     Rôle : reclasse les segments arbustifs isolés selon leurs différences de hauteur avec les segments arborés et arbustifs les entourant
 
@@ -537,7 +535,8 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
         tab_ref : nom de la table contenant tous les segments végétation d'origine
         dic_seuil : dictionnaire des seuils à appliquer
         save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
-    
+        debug : niveau de debug pour l'affichage des commentaires
+
     """
 
     #Table contenant les identifiants des segments arbustifs isolés, la longueur de sa frontière et la longueur de sa frontière en contact avec segments arborés
@@ -654,7 +653,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
 ###########################################################################################################################################
 # FONCTION reclassIsolatedSgtsByAreaRatio()                                                                                               #
 ###########################################################################################################################################
-def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, save_intermediate_result = False):
+def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, save_intermediate_result = False, debug = 0):
     """
     Rôle : reclasse les différents segments arbustifs "isolés" selon un rapport de surface avec les segments arborés ou arborés ET herbacés environnants
 
@@ -664,6 +663,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
         arbu_uniq : nom de la table contenant tous les segments arbustifs isolés
         dic_seuil : dictionnaire des seuils pour la reclassification
         save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
+        debug : niveau de debug pour l'affichage des commentaires
 
     """
 
@@ -884,7 +884,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
 ###########################################################################################################################################
 # FONCTION reclassGroupSgtsByAreaRatio()                                                                                                  #
 ###########################################################################################################################################
-def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  dic_seuil, save_intermediate_result = False):
+def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  dic_seuil, save_intermediate_result = False, debug = 0):
     """
     Rôle : classe les différents segments arbustifs regroupés selon le rapport de surface
     NB : pour l'instant, on ne se charge que des regroupements entourés QUE d'arboré
@@ -895,7 +895,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
         rgpt_arbu : nom de la table contenant les regroupements arbustifs
         arbu_de_rgpt : nom de la table contenant les segments arbustifs appartennants à des regroupements
         save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
-
+        debug : niveau de debug pour l'affichage des commentaires
     """
 
     ###
@@ -1025,7 +1025,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
 ###########################################################################################################################################
 # FONCTION reclassGroupSegments()                                                                                                         #
 ###########################################################################################################################################
-def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermediate_result = False):
+def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermediate_result = False, debug = 0):
     """
     Rôle : reclasse les segments arbustifs regroupés
 
@@ -1035,6 +1035,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         rgpt_arbu : nom de la table contenant les regroupements arbustifs
         dic_seuil : dictionnaire contenant les seuils à prendre en compte lors de différentes classifications
         save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
+        debug : niveau de debug pour l'affichage des commentaires
 
     """
     ###

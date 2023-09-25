@@ -42,8 +42,7 @@ from libs.Lib_text import writeTextFile, appendTextFileCR
 from libs.Lib_file import removeVectorFile, removeFile
 from libs.Lib_operator import switch, case
 from libs.Lib_math import average, standardDeviation
-from libs.Lib_log import timeLine
-from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
+from libs.Lib_display import bold,red,green,yellow,cyan,endC
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 1 : affichage intermédiaire de commentaires lors de l'execution du script
