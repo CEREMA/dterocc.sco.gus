@@ -57,3 +57,4 @@ Version Python 3. 10. 12
 
 #### 
 ## Screenshots
+![Diagramme de structure](https://github.com/CEREMA/dterocc.sco.gus/blob/main/README.md)
