@@ -20,8 +20,7 @@ Objectif   : Créé un modèle numérique de hauteur à partir d'un modèle num�
 Date de creation : 12/06/2023
 """
 # Import des bibliothèques python
-from __future__ import print_function
-import os, sys, string
+import os, sys
 from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *

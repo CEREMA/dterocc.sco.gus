@@ -15,21 +15,8 @@
  Notes diverses :
  Pour utiliser certains modules (notamment createDatabase() / dropDatabase() / importVectorByOgr2ogr() / exportVectorByOgr2ogr() / importShape() / exportShape() / importRaster()),
  il est préférable d'être déconnecté de la base de données (conflit d'accès).
- Certains modules retournent une information, qui peut être utilisée par d'autres modules, ou traitée comme variable dans des scripts :
- connection = openConnection()
- data_list = getData()
- table_name = importVectorByOgr2ogr()
- table_name = importShape()
- data_read = readTable()
- databases_list = getAllDatabases()
- schemas_list = getAllSchemas()
- tables_list = getAllTables()
- columns_list = getAllColumns()
- postgresql_version = versionPostgreSQL()
- postgis_version = versionPostGIS()
 """
 
-from __future__ import print_function
 import os, sys, csv, psycopg2, re, platform
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC

@@ -15,7 +15,6 @@
 """
 
 # IMPORTS DIVERS
-from __future__ import print_function
 import os,glob,sys,shutil,time, numpy
 
 from sklearn.cluster import KMeans

@@ -15,10 +15,8 @@
 """
 
 # IMPORTS DIVERS
-from __future__ import print_function
 import sys,os,glob
 from osgeo import ogr ,osr
-import geopandas
 from rasterstats2 import raster_stats
 from libs.Lib_operator import *
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC

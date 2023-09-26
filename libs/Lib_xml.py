@@ -17,10 +17,9 @@
 
 # IMPORTS DIVERS
 import sys,os
-import six
 from lxml import etree
 from xml.dom import minidom
-from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_display import bold,red,cyan,endC
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire

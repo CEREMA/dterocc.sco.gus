@@ -1,4 +1,4 @@
-from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr
+from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection
 from libs.Lib_display import endC, bold, yellow, cyan, red
 
 #################################################
@@ -50,43 +50,45 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         for el in tables_schema:
             executeQuery(connexion, el[0])
 
+    closeConnection(connexion)
+
     #1# Formes végétales arborées
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate arborée" + endC)
     tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["tree"], output_layers["tree"], save_intermediate_results = save_intermediate_results, debug = debug)
 
-    #2# Formes végétales arbustives
-    if debug >= 2:
-        print(bold + "Détection des formes végétales au sein de la strate arbustive" + endC)
-    tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["schrub"], save_intermediate_results = save_intermediate_results, debug = debug)
+    # #2# Formes végétales arbustives
+    # if debug >= 2:
+    #     print(bold + "Détection des formes végétales au sein de la strate arbustive" + endC)
+    # tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["schrub"], save_intermediate_results = save_intermediate_results, debug = debug)
     
-    #3# Formes végétales herbacées
-    if debug >= 2:
-        print(bold + "Détection des formes végétales au sein de la strate herbacée" + endC)
-    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layers["herbaceous"], save_intermediate_results = save_intermediate_results, debug = debug)
+    # #3# Formes végétales herbacées
+    # if debug >= 2:
+    #     print(bold + "Détection des formes végétales au sein de la strate herbacée" + endC)
+    # tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layers["herbaceous"], save_intermediate_results = save_intermediate_results, debug = debug)
 
-    #4# Concaténation des données en une seule table 'végétation'
+    # #4# Concaténation des données en une seule table 'végétation'
     tab_name = 'vegetation'
-    if debug >= 2:
-        print(bold + "Concaténation des données en une seule table " + tab_name + endC)
+    # if debug >= 2:
+    #     print(bold + "Concaténation des données en une seule table " + tab_name + endC)
 
-    query = """
-    CREATE TABLE %s AS
-    SELECT fid, geom, strate, fv FROM %s
-    UNION
-    SELECT fid, geom, strate, fv FROM %s
-    UNION 
-    SELECT fid, geom, strate, fv FROM %s
-    """ %(tab_name, tab_arbore, tab_arbustive, tab_herbace)
+    # query = """
+    # CREATE TABLE %s AS
+    # SELECT fid, geom, strate, fv FROM %s
+    # UNION
+    # SELECT fid, geom, strate, fv FROM %s
+    # UNION 
+    # SELECT fid, geom, strate, fv FROM %s
+    # """ %(tab_name, tab_arbore, tab_arbustive, tab_herbace)
     
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    if output_layers["output_fv"] == '':
-        print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
-    else:
-        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["output_fv"], tab_name, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+    # if output_layers["output_fv"] == '':
+    #     print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
+    # else:
+    #     exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["output_fv"], tab_name, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
     return tab_name
 
@@ -127,21 +129,21 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     #1# Récupération de la table composée uniquement des segments arborés
     tab_arb_ini = 'arbore_ini'
 
-    query = """
-    CREATE TABLE %s AS
-        SELECT *
-        FROM %s
-        WHERE strate = 'arbore';
-    """ %(tab_arb_ini, schem_tab_ref)
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT *
+    #     FROM %s
+    #     WHERE strate = 'arbore';
+    # """ %(tab_arb_ini, schem_tab_ref)
 
-    #Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    #Création des indexes 
-    addSpatialIndex(connexion, tab_arb_ini)
-    addIndex(connexion, tab_arb_ini, 'fid', 'idx_fid_arboreini')
+    # #Création des indexes 
+    # addSpatialIndex(connexion, tab_arb_ini)
+    # addIndex(connexion, tab_arb_ini, 'fid', 'idx_fid_arboreini')
 
     #2# Regroupement et lissage des segments arborés
     if debug >= 3:
@@ -149,47 +151,47 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
 
     tab_arb = 'arbore'
 
-    query = """
-    CREATE TABLE %s AS
-        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom) AS geom
-        FROM %s;
-    """ %(tab_arb, tab_arb_ini)
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom) AS geom
+    #     FROM %s;
+    # """ %(tab_arb, tab_arb_ini)
 
-    #Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    #Création d'un identifiant unique
-    addUniqId(connexion, tab_arb)
+    # #Création d'un identifiant unique
+    # addUniqId(connexion, tab_arb)
 
-    #Création d'un index spatial
-    addSpatialIndex(connexion, tab_arb)
+    # #Création d'un index spatial
+    # addSpatialIndex(connexion, tab_arb)
 
-    #Création de la colonne strate qui correspond à 'arbore' pour tous les polygones et complétion
-    addColumn(connexion, tab_arb, 'strate', 'varchar(100)')
+    # #Création de la colonne strate qui correspond à 'arbore' pour tous les polygones et complétion
+    # addColumn(connexion, tab_arb, 'strate', 'varchar(100)')
 
-    query = """
-    UPDATE %s SET strate = 'arbore' WHERE fid = fid;
-    """ %(tab_arb)
+    # query = """
+    # UPDATE %s SET strate = 'arbore' WHERE fid = fid;
+    # """ %(tab_arb)
 
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    #Création de la colonne fv
-    addColumn(connexion, tab_arb, 'fv', 'varchar(100)')
+    # #Création de la colonne fv
+    # addColumn(connexion, tab_arb, 'fv', 'varchar(100)')
 
-    #Création et calcul de l'indicateur de forme : compacité
-    createCompactnessIndicator(connexion, tab_arb, thresholds["val_buffer"], debug = debug)
+    # #Création et calcul de l'indicateur de forme : compacité
+    # createCompactnessIndicator(connexion, tab_arb, thresholds["val_buffer"], debug = debug)
 
     #3# Classement des segments en "arbre isole", "tache arboree" et "regroupement arbore"
     # basé sur un critère de surface et de seuil sur l'indice de compacité
 
     if debug >= 3:
-        print(bold + "Classement des segments en 'arbre isole', 'tache arboree' et 'regroupement arbore' basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
+        print(bold + "Classement des segments en 'AI' (arbre isole), 'TA'(tache arboree) et 'RGPTA'(regroupement arbore) basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
 
-    fst_class = firstClassification(connexion, tab_arb,  thresholds, 'arbore', debug = debug)
+    # fst_class = firstClassification(connexion, tab_arb,  thresholds, 'arbore', debug = debug)
     
     #4# Travaux sur les "regroupements arborés"
     if debug >= 3:
@@ -197,9 +199,9 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
 
     sec_class = secClassification(connexion, tab_arb, 'rgpt_arbore', thresholds, save_intermediate_results, debug = debug)
 
-    #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
-    if debug >= 3:
-        print(bold + "Regroupement de l'ensemble des entités de la strate arborée en une seule couche" + endC)
+    # #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
+    # if debug >= 3:
+    #     print(bold + "Regroupement de l'ensemble des entités de la strate arborée en une seule couche" + endC)
 
     tab_arbore = ''
     tab_arbore = createLayerTree(connexion, fst_class, sec_class, debug = debug)
@@ -284,27 +286,27 @@ def firstClassification(connexion, tab_ref, thresholds, typeclass = 'arbore', de
 
     if typeclass == 'arbore':
         query = """
-        UPDATE %s AS arb SET fv = 'arbre isole' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp > %s;
+        UPDATE %s AS arb SET fv = 'AI' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp > %s;
         """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_compacite_1"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'tache arboree' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp <= %s;
+        UPDATE %s AS arb SET fv = 'TA' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp <= %s;
         """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_compacite_1"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'regroupement arbore' WHERE public.ST_AREA(arb.geom) > %s;
+        UPDATE %s AS arb SET fv = 'RGPTA' WHERE public.ST_AREA(arb.geom) > %s;
         """ %(tab_ref, thresholds["seuil_surface"])
     else :
         query = """
-        UPDATE %s AS arb SET fv = 'arbuste isole' WHERE public.ST_AREA(geom) <= %s AND id_comp > %s;
+        UPDATE %s AS arb SET fv = 'AuI' WHERE public.ST_AREA(geom) <= %s AND id_comp > %s;
         """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_compacite_1"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'tache arbustive' WHERE public.ST_AREA(geom) <= %s AND id_comp <= %s;
+        UPDATE %s AS arb SET fv = 'TAu' WHERE public.ST_AREA(geom) <= %s AND id_comp <= %s;
         """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_compacite_1"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'regroupement arbustif' WHERE public.ST_AREA(geom) > %s;
+        UPDATE %s AS arb SET fv = 'RGPTAu' WHERE public.ST_AREA(geom) > %s;
         """ %(tab_ref, thresholds["seuil_surface"])
 
     #Exécution de la requête SQL
@@ -335,17 +337,17 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, save_intermediate
 
     ## CREATION DE LA TABLE CONTENANT UNIQUEMENT LES ENTITES CLASSÉÉS REGROUPEMENT ##
 
-    query = """
-    CREATE TABLE %s AS
-        SELECT public.ST_MAKEVALID(public.ST_UNION(geom)) AS geom
-        FROM  %s
-        WHERE fv LIKE '%s';
-    """ %(tab_out, tab_ref, '%regroupement%')
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom  AS geom
+    #     FROM  %s
+    #     WHERE fv LIKE '%s';
+    # """ %(tab_out, tab_ref, '%RGPT%')
 
-    #Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
     ## PREPARATION DES DONNEES ##
 
@@ -381,11 +383,11 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, save_intermediate
    # createExtensionIndicator(connexion,tab_out)
 
     if tab_ref == 'arbore' :
-        name_algt = 'alignement arbore'
-        name_bst = 'boisement arbore'
+        name_algt = 'AA'
+        name_bst = 'BO'
     else :
-        name_algt = 'alignement arbustif'
-        name_bst = 'boisement arbustif'
+        name_algt = 'AAu'
+        name_bst = 'BOAu'
 
     ## CLASSIFICATION ##
 
@@ -433,7 +435,7 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
         FROM ((SELECT ab2.geom, ab2.fv
             FROM (SELECT geom, fv
                     FROM %s
-                    WHERE fv in ('arbre isole', 'tache arboree')) as ab2)
+                    WHERE fv in ('AI', 'TA')) as ab2)
                     UNION
                     (SELECT geom, fv
                     FROM %s)) AS strate_arboree
@@ -561,7 +563,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     #3# Classement des segments en "arbuste isole", "tache arbustive" et "regroupement arbustif"
        # basé sur un critère de surface et de seuil sur l'indice de compacité
     if debug >= 3:
-        print(bold + "Classement des segments en 'arbustif isole', 'tache arbustive' et 'regroupement arbustif' basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
+        print(bold + "Classement des segments en 'AuI' (arbustif isole), 'TAu'(tache arbustive) et 'RGPTAu'(regroupement arbustif) basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
 
     fst_class = firstClassification(connexion, tab_arbu, thresholds,  'arbustif', debug = debug)
     
@@ -571,28 +573,28 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
 
     sec_class = secClassification(connexion, tab_arbu,'rgpt_arbustif', thresholds, save_intermediate_results, debug = debug)
 
-    #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
-    if debug >= 3:
-        print(bold + "Regroupement de l'ensemble des entités de la strate arbustive en une seule couche" + endC)
+    # #5# Regroupement de l'ensemble des entités de la strate arborée en une seule couche
+    # if debug >= 3:
+    #     print(bold + "Regroupement de l'ensemble des entités de la strate arbustive en une seule couche" + endC)
 
 
     tab_arbustif = ''
-    tab_arbustif = createLayerShrub(connexion, fst_class, sec_class, debug = debug)
+    # tab_arbustif = createLayerShrub(connexion, fst_class, sec_class, debug = debug)
 
     if tab_arbustif == '':
         tab_arbustif = 'strate_arbustive'
 
-    ## SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
-    if not save_intermediate_results :
-        dropTable(connexion, tab_arbu_ini)
-        dropTable(connexion, fst_class)
-        dropTable(connexion, sec_class)
+    # ## SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
+    # if not save_intermediate_results :
+    #     dropTable(connexion, tab_arbu_ini)
+    #     dropTable(connexion, fst_class)
+    #     dropTable(connexion, sec_class)
 
-    # SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
-    if output_layer == '':
-        print(yellow + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification des FV arbustives. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
-    else:
-        exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_arbustif, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
+    # # SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
+    # if output_layer == '':
+    #     print(yellow + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification des FV arbustives. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
+    # else:
+    #     exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_arbustif, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
     
     return tab_arbustif
 
@@ -620,7 +622,7 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass, debug = 0):
     FROM ((SELECT ab2.geom, ab2.fv
             FROM (SELECT geom, fv
                     FROM %s
-                    WHERE fv in ('arbuste isole', 'tache arbustive')) as ab2)
+                    WHERE fv in ('AuI', 'TAu')) as ab2)
             UNION
            (SELECT geom, fv
             FROM %s)) AS strate_arbustive
@@ -686,7 +688,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     CREATE TABLE %s AS
         SELECT *
         FROM %s
-        WHERE strate = 'herbace';
+        WHERE strate = 'H';
     """ %(tab_herb_ini, tab_ref)
 
     #Exécution de la requête SQL
@@ -722,7 +724,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     addColumn(connexion, tab_out, 'strate', 'varchar(100)')
 
     query = """
-    UPDATE %s SET strate = 'herbace' WHERE fid = fid;
+    UPDATE %s SET strate = 'H' WHERE fid = fid;
     """ %(tab_out)
 
     if debug >= 3:
@@ -887,7 +889,7 @@ def createExtensionIndicator(connexion, tab_ref, debug = 0):
 ########################################################################
 # FONCTION distinctForestLineTreeShrub()                               #
 ########################################################################
-def distinctForestLineTreeShrub(connexion, tab_rpgt, seuil_larg, save_intermediate_results= False, debug = 0):
+def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermediate_results= False, debug = 0):
     """
     Rôle : détecter les aligments d'arbres et les boisements
 
@@ -902,7 +904,7 @@ def distinctForestLineTreeShrub(connexion, tab_rpgt, seuil_larg, save_intermedia
     tab_sqt = tab_rgpt + '_squelette'
     query = """
     CREATE TABLE %s AS
-        SELECT fid, fv, public.ST_APPROXIMATEMEDIALAXIS(geom) AS geom
+        SELECT fid, fv, public.ST_MAKEVALID(public.ST_APPROXIMATEMEDIALAXIS(geom)) AS geom
         FROM %s
     """ %(tab_sqt, tab_rgpt)
 

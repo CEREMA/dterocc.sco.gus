@@ -15,7 +15,7 @@
 """
 
 # IMPORTS UTILES
-import sys, os, glob, datetime, re
+import sys, os, re
 import six
 if six.PY2:
     from dbfpy import dbf
@@ -28,9 +28,7 @@ else:
     except Exception:
         import pysal
         IS_libpysal = False
-import numpy
-import pandas
-from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_math import findPositionList
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script

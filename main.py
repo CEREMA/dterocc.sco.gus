@@ -1,6 +1,6 @@
 ### IMPORTS ###
 #Librairies Python
-import sys,os,glob
+import sys,os
 from osgeo import ogr ,osr
 #Librairies
 from libs.Lib_display import bold,red,green,cyan,endC

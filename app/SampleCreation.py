@@ -8,7 +8,6 @@ Choses à faire :
 
 
 # Import des bibliothèques python
-from __future__ import print_function
 import os,sys,glob,shutil
 from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_file import cleanTempData, deleteDir, removeFile, removeVectorFile, copyVectorFile

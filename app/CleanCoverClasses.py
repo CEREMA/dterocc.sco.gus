@@ -1,6 +1,6 @@
 
 from libs.Lib_raster import  deletePixelsSuperpositionMasks, mergeListRaster, updateReferenceProjection 
-import os, string
+import os
 
 ###########################################################################################################################################
 # FONCTION cleanCoverClasses()                                                                                                            #
@@ -24,6 +24,7 @@ def cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merg
     repertory_output_tmp_list = []
     extension_raster =  os.path.splitext(image_samples_merged_output)[1]
 
+    #Le repertoire intermédiaire est situé dans le dossier où se sauvegarde le résultat 
     repertory_base_output = os.path.dirname(image_samples_merged_output)
     filename = os.path.splitext(os.path.basename(image_samples_merged_output))[0]
     

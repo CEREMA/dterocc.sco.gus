@@ -33,8 +33,7 @@ A Reflechir/A faire :
 """
 
 # Import des bibliothèques python
-#from __future__ import print_function
-import os, sys, glob, argparse, copy, random, math, threading
+import os, sys, glob, copy, random, math, threading
 from osgeo import gdal, ogr
 from libs.Lib_raster import identifyPixelValues, countPixelsOfValue, getRawDataImage, getGeometryImage, getEmpriseImage, getPixelWidthXYImage, getProjectionImage
 from libs.Lib_vector import createPointsFromCoordList, getAttributeValues, getAttributeNameList, createEmpriseShapeReduced, fusionVectors

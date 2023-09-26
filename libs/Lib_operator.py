@@ -1,5 +1,5 @@
 # IMPORTS DIVERS
-import os, subprocess, platform, psutil, multiprocessing, threading ,ctypes, re, inspect
+import os, platform
 
 #########################################################################
 # FONCTION getExtensionApplication()                                    #

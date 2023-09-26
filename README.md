@@ -29,6 +29,19 @@ Nous garantissons un bon fonctionnement de l'application sous la configuration U
 ### Librairies python
 
 Version Python 3. 10. 12
+
+| Principales librairie |
+| :-------- |
+| os |
+| sys |
+| glob | 
+| copy | 
+| time | 
+| subprocess | 
+| math |
+| psycopg2 |
+| numpy |
+
 ### Logiciels annexes
 
 | Logiciel | Version                |
@@ -48,7 +61,6 @@ Version Python 3. 10. 12
 ### Données à fournir
 
 ### Lancement des étapes
-
 
 
 

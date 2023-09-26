@@ -1,5 +1,4 @@
-from __future__ import print_function
-import os, sys, glob, argparse, shutil, numpy, time, errno, fnmatch
+import os, sys
 from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *

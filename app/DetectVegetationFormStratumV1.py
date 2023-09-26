@@ -131,7 +131,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     CREATE TABLE %s AS
         SELECT *
         FROM %s
-        WHERE strate = 'arbore';
+        WHERE strate = 'A';
     """ %(tab_arb_ini, schem_tab_ref)
 
     #Exécution de la requête SQL
@@ -170,7 +170,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     addColumn(connexion, tab_arb, 'strate', 'varchar(100)')
 
     query = """
-    UPDATE %s SET strate = 'arbore' WHERE fid = fid;
+    UPDATE %s SET strate = 'A' WHERE fid = fid;
     """ %(tab_arb)
 
     if debug >= 3:
@@ -187,7 +187,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     # basé sur un critère de surface et de seuil sur l'indice de compacité
 
     if debug >= 3:
-        print(bold + "Classement des segments en 'arbre isole', 'tache arboree' et 'regroupement arbore' basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
+        print(bold + "Classement des segments en 'AI', 'TA' et 'RGPTA' basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
 
     fst_class = firstClassification(connexion, tab_arb,  thresholds, 'arbore', debug = debug)
     
@@ -284,27 +284,27 @@ def firstClassification(connexion, tab_ref, thresholds, typeclass = 'arbore', de
 
     if typeclass == 'arbore':
         query = """
-        UPDATE %s AS arb SET fv = 'arbre isole' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp > %s;
+        UPDATE %s AS arb SET fv = 'AI' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp > %s;
         """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_compacite_1"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'tache arboree' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp <= %s;
+        UPDATE %s AS arb SET fv = 'TA' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp <= %s;
         """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_compacite_1"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'regroupement arbore' WHERE public.ST_AREA(arb.geom) > %s;
+        UPDATE %s AS arb SET fv = 'RGPTA' WHERE public.ST_AREA(arb.geom) > %s;
         """ %(tab_ref, thresholds["seuil_surface"])
     else :
         query = """
-        UPDATE %s AS arb SET fv = 'arbuste isole' WHERE public.ST_AREA(geom) <= %s AND id_comp > %s;
+        UPDATE %s AS arb SET fv = 'AuI' WHERE public.ST_AREA(geom) <= %s AND id_comp > %s;
         """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_compacite_1"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'tache arbustive' WHERE public.ST_AREA(geom) <= %s AND id_comp <= %s;
+        UPDATE %s AS arb SET fv = 'TAu' WHERE public.ST_AREA(geom) <= %s AND id_comp <= %s;
         """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_compacite_1"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'regroupement arbustif' WHERE public.ST_AREA(geom) > %s;
+        UPDATE %s AS arb SET fv = 'RGPTAu' WHERE public.ST_AREA(geom) > %s;
         """ %(tab_ref, thresholds["seuil_surface"])
 
     #Exécution de la requête SQL
@@ -339,7 +339,7 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, debug = 0):
         SELECT public.ST_MAKEVALID(public.ST_UNION(geom)) AS geom
         FROM  %s
         WHERE fv LIKE '%s';
-    """ %(tab_out, tab_ref, '%regroupement%')
+    """ %(tab_out, tab_ref, '%RGPT%')
 
     #Exécution de la requête SQL
     if debug >= 3:
@@ -377,11 +377,11 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, debug = 0):
     createExtensionIndicator(connexion,tab_out)
 
     if tab_ref == 'arbore' :
-        name_algt = 'alignement arbore'
-        name_bst = 'boisement arbore'
+        name_algt = 'AA'
+        name_bst = 'BO'
     else :
-        name_algt = 'alignement arbustif'
-        name_bst = 'boisement arbustif'
+        name_algt = 'AAu'
+        name_bst = 'BOAu'
 
     ## CLASSIFICATION ##
 
@@ -438,7 +438,7 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
         FROM ((SELECT ab2.geom, ab2.fv
             FROM (SELECT geom, fv
                     FROM %s
-                    WHERE fv in ('arbre isole', 'tache arboree')) as ab2)
+                    WHERE fv in ('AI', 'TA')) as ab2)
                     UNION
                     (SELECT geom, fv
                     FROM %s)) AS strate_arboree
@@ -461,7 +461,7 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
     addColumn(connexion, 'strate_arboree', 'strate', 'varchar(100)')
 
     query = """
-    UPDATE strate_arboree SET strate='arbore';
+    UPDATE strate_arboree SET strate='A';
     """
 
     #Exécution de la requête SQL
@@ -510,7 +510,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     CREATE TABLE %s AS
         SELECT *
         FROM %s
-        WHERE strate = 'arbustif';
+        WHERE strate = 'Au';
     """ %(tab_arbu_ini, tab_ref)
 
     #Exécution de la requête SQL
@@ -550,7 +550,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
 
     #Ajout de la valeur 'arbore' pour toutes les entités de la table arbore
     query = """
-    UPDATE %s SET strate = 'arbustif' WHERE fid = fid;
+    UPDATE %s SET strate = 'Au' WHERE fid = fid;
     """ %(tab_arbu)
     
     if debug >= 3:
@@ -566,7 +566,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     #3# Classement des segments en "arbuste isole", "tache arbustive" et "regroupement arbustif"
        # basé sur un critère de surface et de seuil sur l'indice de compacité
     if debug >= 3:
-        print(bold + "Classement des segments en 'arbustif isole', 'tache arbustive' et 'regroupement arbustif' basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
+        print(bold + "Classement des segments en 'AuI'(arbuste isolé), 'TAu'(tâche arbustive) et 'RGPTAu'(regroupement arbustif) basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
 
     fst_class = firstClassification(connexion, tab_arbu, thresholds,  'arbustif', debug = debug)
     
@@ -625,7 +625,7 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass, debug = 0):
     FROM ((SELECT ab2.geom, ab2.fv
             FROM (SELECT geom, fv
                     FROM %s
-                    WHERE fv in ('arbuste isole', 'tache arbustive')) as ab2)
+                    WHERE fv in ('AuI', 'TAu')) as ab2)
             UNION
            (SELECT geom, fv
             FROM %s)) AS strate_arbustive
@@ -648,7 +648,7 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass, debug = 0):
     addColumn(connexion, 'strate_arbustive', 'strate', 'varchar(100)')
 
     query = """
-    UPDATE strate_arbustive SET strate='arbustif';
+    UPDATE strate_arbustive SET strate='Au';
     """
 
     #Exécution de la requête SQL
@@ -691,7 +691,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     CREATE TABLE %s AS
         SELECT *
         FROM %s
-        WHERE strate = 'herbace';
+        WHERE strate = 'H';
     """ %(tab_herb_ini, tab_ref)
 
     #Exécution de la requête SQL
@@ -727,7 +727,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     addColumn(connexion, tab_out, 'strate', 'varchar(100)')
 
     query = """
-    UPDATE %s SET strate = 'herbace' WHERE fid = fid;
+    UPDATE %s SET strate = 'H' WHERE fid = fid;
     """ %(tab_out)
 
     if debug >= 3:

@@ -1,5 +1,5 @@
 import os, sys, glob
-from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC,displayIHM
+from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_file import removeFile
 
 ###########################################################################################################################################

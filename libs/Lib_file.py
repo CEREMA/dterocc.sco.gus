@@ -14,7 +14,7 @@
  Ce module défini des fonctions de manipulation, modification de fichiers et de répertoires.
 """
 
-import filecmp, os, sys, shutil, copy, glob, time
+import os, sys, shutil, copy, time
 from osgeo import ogr
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 

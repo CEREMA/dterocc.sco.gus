@@ -14,7 +14,7 @@
  Ce module défini des fonctions faisant  l'outil GRASS.
 """
 import sys,os,shutil,glob, time, subprocess
-from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_display import bold,red,green,blue,cyan,endC
 from libs.Lib_file import deleteDir
 import grass.script as grass
 import grass.script.setup as gsetup

@@ -35,8 +35,7 @@ A Reflechir/A faire :
 
 """
 
-from __future__ import print_function
-import os,sys,glob,string,shutil,time,argparse
+import os,sys,time
 from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_operator import getExtensionApplication
 from libs.Lib_raster import updateReferenceProjection, getGeometryImage, computeStatisticsImage

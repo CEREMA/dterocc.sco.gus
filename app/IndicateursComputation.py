@@ -1,5 +1,4 @@
-from __future__ import print_function
-import os,sys,glob,shutil,string, argparse
+import os,sys
 from libs.Lib_display import green,endC
 from libs.Lib_file import removeFile
 from libs.CrossingVectorRaster import statisticsVectorRaster

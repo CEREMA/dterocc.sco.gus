@@ -1,5 +1,4 @@
-from __future__ import print_function
-import os,sys,glob,shutil,string, argparse
+import os,sys,glob
 from libs.Lib_display import bold,red,yellow,cyan,endC
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_postgis import readTable, executeQuery, addColumn, addUniqId, addIndex, addSpatialIndex, dropTable, dropColumn, exportVectorByOgr2ogr, importVectorByOgr2ogr
@@ -267,15 +266,15 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
         print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
 
     query = """
-    UPDATE %s as t SET strate = 'arbore' WHERE t.txt < %s AND t.mnh  > %s;
+    UPDATE %s as t SET strate = 'A' WHERE t.txt < %s AND t.mnh  > %s;
     """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
 
     query += """
-    UPDATE %s as t SET strate = 'arbustif' WHERE t.txt < %s AND  t.mnh  <= %s;
+    UPDATE %s as t SET strate = 'Au' WHERE t.txt < %s AND  t.mnh  <= %s;
     """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
 
     query += """
-    UPDATE %s as t SET strate = 'herbace' WHERE t.txt  >= %s OR (t.txt > %s AND t.mnh <= %s);
+    UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s OR (t.txt > %s AND t.mnh <= %s);
     """ %(tab_ref, dic_seuil["seuil_txt"], dic_seuil["seuil_txt"], 1)
 
     #Exécution de la requête SQL
@@ -389,7 +388,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False, debu
     CREATE TABLE %s AS
         SELECT public.ST_MAKEVALID((public.ST_DUMP(public.ST_UNION(t.geom))).geom) AS geom
         FROM %s AS t
-        WHERE t.strate = 'arbustif';
+        WHERE t.strate = 'Au';
     """ %(tab_rgpt_arbu, tab_ref)
         
     #Exécution de la requête SQL
@@ -425,7 +424,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False, debu
     CREATE TABLE IF NOT EXISTS tab_interm_arbuste AS
         SELECT fid, public.st_pointonsurface(geom) AS geom 
         FROM %s
-        WHERE strate = 'arbustif';
+        WHERE strate = 'Au';
     """ %(tab_ref)
 
     #Exécution de la requête SQL
@@ -475,7 +474,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False, debu
     query = """
     CREATE TABLE %s AS 
 	    SELECT t1.fid, t1.geom, t4.fid_rgpt
-                        FROM (SELECT * FROM %s WHERE strate='arbustif') AS t1,
+                        FROM (SELECT * FROM %s WHERE strate='Au') AS t1,
                              (SELECT t3.fid AS fid, t2.fid as fid_rgpt
 								FROM (SELECT * FROM %s WHERE nb_sgt>1) as t2, 
 								tab_interm_arbuste as t3
@@ -501,7 +500,7 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False, debu
     query = """
     CREATE TABLE %s AS
         SELECT t1.fid, t1.geom, t4.fid_rgpt
-            FROM (SELECT fid, geom FROM %s WHERE strate='arbustif') AS t1,
+            FROM (SELECT fid, geom FROM %s WHERE strate='Au') AS t1,
                     (SELECT t2.fid AS fid, t3.fid as fid_rgpt
 						FROM (SELECT * FROM %s WHERE nb_sgt<=1) as t3, tab_interm_arbuste AS t2
 					WHERE public.ST_INTERSECTS(t2.geom,t3.geom)) as t4
@@ -546,9 +545,9 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
 	    SELECT t1.fid, t1.geom, public.ST_PERIMETER(t1.geom) AS long_bound_arbu, t2.long_bound_inters_arbo AS long_bound_inters_arbo
 	    FROM (SELECT t3.fid, SUM(public.ST_LENGTH(t3.geom_bound_inters_arbo)) AS long_bound_inters_arbo
 			    FROM (SELECT t1.fid, t1.geom, arbre.fid AS fid_arbo, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom), public.ST_INTERSECTION(t1.geom, arbre.geom)) AS geom_bound_inters_arbo 
-					    FROM  arbu_uniq AS t1, (SELECT fid, geom FROM %s WHERE strate = 'arbore') as arbre
+					    FROM  arbu_uniq AS t1, (SELECT fid, geom FROM %s WHERE strate = 'A') as arbre
 					    WHERE public.ST_INTERSECTS(t1.geom,arbre.geom) and t1.fid not in (SELECT t1.fid
-																				    FROM (SELECT geom FROM %s WHERE strate = 'herbace') AS herbe, arbu_uniq as t1
+																				    FROM (SELECT geom FROM %s WHERE strate = 'H') AS herbe, arbu_uniq as t1
 																				    WHERE public.ST_INTERSECTS(herbe.geom, t1.geom)
 																				    GROUP BY t1.fid)) AS t3
 			    GROUP BY t3.fid) AS t2, arbu_uniq AS t1
@@ -568,9 +567,9 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
              SELECT t2.fid, SUM(public.ST_LENGTH(t2.geom_bound_inters_herbe)) AS long_bound_inters_herbe
 			 FROM (
                     SELECT t1.fid, t1.geom, herbe.fid AS fid_arbo, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, herbe.geom)) AS geom_bound_inters_herbe
-					FROM  arbu_uniq AS t1, (SELECT fid, geom FROM %s WHERE strate = 'herbace') AS herbe
+					FROM  arbu_uniq AS t1, (SELECT fid, geom FROM %s WHERE strate = 'H') AS herbe
 					WHERE public.ST_INTERSECTS(t1.geom,herbe.geom) AND t1.fid not in (SELECT t1.fid
-																				FROM (SELECT geom FROM %s WHERE strate = 'arbore') AS arbre, arbu_uniq AS t1
+																				FROM (SELECT geom FROM %s WHERE strate = 'A') AS arbre, arbu_uniq AS t1
 																				WHERE public.ST_INTERSECTS(arbre.geom, t1.geom)
 																				GROUP BY t1.fid)
                     ) AS t2
@@ -605,7 +604,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
                                     FROM %s AS t1, arbu_touch_herb_arbo_and_only_arbo AS t2 
                                     WHERE t1.fid = t2.fid
                                     ) AS arbuste, 
-								    (SELECT * FROM %s WHERE strate in ('arbore', 'herbace')) AS sgt_herbarbo
+								    (SELECT * FROM %s WHERE strate in ('A', 'H')) AS sgt_herbarbo
 							    WHERE public.ST_INTERSECTS(arbuste.geom, sgt_herbarbo.geom));
     """ %(tab_ref, tab_ref)
 
@@ -674,9 +673,9 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
 	    SELECT t1.fid, t1.geom
 	    FROM (SELECT t3.fid
 			    FROM (SELECT t1.fid, t1.geom, arbre.fid as fid_arbo, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, arbre.geom)) AS geom_bound_inters_arbo 
-					    FROM  %s AS t1, (SELECT fid, geom FROM %s WHERE strate = 'arbore') as arbre
+					    FROM  %s AS t1, (SELECT fid, geom FROM %s WHERE strate = 'A') as arbre
 					    WHERE public.ST_INTERSECTS(t1.geom,arbre.geom) and t1.fid not in (SELECT t1.fid
-																				    FROM (SELECT geom FROM %s WHERE strate = 'herbace') AS herbe, %s as t1
+																				    FROM (SELECT geom FROM %s WHERE strate = 'H') AS herbe, %s as t1
 																				    WHERE public.ST_INTERSECTS(herbe.geom, t1.geom)
 																				    GROUP BY t1.fid)) AS t3
 			    GROUP BY t3.fid) AS t2, %s AS t1
@@ -696,9 +695,9 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
              SELECT t2.fid
 			 FROM (
                     SELECT t1.fid, t1.geom, herbe.fid AS fid_herba, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, herbe.geom)) AS geom_bound_inters_herbe
-					FROM  %s AS t1, (SELECT fid, geom FROM %s WHERE strate = 'herbace') as herbe
+					FROM  %s AS t1, (SELECT fid, geom FROM %s WHERE strate = 'H') as herbe
 					WHERE public.ST_INTERSECTS(t1.geom,herbe.geom) and t1.fid not in (SELECT t1.fid
-																				FROM (SELECT geom FROM %s WHERE strate = 'arbore') AS arbre, %s AS t1
+																				FROM (SELECT geom FROM %s WHERE strate = 'A') AS arbre, %s AS t1
 																				WHERE public.ST_INTERSECTS(arbre.geom, t1.geom)
 																				GROUP BY t1.fid)
                     ) AS t2
@@ -720,7 +719,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     query = """
     CREATE TABLE arbu_uniq_surf_stats AS 
 	    SELECT t1.fid AS fid_sgt, public.ST_AREA(t1.geom) AS surf_sgt, public.ST_AREA(public.ST_UNION(t2.geom)) AS surf_touch_arbo
-	    FROM arbu_isole_touch_arbo AS t1, (SELECT * FROM %s WHERE strate = 'arbore') AS t2
+	    FROM arbu_isole_touch_arbo AS t1, (SELECT * FROM %s WHERE strate = 'A') AS t2
 	    WHERE public.ST_INTERSECTS(t1.geom, t2.geom)
 	    GROUP BY t1.fid, public.ST_AREA(t1.geom);
     """ %(tab_ref)
@@ -736,7 +735,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     CREATE TABLE arbu_uniq_diffh AS
 	    SELECT t.fid AS fid_sgt, abs(t.mnh-t3.mnh) AS diff_mnh
 	    FROM (SELECT t1.* FROM %s AS t1, arbu_uniq_surf_stats AS t2 WHERE t1.fid = t2.fid_sgt) AS t,
-		(SELECT * FROM %s WHERE strate = 'arbore') AS t3
+		(SELECT * FROM %s WHERE strate = 'A') AS t3
 	    WHERE public.ST_INTERSECTS(t.geom, t3.geom);
     """ %(tab_ref, tab_ref)
 
@@ -764,7 +763,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
    #Reclassification en arboré des segments arbustifs dont la surface n'est pas représentative par rapport à la surface d'arboré qui l'entoure
    # OU lorsque la différence de hauteur est inférieure à un certain seuil  
     query = """
-    UPDATE %s SET strate = 'arbore' 
+    UPDATE %s SET strate = 'A' 
             FROM (SELECT * 
                     FROM arbu_uniq_mindiffh_surfstats AS r3 
                     WHERE r3.surf_sgt/r3.surf_touch_arbo <= %s OR (r3.surf_sgt/r3.surf_touch_arbo > %s AND r3.min_diffh <= %s)) AS t 
@@ -807,7 +806,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     query = """
     CREATE TABLE arbu_uniq_surf_stats2 AS 
         SELECT t1.fid AS fid_sgt, public.ST_AREA(t1.geom) AS surf_sgt, public.ST_AREA(public.ST_UNION(t2.geom)) AS surf_touch
-        FROM arbu_touch_herb_arbo AS t1, (SELECT * FROM %s WHERE strate in ('arbore', 'herbace')) AS t2
+        FROM arbu_touch_herb_arbo AS t1, (SELECT * FROM %s WHERE strate in ('A', 'H')) AS t2
         WHERE public.ST_INTERSECTS(t1.geom, t2.geom)
         GROUP BY t1.fid, public.ST_AREA(t1.geom);
     """ %(tab_ref)
@@ -823,7 +822,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
     CREATE TABLE arbu_uniq_diffh2 AS
         SELECT t.fid AS fid_sgt, t3.fid AS fid_touch, abs(t.mnh-t3.mnh) AS diff_mnh
         FROM (SELECT t1.* FROM %s AS t1, arbu_uniq_surf_stats2 AS t2 WHERE t1.fid = t2.fid_sgt) AS t,
-            (SELECT * FROM %s WHERE strate in ('arbore', 'herbace')) AS t3
+            (SELECT * FROM %s WHERE strate in ('A', 'H')) AS t3
         WHERE public.ST_INTERSECTS(t.geom, t3.geom);
     """ %(tab_ref, tab_ref)
 
@@ -905,13 +904,13 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
     query = """ 
     CREATE TABLE herbace AS
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
-        FROM (SELECT geom FROM %s WHERE strate='herbace') AS t1;
+        FROM (SELECT geom FROM %s WHERE strate='H') AS t1;
     """ %(tab_ref)
 
     query += """ 
     CREATE TABLE arbore AS
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
-        FROM (SELECT geom FROM %s WHERE strate='arbore') AS t1;
+        FROM (SELECT geom FROM %s WHERE strate='A') AS t1;
     """ %(tab_ref)
 
     # Exécution de la requête SQL
@@ -1000,7 +999,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, rgpt_arbu, arbu_de_rgpt,  di
  
    #Mise à jour du statut "strate" du segment arbustif rentrant dans les conditions
     query = """
-    UPDATE %s AS t1 SET strate = 'arbore' 
+    UPDATE %s AS t1 SET strate = 'A' 
             FROM (SELECT t1.fid 
                     FROM %s AS t1, (SELECT * FROM rgpt_arbu_surf_stats3 AS r WHERE r.surf_rgpt/r.surf_touch_arbo <= %s AND r.surf_rgpt<= %s) AS t2 
                     WHERE t1.fid_rgpt = t2.fid_rgpt) AS t2
@@ -1045,13 +1044,13 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     query = """ 
     CREATE TABLE herbace AS
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
-        FROM (SELECT geom FROM %s WHERE strate='herbace') AS t1;
+        FROM (SELECT geom FROM %s WHERE strate='H') AS t1;
     """ %(tab_ref)
 
     query += """ 
     CREATE TABLE arbore AS
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
-        FROM (SELECT geom FROM %s WHERE strate='arbore') AS t1;
+        FROM (SELECT geom FROM %s WHERE strate='A') AS t1;
     """ %(tab_ref)
 
     # Exécution de la requête SQL
@@ -1152,7 +1151,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
 	    SELECT t1.fid, t1.geom, public.ST_PERIMETER(t1.geom) AS long_bound_arbu, t3.long_bound_inters_herbe AS long_bound_inters_herbe, t4.long_bound_inters_arbo AS long_bound_inters_arbo
 	    FROM (
                 SELECT t2.fid, SUM(public.ST_LENGTH(t2.geom_bound_inters_herbe)) AS long_bound_inters_herbe
-			    FROM (SELECT t1.fid, t1.geom, 'herbace' AS strate, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, herbe.geom)) AS geom_bound_inters_herbe
+			    FROM (SELECT t1.fid, t1.geom, 'H' AS strate, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, herbe.geom)) AS geom_bound_inters_herbe
  					    FROM  tab_interm_rgptarbu_toucharboetherbo AS t1, herbace as herbe
  					    WHERE public.ST_INTERSECTS(t1.geom,herbe.geom) 
                      ) AS t2  
@@ -1160,7 +1159,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
               ) AS t3, 
               (
                 SELECT t2.fid,SUM(public.ST_LENGTH(t2.geom_bound_inters_arbo)) AS long_bound_inters_arbo
-			    FROM (SELECT t1.fid, t1.geom, 'arbore' AS strate, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, arbore.geom)) AS geom_bound_inters_arbo
+			    FROM (SELECT t1.fid, t1.geom, 'A' AS strate, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, arbore.geom)) AS geom_bound_inters_arbo
  					    FROM  tab_interm_rgptarbu_toucharboetherbo AS t1, arbore
  					    WHERE public.ST_INTERSECTS(t1.geom,arbore.geom) 
                      ) AS t2
@@ -1177,7 +1176,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
 
     # Mise à jour du statut des segments arbustifs appartennant à un regroupement touchant très peu d'arboré 
     query = """
-    UPDATE %s AS t1 SET strate = 'arbore' 
+    UPDATE %s AS t1 SET strate = 'A' 
             FROM (SELECT t1.fid AS fid_arbu, t2.fid AS fid_arbo, abs(t1.mnh - t2.mnh) AS diff_h
                     FROM (
                             SELECT t3.* 
@@ -1186,7 +1185,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
                                                   arbu_de_rgpt AS t2, arbore AS t3
 									        WHERE t2.fid_rgpt = t1.fid AND public.ST_INTERSECTS(t2.geom, t3.geom)) AS t4
 		                    WHERE t3.fid = t4.fid) AS t1, 
-                        (SELECT * FROM %s WHERE strate = 'arbore') AS t2
+                        (SELECT * FROM %s WHERE strate = 'A') AS t2
                     WHERE public.ST_INTERSECTS(t1.geom, t2.geom)) AS t2
             WHERE t1.fid = t2.fid_arbu AND t2.diff_h <= %s;
     """ %(tab_ref, tab_ref, dic_seuil["seuil_touch_arbo_vs_herba"], tab_ref, dic_seuil["seuil_h2"])
@@ -1258,7 +1257,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
                 AS arbuste, (
                         SELECT *
                         FROM %s
-                        WHERE strate in ('arbore', 'herbace')
+                        WHERE strate in ('A', 'H')
                         )
                         AS sgt_touch
             WHERE public.ST_INTERSECTS(arbuste.geom, sgt_touch.geom)
@@ -1277,7 +1276,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
                 (
                 SELECT *
                 FROM %s
-                WHERE strate in ('arbore', 'herbace')
+                WHERE strate in ('A', 'H')
                 )
                 AS sgt_touch
             WHERE public.ST_INTERSECTS(arbuste.geom, sgt_touch.geom)
@@ -1354,7 +1353,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
                     as arbuste, (
                             SELECT *
                             FROM %s
-                            WHERE strate in ('arbore', 'herbace')
+                            WHERE strate in ('A', 'H')
                             )
                             AS sgt_touch
                 WHERE public.ST_INTERSECTS(arbuste.geom, sgt_touch.geom)
@@ -1373,7 +1372,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
                     (
                     SELECT *
                     FROM %s
-                    WHERE strate in ('arbore', 'herbace')
+                    WHERE strate in ('A', 'H')
                     )
                     AS sgt_touch
                 WHERE public.ST_INTERSECTS(arbuste.geom, sgt_touch.geom)
