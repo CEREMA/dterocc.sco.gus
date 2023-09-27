@@ -1,7 +1,7 @@
 import os,sys,glob
 from libs.Lib_display import bold,red,yellow,cyan,endC
 from libs.CrossingVectorRaster import statisticsVectorRaster
-from libs.Lib_postgis import readTable, executeQuery, addColumn, addUniqId, addIndex, addSpatialIndex, dropTable, dropColumn, exportVectorByOgr2ogr, importVectorByOgr2ogr
+from libs.Lib_postgis import readTable, executeQuery, addColumn, addUniqId, addIndex, addSpatialIndex, dropTable, dropColumn, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection
 
 ###########################################################################################################################################
 # FONCTION vegetationMask()                                                                                                               #
@@ -137,8 +137,6 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
         tables_schema = cursor.fetchall()
         for el in tables_schema:
             executeQuery(connexion, el[0])
-
-
     
     #Fichiers intermédiaires
     # repertory_output = os.path.dirname(output_layer)
@@ -150,8 +148,8 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     ##                             segment                             ## 
     #####################################################################
 
-    if debug >= 1:
-        print(bold + "Collecte des valeurs médianes de hauteur et de texture pour chaque segment." + endC)
+    # if debug >= 1:
+    #     print(bold + "Collecte des valeurs médianes de hauteur et de texture pour chaque segment." + endC)
 
     # ## Collecte données de hauteur pour chaque segment  
     # file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
@@ -187,7 +185,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
 
 
     # #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
-    tab_sgt_ini = 'segments_vegetation_ini_t1'
+    tab_sgt_ini = 'segments_vegetation_ini_t0'
     # query = """
     # CREATE TABLE %s AS
     #     SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
@@ -201,20 +199,20 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     # executeQuery(connexion, query)
 
     #Traitement des artefacts au reflet blanc
-    tab_sgt_txt_val0 = 'segments_txt_val0'
-    query = """
-    CREATE TABLE %s AS
-        SELECT * 
-        FROM %s
-        WHERE txt = 0;
+    # tab_sgt_txt_val0 = 'segments_txt_val0'
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT * 
+    #     FROM %s
+    #     WHERE txt = 0;
 
-    DELETE FROM %s WHERE txt = 0;
-    """ %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
+    # DELETE FROM %s WHERE txt = 0;
+    # """ %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
 
-    #Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
     #Suppression des deux tables txt et mnh
    # if tablename_txt != '' :
@@ -223,44 +221,46 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     #     dropTable(connexion, tablename_mnh) 
 
 
-    ##################################################################### 
-    ## Prétraitements : transformation de l'ensemble des multipolygones##
-    ##                  en simples polygones ET suppression des        ## 
-    ##                  artefacts au reflet blanc                      ##  
-    #####################################################################
+    ###################################################################### 
+    ## Prétraitements : transformation de l'ensemble des multipolygones ##
+    ##                  en simples polygones ET suppression des         ## 
+    ##                  artefacts au reflet blanc                       ##  
+    ######################################################################
 
-    if debug >= 2:
-        print(bold + "Prétraitements : transformation de l'ensemble des multipolygones en simples polygones ET suppression des artefacts au reflet blanc" + endC)
+    # if debug >= 2:
+    #     print(bold + "Prétraitements : transformation de l'ensemble des multipolygones en simples polygones ET suppression des artefacts au reflet blanc" + endC)
 
-    #Conversion en simples polygones 
-    query = """
-    CREATE TABLE %s AS
-        SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
-        FROM %s as t
-    """ %(tab_ref, tab_sgt_ini)
+    # #Conversion en simples polygones 
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
+    #     FROM %s as t
+    # """ %(tab_ref, tab_sgt_ini)
 
-    #Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
     #Ajout d'un identifiant unique
-    addUniqId(connexion, tab_ref)
+  #  addUniqId(connexion, tab_ref)
 
     #Ajout d'un index spatial 
-    addSpatialIndex(connexion, tab_ref)
+   # addSpatialIndex(connexion, tab_ref)
+
+   # addIndex(connexion, tab_ref, 'fid', 'idx_fid_'+tab_ref)
 
     #Ajout de l'attribut "strate"
-    addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
+   # addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
 
 
-    if not save_intermediate_result:
-        dropTable(connexion, tab_sgt_txt_val0)
+    # if not save_intermediate_result:
+    #     dropTable(connexion, tab_sgt_txt_val0)
 
-    ##################################################################### 
-    ## Première étape : classification générale, à partir de règles de ##
-    ##                  hauteur et de texture                          ##  
-    #####################################################################
+    # ##################################################################### 
+    # ## Première étape : classification générale, à partir de règles de ##
+    # ##                  hauteur et de texture                          ##  
+    # #####################################################################
 
     if debug >= 2:
         print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
@@ -274,8 +274,12 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
 
     query += """
-    UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s OR (t.txt > %s AND t.mnh <= %s);
-    """ %(tab_ref, dic_seuil["seuil_txt"], dic_seuil["seuil_txt"], 1)
+    UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s;
+    """ %(tab_ref, dic_seuil["seuil_txt"])
+
+    # query += """
+    # UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
+    # """ %(tab_ref, dic_seuil["seuil_txt"], 1)
 
     #Exécution de la requête SQL
     if debug >= 3:

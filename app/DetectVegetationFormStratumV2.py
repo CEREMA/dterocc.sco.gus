@@ -734,6 +734,9 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     #Création de la colonne fv
     addColumn(connexion, tab_out, 'fv', 'varchar(100)')
 
+    #Complétion de l'attribut fv
+    tab_herbace = classificationGrassOrCrop(connexion, tab_in, tab_out, img_input, save_intermediate_results = save_intermediate_results, debug = debug) 
+
     #Pas de complétion de cet attribut pour l'instant
     tab_herbace = ''
 
@@ -752,6 +755,23 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
 
     return tab_herbace  
 
+
+def classificationGrassOrCrop(connexion, tab_in, tab_out, img_input, save_intermediate_results = False, debug = 0) :
+    """
+    Rôle : produire les formes végétales herbacée 'Pr' (prairie) ou 'C' (culture)
+
+    Paramètres :
+        connexion :
+        tab_in : nom de la table contenant les segments de végétation herbacée
+        tab_out : nom de la table en sortie contenant les polygones des formes végétales herbacées détectées
+        img_input : image de classification prairie vs culture en entrée
+        save_intermediate_result : paramètre de sauvegarde des tables et/ou fichiers intermédiaires. Par défaut : False
+        debug : paramètre du niveau de debug. Par défaut : 0
+    """
+
+    
+
+    return
 #####################################
 ## Fonctions indicateurs de formes ## 
 #####################################
