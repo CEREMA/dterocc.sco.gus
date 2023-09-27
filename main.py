@@ -20,31 +20,228 @@ from app.ImagesAssembly import assemblyRasters
 
 if __name__ == "__main__":
 
+    #Option debug permet l'affichage de commentaires en plus des basiques lors du lancement des différentes étapes 
     debug = 3
-    #Préparation du parser
-    #à faire par la suite
-    print(bold + cyan + "*********************************************** \n*** Cartographie détaillée de la végétation *** \n***********************************************" + endC)
 
-    #Structurer un dossier qui stockera toutes les données
-    #Création du repertoire du projet 
+    ########################################
+    # RENSEIGNEMENT DES DONNEES EN ENTREE  #  
+    ########################################
+
+    img_ref = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/ORT_20220614_NADIR_16B_MGN_V2.tif'
+
+    img_ref_PAN = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/ORT_P1AP_MGN.tif'
+    #NB : l'image PAN doit aussi être découpée à la même emprise que l'image de référence --> pour que la superposition des résultats suivant puisse se faire correctement 
+
+    shp_zone = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/MGN_contours.shp'
+
+    img_mnt =  r'/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNT/2021/NANCY/MNT_RGEALTI/MNT_RGEALTI_1M_ZONE_DE_NANCY.tif'
+
+    img_mns = r'/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNS/2022/NANCY/2022_06_14/MNSCARS/DSM_PRODUITS_RGE.tif'
+
+    img_spring = img_ref
+
+    img_winter = r''
+
+    #Fournir les couches des échantillons d'entraînement 
+    bati = path_data_entry + os.sep + 'bati_vector.shp'
+    route =  path_data_entry + os.sep + 'route_vector.shp'
+    solnu =  path_data_entry + os.sep + 'solnu_vector.shp'
+    eau =  path_data_entry + os.sep + 'eau_vector.shp'
+    vegetation =  path_data_entry + os.sep + 'vegetation_vector.shp'
+
+    
+
+    ########################################
+    #   RENSEIGNEMENT DES PARAMETRES ET    # 
+    #            VALEURS SEUILS            #  
+    ########################################
+
+    #Paramètres de l'algorithme de classification supervisée RF 
+    params_RF ={
+      "depth_tree" : 50,
+      "sample_min" : 20,
+      "termin_criteria" : 0.0,
+      "cluster" : 30,
+      "size_features" : 2,
+      "num_tree" : 50,
+      "obb_erreur" : 0.001
+    } 
+
+    #Fournir les paramètres de connexion à la base de donnée 
+     connexion_ini_dic = {
+      "dbname" : 'gus',
+      "user_db" : 'postgres',
+      "password_db" : 'postgres',
+      "server_db" : '172.22.130.99',
+      "port_number" : '5432',
+      "schema" : ''
+    }
+
+    #Paramètres de segmentation
+    num_class = {
+      "bati" : 1,
+      "route" : 2,
+      "sol nu" : 3,
+      "eau" : 4,
+      "vegetation" : 5
+    }  
+    minsize = 10
+
+    #Seuils pour la distinction des strates verticales
+    dic_seuils_stratesV = {
+      "seuil_h1" : 3,
+      "seuil_h2" : 1, 
+      "seuil_h3" : 2,
+      "seuil_txt" : 11,
+      "seuil_touch_arbo_vs_herba" : 15,
+      "seuil_ratio_surf" : 25,
+      "seuil_arbu_repres" : 20
+    } 
+   
+
+    ########################################
+    # CRÉATION ARCHITECTURE DOSSIER PROJET #  
+    ########################################
+
+    ##Emplacement du repertoire
     repertory_prj = r'/mnt/RAM_disk'
     path_prj = repertory_prj + os.sep + 'ProjetGUS'
-    if  not os.path.exists(path_prj):
-      os.makedirs(path_prj)
+    
 
     #Dossier de stockage des datas
     path_data = path_prj + os.sep + '0-Data'  
     path_data_entry = path_data + os.sep + '00-DonneesEntrees'
     path_data_prod = path_data + os.sep + '01-DonneesProduites'
 
-    # if not os.path.exists(path_data):
-    #   os.makedirs(path_data)
+    #Dossier de sauvegarde des résultats d'extraction de la végétation 
+    path_extractveg = path_prj + os.sep + '1-ExtractionVegetation'  
+  
+    path_tmp_preparesamples = path_extractveg + os.sep + 'TMP_PREPARE_SAMPLE'
 
-    # if not os.path.exists(path_data_entry):
-    #   os.makedirs(path_data_entry)
+    path_tmp_cleansamples = path_extractveg + os.sep + 'TMP_CLEAN_SAMPLE'
 
-    # if not os.path.exists(path_data_prod):
-    #   os.makedirs(path_data_prod)
+    path_tmp_selectsamples = path_extractveg + os.sep + 'TMP_SELECT_SAMPLE'
+
+    #Dossier de sauvegarde des résultats de distinction des strates verticales végétales
+    path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'
+
+    #Dossier de sauvegarde des résultats de distinction des formes végétales
+    path_fv = path_prj + os.sep + '3-DistinctionFormesVegetales'  
+
+    #Dossier de sauvegarde des résultats de calcul des attributs descriptifs de la végétation
+    path_datafinal = path_prj + os.sep + '4-Calcul_attributs_descriptifs'  
+
+   
+
+    
+    ##Création des répertoires s'ils n'existent pas
+    if  not os.path.exists(path_prj):
+      os.makedirs(path_prj)
+
+    if not os.path.exists(path_data):
+      os.makedirs(path_data)
+
+    if not os.path.exists(path_data_entry):
+      os.makedirs(path_data_entry)
+
+    if not os.path.exists(path_data_prod):
+      os.makedirs(path_data_prod)
+
+    if not os.path.exists(path_extractveg):
+      os.makedirs(path_extractveg)
+
+    if not os.path.exists(path_tmp_preparesamples):
+      os.makedirs(path_tmp_preparesamples)
+
+    if not os.path.exists(path_tmp_cleansamples):
+      os.makedirs(path_tmp_cleansamples)
+
+    if not os.path.exists(path_tmp_selectsamples):
+      os.makedirs(path_tmp_selectsamples)
+
+    if not os.path.exists(path_stratesveg):
+      os.makedirs(path_stratesveg)
+
+    if not os.path.exists(path_fv):
+      os.makedirs(path_fv)
+
+    if not os.path.exists(path_datafinal):
+      os.makedirs(path_datafinal)
+
+
+
+    #######################################################
+    # CRÉATION DES CHEMINS D'ACCES DANS LE DOSSIER PROJET # 
+    #                 AUX FICHIERS CRÉÉS                  #  
+    #######################################################
+     
+    img_stack = path_data_prod + os.sep + 'img_stack.tif'
+
+    img_mnh = path_data_prod + os.sep + 'mnh.tif'
+
+    
+
+    images_in_output = {
+        "bâti" : [bati_prepare, bati_clean],
+        "route" : [route_prepare, route_clean],
+        "solnu" : [solnu_prepare, solnu_clean],
+        "eau" : [eau_prepare, eau_clean],
+        "vegetation" : [vegetation_prepare, vegetation_clean]     
+      } 
+
+    correction_images_dic = {
+        "bâti" :[["ndvi", neochannels["ndvi"] ,0, 0.35]],
+        "route" : [["ndvi", neochannels["ndvi"] ,0, 0.35]],
+        "solnu" : [["ndvi", neochannels["ndvi"] ,0, 0.2], ["hue", neochannels["hue"], 0, 50]],
+        "eau" : [["ndwi", neochannels["ndwi"], -500, 1]],
+        "vegetation" : [["ndvi", neochannels["ndvi"] ,0.35,1], ["msavi", neochannels["msavi"] ,0.4,1]]
+      } 
+
+      
+
+    bati_prepare = path_tmp_preparesamples + os.sep + 'bati_vector_prepare.tif'
+    route_prepare = path_tmp_preparesamples + os.sep + 'route_vector_prepare.tif'
+    solnu_prepare = path_tmp_preparesamples + os.sep + 'solnu_vector_prepare.tif'
+    eau_prepare = path_tmp_preparesamples + os.sep + 'eau_vector_prepare.tif'
+    vegetation_prepare = path_tmp_preparesamples + os.sep + 'vegetation_vector_prepare.tif'
+
+    bati_clean = path_tmp_cleansamples + os.sep + 'bati_vector_clean.tif'
+    route_clean = path_tmp_cleansamples + os.sep + 'route_vector_clean.tif'
+    solnu_clean = path_tmp_cleansamples + os.sep + 'solnu_vector_clean.tif'
+    eau_clean = path_tmp_cleansamples + os.sep + 'eau_vector_clean.tif'
+    vegetation_clean = path_tmp_cleansamples + os.sep + 'vegetation_vector_clean.tif'
+
+    image_samples_merged_output = path_tmp_cleansamples + os.sep + 'img_samples_merged.tif'
+
+    samplevector = path_tmp_selectsamples + os.sep + 'sample_vector_selected.shp'
+    table_statistics_output = path_tmp_selectsamples + os.sep + 'statistics_sample_vector_selected.csv'
+
+    img_classif = path_extractveg + os.sep + 'img_classification.tif'
+    img_classif_confid = path_extractveg + os.sep + 'img_classification_confidence.tif'
+
+    img_classif_filtered = path_extractveg + os.sep + 'img_classification_filtered.tif'
+
+    sgt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
+
+    stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg'  
+
+
+
+    output_fv = path_fv + os.sep + 'vegetation_fv.gpkg'
+
+    fv_st_arbore = path_fv + os.sep + 'fv_st_arbore.gpkg'
+    fv_st_arbustif = path_fv + os.sep + 'fv_st_arbustif.gpkg'
+    fv_st_herbace = path_fv + os.sep + 'fv_st_herbace.gpkg'
+
+    output_layer = path_datafinal + os.sep + "cartographie_detaillee_vegetation.gpkg" 
+
+    
+    #######################################################
+    #                   TRAITEMENTS                       #  
+    #######################################################
+    
+    print(bold + cyan + "*********************************************** \n*** Cartographie détaillée de la végétation *** \n***********************************************" + endC)
+
 
     if debug >= 1:
       print(bold + cyan + "\nCréation structure du dossier de projet" + endC)
@@ -54,8 +251,7 @@ if __name__ == "__main__":
     img_tiles_repertory = ''
     img_ref = path_data_entry + os.sep + 'img_pleiades_ref.tif'
 
-    img_ref = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/ORT_20220614_NADIR_16B_MGN_V2.tif'
-    shp_zone = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/MGN_contours.shp'
+    
     
    ## PRE-TRAITEMENTS ##  
     if debug >= 1:
@@ -70,21 +266,16 @@ if __name__ == "__main__":
     if debug >= 1:
       print(cyan + "\nCréation du MNH" + endC)
 
-    img_mnt =  r'/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNT/2021/NANCY/MNT_RGEALTI/MNT_RGEALTI_1M_ZONE_DE_NANCY.tif'
-    img_mns = r'/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNS/2022/NANCY/2022_06_14/MNSCARS/DSM_PRODUITS_RGE.tif'
+    
     img_mnh = path_data_prod + os.sep + 'mnh.tif'
     
    # img_MNH = mnhCreation(img_mns, img_mnt, img_mnh, shp_zone , img_ref,  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_results = True)
     img_MNH = img_mnh
     # Stockage des données d'entrée dans un dossier : /  
 
-    img_spring = img_ref
+    
 
-    # img_winter = 
-
-   # NB : l'image PAN doit aussi être découpée à la même emprise que l'image de référence --> pour que la superposition des résultats suivant puisse se faire correctement 
-    img_ref_PAN = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/ORT_P1AP_MGN.tif'
-
+  
     # CALCUL DES NEOCANAUX
     if debug >= 1:
       print(cyan + "\nCalcul des néocanaux" + endC)
@@ -113,8 +304,6 @@ if __name__ == "__main__":
     if debug >= 1:
       print(cyan + "\nConcaténation des néocanaux" + endC)
 
-    img_stack = path_data_prod + os.sep + 'img_stack.tif'
-
   
  #  concatenateData(img_to_concatenate, img_stack)
 
@@ -122,58 +311,10 @@ if __name__ == "__main__":
     if debug >= 1:
       print(bold + cyan + "\n*1* EXTRACTION DE LA VÉGÉTATION" + endC)
 
-  #    #Dossier de stockage des datas
-    path_extractveg = path_prj + os.sep + '1-ExtractionVegetation'  
-
-  #   # if not os.path.exists(path_extractveg):
-  #   #   os.makedirs(path_extractveg)    
-
-  #   # path_tmp_preparesamples = path_extractveg + os.sep + 'TMP_PREPARE_SAMPLE'
-
-  #   # if not os.path.exists(path_tmp_preparesamples):
-  #   #   os.makedirs(path_tmp_preparesamples)
-
-    path_tmp_cleansamples = path_extractveg + os.sep + 'TMP_CLEAN_SAMPLE'
-
-  #   # if not os.path.exists(path_tmp_cleansamples):
-  #   #   os.makedirs(path_tmp_cleansamples)
-
-    path_tmp_selectsamples = path_extractveg + os.sep + 'TMP_SELECT_SAMPLE'
-
-  #   # if not os.path.exists(path_tmp_selectsamples):
-  #   #   os.makedirs(path_tmp_selectsamples)
-
   #   #1# Création des échantillons d'apprentissage
     if debug >= 1:
       print(cyan + "\nCréation des échantillons d'apprentissage" + endC) 
-  #   #Fournir 5 couches vectorielles
-  #   # bati = path_data_entry + os.sep + 'bati_vector.shp'
-  #   # route =  path_data_entry + os.sep + 'route_vector.shp'
-  #   # solnu =  path_data_entry + os.sep + 'solnu_vector.shp'
-  #   # eau =  path_data_entry + os.sep + 'eau_vector.shp'
-  #   # vegetation =  path_data_entry + os.sep + 'vegetation_vector.shp'
-
-  #   # bati_prepare = path_tmp_preparesamples + os.sep + 'bati_vector_prepare.tif'
-  #   # route_prepare = path_tmp_preparesamples + os.sep + 'route_vector_prepare.tif'
-  #   # solnu_prepare = path_tmp_preparesamples + os.sep + 'solnu_vector_prepare.tif'
-  #   # eau_prepare = path_tmp_preparesamples + os.sep + 'eau_vector_prepare.tif'
-  #   # vegetation_prepare = path_tmp_preparesamples + os.sep + 'vegetation_vector_prepare.tif'
-
-  #   # bati_clean = path_tmp_cleansamples + os.sep + 'bati_vector_clean.tif'
-  #   # route_clean = path_tmp_cleansamples + os.sep + 'route_vector_clean.tif'
-  #   # solnu_clean = path_tmp_cleansamples + os.sep + 'solnu_vector_clean.tif'
-  #   # eau_clean = path_tmp_cleansamples + os.sep + 'eau_vector_clean.tif'
-  #   # vegetation_clean = path_tmp_cleansamples + os.sep + 'vegetation_vector_clean.tif'
-
-    image_samples_merged_output = path_tmp_cleansamples + os.sep + 'img_samples_merged.tif'
-
-    samplevector = path_tmp_selectsamples + os.sep + 'sample_vector_selected.shp'
-    table_statistics_output = path_tmp_selectsamples + os.sep + 'statistics_sample_vector_selected.csv'
-
-    img_classif = path_extractveg + os.sep + 'img_classification.tif'
-    img_classif_confid = path_extractveg + os.sep + 'img_classification_confidence.tif'
-
-    img_classif_filtered = path_extractveg + os.sep + 'img_classification_filtered.tif'
+ 
 
     # vectors_samples_output ={
     #   "bati" : ,
@@ -219,21 +360,7 @@ if __name__ == "__main__":
     if debug >= 1:
       print(cyan + "\nNettoyage des échantillons d'apprentissage" + endC) 
 
-      # images_in_output = {
-      #   "bâti" : [bati_prepare, bati_clean],
-      #   "route" : [route_prepare, route_clean],
-      #   "solnu" : [solnu_prepare, solnu_clean],
-      #   "eau" : [eau_prepare, eau_clean],
-      #   "vegetation" : [vegetation_prepare, vegetation_clean]     
-      # } 
-
-      # correction_images_dic = {
-      #   "bâti" :[["ndvi", neochannels["ndvi"] ,0, 0.35]],
-      #   "route" : [["ndvi", neochannels["ndvi"] ,0, 0.35]],
-      #   "solnu" : [["ndvi", neochannels["ndvi"] ,0, 0.2], ["hue", neochannels["hue"], 0, 50]],
-      #   "eau" : [["ndwi", neochannels["ndwi"], -500, 1]],
-      #   "vegetation" : [["ndvi", neochannels["ndvi"] ,0.35,1], ["msavi", neochannels["msavi"] ,0.4,1]]
-      # } 
+      
 
       # cleanAllSamples(images_in_output, correction_images_dic, extension_raster = ".tif", save_results_intermediate = False, overwrite = False)
 
@@ -255,22 +382,15 @@ if __name__ == "__main__":
     if debug >= 1:
       print(cyan + "\nClassification supervisée RF" + endC)
 
-    depth_tree = 50
-    sample_min = 20
-    termin_criteria = 0.0
-    cluster = 30
-    size_features = 2
-    num_tree = 50
-    obb_erreur = 0.001
-
     rf_parametres_struct = StructRFParameter()
-    rf_parametres_struct.max_depth_tree = depth_tree
-    rf_parametres_struct.min_sample = sample_min
-    rf_parametres_struct.ra_termin_criteria = termin_criteria
-    rf_parametres_struct.cat_clusters = cluster
-    rf_parametres_struct.var_size_features = size_features
-    rf_parametres_struct.nbtrees_max =  num_tree
-    rf_parametres_struct.acc_obb_erreur = obb_erreur
+    rf_parametres_struct.max_depth_tree = params_RF["depth_tree"]
+    rf_parametres_struct.min_sample = params_RF["sample_min"]
+    rf_parametres_struct.ra_termin_criteria = params_RF["termin_criteria"]
+    rf_parametres_struct.cat_clusters = params_RF["cluster"]
+    rf_parametres_struct.var_size_features = params_RF["size_features"]
+    rf_parametres_struct.nbtrees_max =  params_RF["num_tree"]
+    rf_parametres_struct.acc_obb_erreur = params_RF["obb_erreur"]
+    
 
    # classifySupervised([img_stack], samplevector, img_classif, '', model_output = '', model_input = '', field_class = 'ROI', classifier_mode = "rf", rf_parametres_struct = rf_parametres_struct,no_data_value = 0, ram_otb=0,  format_raster='GTiff', extension_vector=".shp")
     
@@ -283,32 +403,15 @@ if __name__ == "__main__":
     ## CREATION ET PREPARATION DE LA BASE DE DONNEES ##  
     if debug >= 1:
       print(bold + cyan + "\nCréation de la base de données " + endC)
-
-    #Paramètres de connexion 
-    dbname = 'gus'
-    user_db = 'postgres'
-    password_db = 'postgres'
-    server_db = '172.22.130.99'
-    port_number = '5432'
-    schema = ''
-
-    #Dictionnaire des paramètres BD de base
-    connexion_ini_dic = {
-      "dbname" : 'gus',
-      "user_db" : 'postgres',
-      "password_db" : 'postgres',
-      "server_db" : '172.22.130.99',
-      "port_number" : '5432',
-      "schema" : ''
-    }
+   
 
     #Dictionnaire des paramètres BD de classification en strates verticales 
-    # connexion_stratev_dic = connexion_ini_dic
-    # connexion_stratev_dic["schema"] = 'classif_stratesv_t1'
+    connexion_stratev_dic = connexion_ini_dic
+    connexion_stratev_dic["schema"] = 'classif_stratesv_t0'
 
     # #Dictionnaire des paramètres BD de classsification des formes végétales horizontales
-    connexion_fv_dic = connexion_ini_dic
-    connexion_fv_dic["schema"] = 'classification_fv_t0'
+   # connexion_fv_dic = connexion_ini_dic
+   # connexion_fv_dic["schema"] = 'classification_fv_t0'
 
     # #Dictionnaire des paramètres BD des données finales (cartographie)
     # connexion_datafinal_dic = connexion_ini_dic
@@ -338,8 +441,8 @@ if __name__ == "__main__":
       print("Mot de passe : %s" %(connexion_ini_dic["password_db"]))
       print("Serveur: %s" %(connexion_ini_dic["server_db"]))
       print("Num port : %s" %(connexion_ini_dic["port_number"]))
-     # print("Schéma strates végétales : %s" %(connexion_stratev_dic["schema"]))
-      print("Schéma formes végétales : %s" %(connexion_fv_dic["schema"]))
+      print("Schéma strates végétales : %s" %(connexion_stratev_dic["schema"]))
+     # print("Schéma formes végétales : %s" %(connexion_fv_dic["schema"]))
      # print("Schéma données finales : %s" %(connexion_datafinal_dic["schema"]))
       print("Extensions : postgis, postgis_sfcgal")
 
@@ -347,124 +450,83 @@ if __name__ == "__main__":
     if debug >= 1:
       print(bold + cyan + "\nDistinction des strates verticales de végétation " + endC)
 
-    #Dossier de stockage des datas
-    # path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'  
-
-    # if not os.path.exists(path_stratesveg):
-    #   os.makedirs(path_stratesveg)
-
-    # sgt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
-
-    # stratesV = path_stratesveg + os.sep + 'img_stratesV.gpkg' 
-
     # #1.1# Segmentation de l'image
     # if debug >= 1:
     #   print(cyan + "\nSegmentation de l'image de végétation " + endC)
-    # #Paramètres de segmentation
-    # num_class = {
-    #   "bati" : 1,
-    #   "route" : 2,
-    #   "sol nu" : 3,
-    #   "eau" : 4,
-    #   "vegetation" : 5
-    # }  
-    # minsize = 10
+   
    # segmentationImageVegetetation(img_ref, img_classif_filtered, sgt_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = True, overwrite = False)
 
     #1.2# Classification en strates verticales
     if debug >= 1:
       print(cyan + "\nClassification des segments végétation en strates verticales " + endC)
 
-    # # #Ouverture connexion 
-    # connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
+    # #Ouverture connexion 
+    connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
  
-    # img_txt_SFS = '/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
-    # raster_dic = {
-    #   "MNH" : img_MNH, 
-    #   "TXT" : img_txt_SFS
-    # }
-    # tab_ref = 'segments_vegetation_t1'
-    # dic_seuils_stratesV = {
-    #   "seuil_h1" : 3,
-    #   "seuil_h2" : 1, 
-    #   "seuil_h3" : 2,
-    #   "seuil_txt" : 11,
-    #   "seuil_touch_arbo_vs_herba" : 15,
-    #   "seuil_ratio_surf" : 25,
-    #   "seuil_arbu_repres" : 20
-    # }
-
-    # output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
+    img_txt_SFS = '/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
+    raster_dic = {
+      "MNH" : img_MNH, 
+      "TXT" : img_txt_SFS
+    }
+    tab_ref = 'segments_vegetation_t0'
     
-    # closeConnection(connexion)
 
-    # #2# Détection des formes végétales horizontales
+    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
+    
+    closeConnection(connexion)
+
+    #2# Détection des formes végétales horizontales
     if debug >= 1:
       print(cyan + "\nClassification des segments végétation en formes végétales" + endC)
 
-    # #Dossier de stockage des datas
-    path_fv = path_prj + os.sep + '2-DistinctionFormesVegetales'  
-
-    if not os.path.exists(path_fv):
-      os.makedirs(path_fv)
-
-    output_fv = path_fv + os.sep + 'vegetation_fv.gpkg'
-
-    fv_st_arbore = path_fv + os.sep + 'fv_st_arbore.gpkg'
-    fv_st_arbustif = path_fv + os.sep + 'fv_st_arbustif.gpkg'
-    fv_st_herbace = path_fv + os.sep + 'fv_st_herbace.gpkg'
     
-    # #Ouverture connexion 
-    connexion = openConnection(connexion_fv_dic["dbname"], user_name = connexion_fv_dic["user_db"], password=connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port=connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"])
+    
+    # # #Ouverture connexion 
+    # connexion = openConnection(connexion_fv_dic["dbname"], user_name = connexion_fv_dic["user_db"], password=connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port=connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"])
  
 
-    treethresholds = {
-      "seuil_surface" : 20,
-      "seuil_compacite_1" : 0.7,
-      "seuil_compacite_2" : 0.5,
-      "seuil_convexite" : 0.7,
-      "seuil_elongation" : 3,
-      "val_largeur_max_alignement" : 12,
-      "val_buffer" : 1
-    }
-    shrubthresholds = {
-      "seuil_surface" : 5,
-      "seuil_compacite_1" : 0.7,
-      "seuil_compacite_2" : 0.5,
-      "seuil_convexite" : 0.7,
-      "seuil_elongation" : 3,
-      "val_largeur_max_alignement" : 8,
-      "val_buffer" : 1
-    }
-    dic_thresholds = {
-      "tree" : treethresholds,
-      "shrub" : shrubthresholds} 
+    # treethresholds = {
+    #   "seuil_surface" : 20,
+    #   "seuil_compacite_1" : 0.7,
+    #   "seuil_compacite_2" : 0.5,
+    #   "seuil_convexite" : 0.7,
+    #   "seuil_elongation" : 3,
+    #   "val_largeur_max_alignement" : 12,
+    #   "val_buffer" : 1
+    # }
+    # shrubthresholds = {
+    #   "seuil_surface" : 5,
+    #   "seuil_compacite_1" : 0.7,
+    #   "seuil_compacite_2" : 0.5,
+    #   "seuil_convexite" : 0.7,
+    #   "seuil_elongation" : 3,
+    #   "val_largeur_max_alignement" : 8,
+    #   "val_buffer" : 1
+    # }
+    # dic_thresholds = {
+    #   "tree" : treethresholds,
+    #   "shrub" : shrubthresholds} 
 
-    schem_tab_ref = 'classif_stratesv_t0.segments_vegetation_t0'
+    # schem_tab_ref = 'classif_stratesv_t0.segments_vegetation_t0'
 
-    output_layers ={
-      "tree" : fv_st_arbore,
-      "shrub" : fv_st_arbustif,
-      "herbaceous" : fv_st_herbace,
-      "output_fv" : output_fv
-    }# dictionnaire des couches de sauvegarde  
+    # output_layers ={
+    #   "tree" : fv_st_arbore,
+    #   "shrub" : fv_st_arbustif,
+    #   "herbaceous" : fv_st_herbace,
+    #   "output_fv" : output_fv
+    # }# dictionnaire des couches de sauvegarde  
 
-    #2.2#Elements arbustifs 
+    # #2.2#Elements arbustifs 
 
-    tab_veg = cartographyVegetation(connexion, connexion_fv_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = True, overwrite = False,  debug = debug)
+    # tab_veg = cartographyVegetation(connexion, connexion_fv_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = True, overwrite = False,  debug = debug)
 
-    closeConnection(connexion)
+    # closeConnection(connexion)
 
     # #4# Calcul des indicateurs de végétation
     if debug >= 1:
       print(cyan + "\nCalcul des attributs descriptifs des formes végétales" + endC)
-    # #Dossier de stockage des datas
-    # path_datafinal = path_prj + os.sep + '5-Calcul_attributs_descriptifs'  
+    
 
-    # if not os.path.exists(path_datafinal):
-    #   os.makedirs(path_datafinal)
-
-    # output_layer = path_datafinal + os.sep + "cartographie_detaillee_vegetation.gpkg"
 
     # #Duplication de la couche tab_veg du schema  classification_fv vers data_final
     # query = """
