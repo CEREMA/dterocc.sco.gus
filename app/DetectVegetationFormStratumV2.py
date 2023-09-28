@@ -1088,9 +1088,9 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
     query_intersect = """
     DROP TABLE IF EXISTS ara_intersect_bound;
     CREATE TABLE ara_intersect_bound AS
-        SELECT r.id_seg as id_seg, r.id_perp as id_perp, r.xR as xR, r.yR as yR, ST_Intersection(r.geom, b.geom) as geom
+        SELECT r.id as id_fv, r.id_seg as id_seg, r.id_perp as id_perp, ST_Intersects(r.geom, b.geom) as intersect_bound
         FROM ara_seg_perp as r, (select public.ST_BOUNDARY(geom) AS geom FROM %s) as b
-        WHERE ST_Intersects(r.geom, b.geom) and r.id = b.id;
+        WHERE r.id = b.id;
     ALTER TABLE ara_intersect_bound ADD COLUMN id_intersect serial;
     CREATE INDEX IF NOT EXISTS intersect_bati_geom_gist ON ara_intersect_bound USING GIST (geom);
     """  %(tab_rgpt)

@@ -185,7 +185,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
 
 
     # #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
-    tab_sgt_ini = 'segments_vegetation_ini_t0'
+    tab_sgt_ini = 'segments_vegetation_ini_t1'
     # query = """
     # CREATE TABLE %s AS
     #     SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
