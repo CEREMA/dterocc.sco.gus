@@ -408,7 +408,7 @@ if __name__ == "__main__":
 
     #Dictionnaire des paramètres BD de classification en strates verticales 
     connexion_stratev_dic = connexion_ini_dic
-    connexion_stratev_dic["schema"] = 'classif_stratesv_t0'
+    connexion_stratev_dic["schema"] = 'classif_stratesv_t1'
 
     # #Dictionnaire des paramètres BD de classsification des formes végétales horizontales
    # connexion_fv_dic = connexion_ini_dic
@@ -469,10 +469,10 @@ if __name__ == "__main__":
       "MNH" : img_MNH, 
       "TXT" : img_txt_SFS
     }
-    tab_ref = 'segments_vegetation_t0'
+    tab_ref = 'segments_vegetation_t1'
     
 
-    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = debug)
+    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
     
     closeConnection(connexion)
 
