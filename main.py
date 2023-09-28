@@ -43,11 +43,11 @@ if __name__ == "__main__":
     img_winter = r''
 
     #Fournir les couches des échantillons d'entraînement 
-    bati = path_data_entry + os.sep + 'bati_vector.shp'
-    route =  path_data_entry + os.sep + 'route_vector.shp'
-    solnu =  path_data_entry + os.sep + 'solnu_vector.shp'
-    eau =  path_data_entry + os.sep + 'eau_vector.shp'
-    vegetation =  path_data_entry + os.sep + 'vegetation_vector.shp'
+    # bati = path_data_entry + os.sep + 'bati_vector.shp'
+    # route =  path_data_entry + os.sep + 'route_vector.shp'
+    # solnu =  path_data_entry + os.sep + 'solnu_vector.shp'
+    # eau =  path_data_entry + os.sep + 'eau_vector.shp'
+    # vegetation =  path_data_entry + os.sep + 'vegetation_vector.shp'
 
     
 
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     } 
 
     #Fournir les paramètres de connexion à la base de donnée 
-     connexion_ini_dic = {
+    connexion_ini_dic = {
       "dbname" : 'gus',
       "user_db" : 'postgres',
       "password_db" : 'postgres',
@@ -94,6 +94,7 @@ if __name__ == "__main__":
       "seuil_h3" : 2,
       "seuil_txt" : 11,
       "seuil_touch_arbo_vs_herba" : 15,
+      "seuil_touch_arbo_vs_herba_2" : 50,
       "seuil_ratio_surf" : 25,
       "seuil_arbu_repres" : 20
     } 
@@ -181,45 +182,45 @@ if __name__ == "__main__":
 
     
 
-    images_in_output = {
-        "bâti" : [bati_prepare, bati_clean],
-        "route" : [route_prepare, route_clean],
-        "solnu" : [solnu_prepare, solnu_clean],
-        "eau" : [eau_prepare, eau_clean],
-        "vegetation" : [vegetation_prepare, vegetation_clean]     
-      } 
+    # images_in_output = {
+    #     "bâti" : [bati_prepare, bati_clean],
+    #     "route" : [route_prepare, route_clean],
+    #     "solnu" : [solnu_prepare, solnu_clean],
+    #     "eau" : [eau_prepare, eau_clean],
+    #     "vegetation" : [vegetation_prepare, vegetation_clean]     
+    #   } 
 
-    correction_images_dic = {
-        "bâti" :[["ndvi", neochannels["ndvi"] ,0, 0.35]],
-        "route" : [["ndvi", neochannels["ndvi"] ,0, 0.35]],
-        "solnu" : [["ndvi", neochannels["ndvi"] ,0, 0.2], ["hue", neochannels["hue"], 0, 50]],
-        "eau" : [["ndwi", neochannels["ndwi"], -500, 1]],
-        "vegetation" : [["ndvi", neochannels["ndvi"] ,0.35,1], ["msavi", neochannels["msavi"] ,0.4,1]]
-      } 
+    # correction_images_dic = {
+    #     "bâti" :[["ndvi", neochannels["ndvi"] ,0, 0.35]],
+    #     "route" : [["ndvi", neochannels["ndvi"] ,0, 0.35]],
+    #     "solnu" : [["ndvi", neochannels["ndvi"] ,0, 0.2], ["hue", neochannels["hue"], 0, 50]],
+    #     "eau" : [["ndwi", neochannels["ndwi"], -500, 1]],
+    #     "vegetation" : [["ndvi", neochannels["ndvi"] ,0.35,1], ["msavi", neochannels["msavi"] ,0.4,1]]
+    #   } 
 
       
 
-    bati_prepare = path_tmp_preparesamples + os.sep + 'bati_vector_prepare.tif'
-    route_prepare = path_tmp_preparesamples + os.sep + 'route_vector_prepare.tif'
-    solnu_prepare = path_tmp_preparesamples + os.sep + 'solnu_vector_prepare.tif'
-    eau_prepare = path_tmp_preparesamples + os.sep + 'eau_vector_prepare.tif'
-    vegetation_prepare = path_tmp_preparesamples + os.sep + 'vegetation_vector_prepare.tif'
+    # bati_prepare = path_tmp_preparesamples + os.sep + 'bati_vector_prepare.tif'
+    # route_prepare = path_tmp_preparesamples + os.sep + 'route_vector_prepare.tif'
+    # solnu_prepare = path_tmp_preparesamples + os.sep + 'solnu_vector_prepare.tif'
+    # eau_prepare = path_tmp_preparesamples + os.sep + 'eau_vector_prepare.tif'
+    # vegetation_prepare = path_tmp_preparesamples + os.sep + 'vegetation_vector_prepare.tif'
 
-    bati_clean = path_tmp_cleansamples + os.sep + 'bati_vector_clean.tif'
-    route_clean = path_tmp_cleansamples + os.sep + 'route_vector_clean.tif'
-    solnu_clean = path_tmp_cleansamples + os.sep + 'solnu_vector_clean.tif'
-    eau_clean = path_tmp_cleansamples + os.sep + 'eau_vector_clean.tif'
-    vegetation_clean = path_tmp_cleansamples + os.sep + 'vegetation_vector_clean.tif'
+    # bati_clean = path_tmp_cleansamples + os.sep + 'bati_vector_clean.tif'
+    # route_clean = path_tmp_cleansamples + os.sep + 'route_vector_clean.tif'
+    # solnu_clean = path_tmp_cleansamples + os.sep + 'solnu_vector_clean.tif'
+    # eau_clean = path_tmp_cleansamples + os.sep + 'eau_vector_clean.tif'
+    # vegetation_clean = path_tmp_cleansamples + os.sep + 'vegetation_vector_clean.tif'
 
-    image_samples_merged_output = path_tmp_cleansamples + os.sep + 'img_samples_merged.tif'
+    # image_samples_merged_output = path_tmp_cleansamples + os.sep + 'img_samples_merged.tif'
 
-    samplevector = path_tmp_selectsamples + os.sep + 'sample_vector_selected.shp'
-    table_statistics_output = path_tmp_selectsamples + os.sep + 'statistics_sample_vector_selected.csv'
+    # samplevector = path_tmp_selectsamples + os.sep + 'sample_vector_selected.shp'
+    # table_statistics_output = path_tmp_selectsamples + os.sep + 'statistics_sample_vector_selected.csv'
 
-    img_classif = path_extractveg + os.sep + 'img_classification.tif'
-    img_classif_confid = path_extractveg + os.sep + 'img_classification_confidence.tif'
+    # img_classif = path_extractveg + os.sep + 'img_classification.tif'
+    # img_classif_confid = path_extractveg + os.sep + 'img_classification_confidence.tif'
 
-    img_classif_filtered = path_extractveg + os.sep + 'img_classification_filtered.tif'
+    # img_classif_filtered = path_extractveg + os.sep + 'img_classification_filtered.tif'
 
     sgt_veg = path_stratesveg + os.sep + 'img_sgt_vegetation.gpkg' 
 
@@ -471,7 +472,7 @@ if __name__ == "__main__":
     tab_ref = 'segments_vegetation_t0'
     
 
-    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
+    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = debug)
     
     closeConnection(connexion)
 
