@@ -93,10 +93,10 @@ if __name__ == "__main__":
       "seuil_h2" : 1, 
       "seuil_h3" : 2,
       "seuil_txt" : 11,
-      "seuil_touch_arbo_vs_herba" : 15,
-      "seuil_touch_arbo_vs_herba_2" : 50,
-      "seuil_ratio_surf" : 25,
-      "seuil_arbu_repres" : 20
+      "seuil_touch_arbo_vs_herba" : 25,
+      "seuil_touch_herba_vs_arbo" : 50,
+      "seuil_ratio_surf" : 0.25,
+      "seuil_arbu_repres" : 25
     } 
    
 
@@ -469,10 +469,10 @@ if __name__ == "__main__":
       "MNH" : img_MNH, 
       "TXT" : img_txt_SFS
     }
-    tab_ref = 'segments_vegetation_t1'
+    tab_ref = 'segments_vegetation_t2'
     
 
-    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
+    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, stratesV, sgt_veg, raster_dic, tab_ref = tab_ref, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = debug)
     
     closeConnection(connexion)
 
