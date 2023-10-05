@@ -1,5 +1,6 @@
 from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection
 from libs.Lib_display import endC, bold, yellow, cyan, red
+import math
 
 #################################################
 ## Concaténation des trois tables pour obtenir ##
@@ -733,12 +734,11 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
 
     #Création de la colonne fv
     addColumn(connexion, tab_out, 'fv', 'varchar(100)')
+    #Pas de complétion de cet attribut pour l'instant
+    tab_herbace = ''
 
     #Complétion de l'attribut fv
     tab_herbace = classificationGrassOrCrop(connexion, tab_in, tab_out, img_input, save_intermediate_results = save_intermediate_results, debug = debug) 
-
-    #Pas de complétion de cet attribut pour l'instant
-    tab_herbace = ''
 
     if tab_herbace == '':
         tab_herbace = 'herbace'
@@ -756,7 +756,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     return tab_herbace  
 
 
-def classificationGrassOrCrop(connexion, tab_in, tab_out, img_input, save_intermediate_results = False, debug = 0) :
+def classificationGrassOrCrop(connexion, connexion_dic, tab_in, tab_out, img_input, save_intermediate_results = False, debug = 0) :
     """
     Rôle : produire les formes végétales herbacée 'Pr' (prairie) ou 'C' (culture)
 
@@ -768,10 +768,88 @@ def classificationGrassOrCrop(connexion, tab_in, tab_out, img_input, save_interm
         save_intermediate_result : paramètre de sauvegarde des tables et/ou fichiers intermédiaires. Par défaut : False
         debug : paramètre du niveau de debug. Par défaut : 0
     """
+    #Crossing vector raster + majority
+
+    layer_sgts_veg_h = repertory + 'sgts_vegetation_herbace.gpkg'
+    vector_output = repertory + 'sgts_vegetation_hebace_plus_maj.gpkg'
+
+    #Export des le donnée vecteur des segments herbacés en couche GPKG
+    exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_in, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+
+
+    #Calcul de la classe majoritaire par segments herbacé 
+    col_to_add_list = ["majority"]
+    col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range", "median", "minority" ]
+    class_label_dico = {} 
+    statisticsVectorRaster(img_input, layer_sgts_veg_h, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    
+    #Import en base de la ocuche vecteur
+    tab_cross = 'tab_cross_h_classif'
+    importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
+
+
+    # Attribution du label 'PR' (prairie) ou 'C' (culture)
+    query = """
+    UPDATE %s AS t1 SET fv = 'PR' FROM %s AS t2 WHERE t2.majority = '1' AND t1.fid = t2.fid;
+    UPDATE %s AS t1 SET fv = 'C' FROM %s AS t2 WHERE t2.majority = '2' AND t1.fid = t2.fid;
+    """  %(tab_in, tab_cross ,tab_in,tab_cross)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+
+    #Regroupe par localisation et par label (fv) les semgents de végétation herbacés 
+    tab_crop = 'tab_crops'
+    tab_grass = 'tab_grass'
+
+    query = """
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS
+        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom 
+        FROM (SELECT geom FROM %s WHERE majority = '%s') AS t1);
+    """ %(tab_grass, tab_grass, tab_in, class_ocs["prairie"])
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
     
 
-    return
+    query = """
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS
+        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom 
+        FROM (SELECT geom FROM %s WHERE majority = '%s') AS t1);
+    """ %(tab_crop, tab_crop, tab_in, class_ocs["culture"])
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    query = """
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS 
+        SELECT 'Pr' AS fv, 'H' AS strate, geom AS geom
+        FROM %s
+        UNION
+        SELECT 'C' AS fv, 'H' AS strate, geom AS geom
+        FROM %s
+    """ %(tab_out, tab_out, tab_grass, tab_crop)
+
+    if debug >= 3:
+        print(query)
+    ecuteQUery(connexion, query)
+
+    addUniqId(connexion, tab_out)
+    addSpatialIndex(connexion, tab_out)
+
+    dropTable(connexion, tab_cross)
+    dropTable(connexion, tab_crop)
+    dropTable(connexion, tab_grass)
+
+    return tab_out
+
 #####################################
 ## Fonctions indicateurs de formes ## 
 #####################################
@@ -921,27 +999,33 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
     # Création des squelettes des FVs de regroupements 
-    tab_sqt = tab_rgpt + '_squelette'
-    query = """
-    CREATE TABLE %s AS
-        SELECT fid, fv, public.ST_MAKEVALID(public.ST_APPROXIMATEMEDIALAXIS(geom)) AS geom
-        FROM %s
-    """ %(tab_sqt, tab_rgpt)
+    # tab_sqt = tab_rgpt + '_squelette'
+    tab_sqt = 'sql_rgpt_arb2'
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT fid, fv, public.ST_MAKEVALID(public.ST_APPROXIMATEMEDIALAXIS(geom)) AS geom
+    #     FROM %s
+    # """ %(tab_sqt, tab_rgpt)
 
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    addSpatialIndex(connexion, tab_sqt,)
-    addIndex(connexion, tab_sqt, 'fid', 'idx_fid')
+    # addSpatialIndex(connexion, tab_sqt,)
+    # addIndex(connexion, tab_sqt, 'fid', 'idx_fid')
 
     # Création de la table des segments de squelettes
     tab_sgt_sqt = tab_rgpt + '_sgt_squelette'
     query = """
+    DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-        SELECT fid AS id_sqt, fv, (public.ST_DUMP(geom).geom) AS geom
+        SELECT fid AS id_sqt, public.ST_SUBDIVIDE(public.ST_SEGMENTIZE(geom, public.ST_LENGTH(geom)/11)) AS geom
         FROM %s
-    """ %(tab_sgt_sqt, tab_sqt)
+    """ %(tab_sgt_sqt, tab_sgt_sqt, tab_sqt)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
     addUniqId(connexion, tab_sgt_sqt)
     addSpatialIndex(connexion, tab_sgt_sqt)
@@ -951,7 +1035,7 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
 
     # Début de la construction de la requête de création des segments perpendiculaires
     query_seg_perp = "DROP TABLE IF EXISTS ara_seg_perp;\n"
-    query_seg_perp += "CREATE TABLE ara_seg_perp (id_sqt int, id_seg text, id_perp text, xR float, yR float, xP float, yP float, geom geometry);\n"
+    query_seg_perp += "CREATE TABLE ara_seg_perp (id_sqt int, id_seg text, id_perp text, xR float, yR float, xP float, yP float, geom GEOMETRY);\n"
     query_seg_perp += "INSERT INTO ara_seg_perp VALUES\n"
 
     # Récupération de la liste des identifiants segments routes
@@ -968,35 +1052,36 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
         id_seg = id_seg[0]
         
         query = """
-        SELECT id FROM %s WHERE id_seg = %s;
+        SELECT id_sqt FROM %s WHERE fid = %s;
         """ %(tab_sgt_sqt, id_seg)
         
         cursor.execute(query)
-        id = cursor.fetchone()[0]
-
+        id_sqt = cursor.fetchone()[0] 
+        
+        
         # Table temporaire ne contenant qu'un segment route donné : ST_LineMerge(geom) permet de passer la géométrie de MultiLineString à LineString, pour éviter des problèmes de requêtes spatiales
         query_temp1_seg = "DROP TABLE IF EXISTS ara_temp1_seg;\n"
-        query_temp1_seg += "CREATE TABLE ara_temp1_seg AS SELECT id_sqt, fid as id_seg, ST_LineMerge(geom) as geom FROM %s WHERE id_seg = %s;\n" % (tab_sgt_sqt, id_seg)
+        query_temp1_seg += "CREATE TABLE ara_temp1_seg AS SELECT id_sqt, fid as id_seg, public.ST_LineMerge(geom) as geom FROM %s WHERE fid = %s;\n" % (tab_sgt_sqt, id_seg)
         if debug >= 3:
             print(query_temp1_seg)
         executeQuery(connexion, query_temp1_seg)
 
 
         # Récupération du nombre de sommets du segment route (utile pour les segments routes en courbe, permet de récupérer le dernier point du segment)
-        cursor.execute("SELECT ST_NPoints(geom) FROM ara_temp1_seg;")
+        cursor.execute("SELECT public.ST_NPoints(geom) FROM ara_temp1_seg;")
         nb_points = cursor.fetchone()
 
         # Récupération des coordonnées X et Y des points extrémités du segment route
-        query_xR1 = "SELECT ST_X(geom) as X FROM (SELECT ST_AsText(ST_PointN(geom,1)) as geom FROM ara_temp1_seg) as toto;"
+        query_xR1 = "SELECT public.ST_X(geom) as X FROM (SELECT public.ST_AsText(public.ST_PointN(geom,1)) as geom FROM ara_temp1_seg) as toto;"
         cursor.execute(query_xR1)
         xR1 = cursor.fetchone()
-        query_yR1 = "SELECT ST_Y(geom) as Y FROM (SELECT ST_AsText(ST_PointN(geom,1)) as geom FROM ara_temp1_seg) as toto;"
+        query_yR1 = "SELECT public.ST_Y(geom) as Y FROM (SELECT public.ST_AsText(public.ST_PointN(geom,1)) as geom FROM ara_temp1_seg) as toto;"
         cursor.execute(query_yR1)
         yR1 = cursor.fetchone()
-        query_xR2 = "SELECT ST_X(geom) as X FROM (SELECT ST_AsText(ST_PointN(geom,%s)) as geom FROM ara_temp1_seg) as toto;" % (nb_points)
+        query_xR2 = "SELECT public.ST_X(geom) as X FROM (SELECT public.ST_AsText(public.ST_PointN(geom,%s)) as geom FROM ara_temp1_seg) as toto;" % (nb_points)
         cursor.execute(query_xR2)
         xR2 = cursor.fetchone()
-        query_yR2 = "SELECT ST_Y(geom) as Y FROM (SELECT ST_AsText(ST_PointN(geom,%s)) as geom FROM ara_temp1_seg) as toto;" % (nb_points)
+        query_yR2 = "SELECT public.ST_Y(geom) as Y FROM (SELECT public.ST_AsText(public.ST_PointN(geom,%s)) as geom FROM ara_temp1_seg) as toto;" % (nb_points)
         cursor.execute(query_yR2)
         yR2 = cursor.fetchone()
 
@@ -1065,14 +1150,14 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
             print("\n")
 
         # Construction de la requête de création des 2 segments perpendiculaires pour le segment route sélectionné
-        query_seg_perp += "    (%s, '%s', '%s_perp1', %s, %s, %s, %s, 'LINESTRING(%s %s, %s %s)'),\n" % (str(id_sqt), str(id_seg), str(id_seg), xR1, yR1, xP1, yP1, xR1, yR1, xP1, yP1)
-        query_seg_perp += "    (%s, '%s', '%s_perp2', %s, %s, %s, %s, 'LINESTRING(%s %s, %s %s)'),\n" % (str(id_sqt), str(id_seg), str(id_seg), xR1, yR1, xP2, yP2, xR1, yR1, xP2, yP2)
+        query_seg_perp += "    ('%s', '%s', '%s_perp1', %s, %s, %s, %s, 'LINESTRING(%s %s, %s %s)'),\n" % (str(id_sqt), str(id_seg), str(id_seg), xR1, yR1, xP1, yP1, xR1, yR1, xP1, yP1)
+        query_seg_perp += "    ('%s', '%s', '%s_perp2', %s, %s, %s, %s, 'LINESTRING(%s %s, %s %s)'),\n" % (str(id_sqt), str(id_seg), str(id_seg), xR1, yR1, xP2, yP2, xR1, yR1, xP2, yP2)
 
         treat_seg += 1
 
     # Fin de la construction de la requête de création des segments perpendiculaires et exécution de cette requête
     query_seg_perp = query_seg_perp[:-2] + ";\n" # Transformer la virgule de la dernière ligne SQL en point-virgule (pour terminer la requête)
-    query_seg_perp += "ALTER TABLE ara_seg_perp ALTER COLUMN geom TYPE geometry(LINESTRING,%s) USING ST_SetSRID(geom,%s);\n" % ('2154','2154') # Mise à jour du système de coordonnées
+    query_seg_perp += "ALTER TABLE ara_seg_perp ALTER COLUMN geom TYPE geometry(LINESTRING,%s) USING public.ST_SetSRID(geom,%s);\n" % ('2154','2154') # Mise à jour du système de coordonnées
     query_seg_perp += "CREATE INDEX IF NOT EXISTS seg_perp_geom_gist ON ara_seg_perp USING GIST (geom);\n"
     
     if debug >= 3:
@@ -1084,66 +1169,74 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
     if debug >= 3:
         print(bold + "Intersect entre les segments perpendiculaires et les bords de la forme végétale :" + endC)
 
-    # Requête d'intersect entre les segments perpendiculaires et bords de la forme végétale
-    query_intersect = """
-    DROP TABLE IF EXISTS ara_intersect_bound;
-    CREATE TABLE ara_intersect_bound AS
-        SELECT r.id as id_fv, r.id_seg as id_seg, r.id_perp as id_perp, ST_Intersects(r.geom, b.geom) as intersect_bound
-        FROM ara_seg_perp as r, (select public.ST_BOUNDARY(geom) AS geom FROM %s) as b
-        WHERE r.id = b.id;
-    ALTER TABLE ara_intersect_bound ADD COLUMN id_intersect serial;
-    CREATE INDEX IF NOT EXISTS intersect_bati_geom_gist ON ara_intersect_bound USING GIST (geom);
-    """  %(tab_rgpt)
+    # #Sélection d'une liste de segments de test avec la bordure d'une FV ( 10 segments perpendiculaires)
+    # cursor.execute("SELECT DISTINCT id_sqt FROM %s" %(tab_sgt_sqt))
+    # li_fv = cursor.fetchall()
+    # for id_sqt in li_fv :
+    #     query = """
+    #     SELECT * FROM %s ORDER BY RANDOM() LIMIT 10;
+    #     """
 
-    if debug >= 3:
-        print(query_intersect)
-    executeQuery(connexion, query_intersect)
+    # # Requête d'intersect entre les segments perpendiculaires et bords de la forme végétale
+    # query_intersect = """
+    # DROP TABLE IF EXISTS ara_intersect_bound;
+    # CREATE TABLE ara_intersect_bound AS
+    #     SELECT r.id as id_fv, r.id_seg as id_seg, r.id_perp as id_perp, ST_Intersects(r.geom, b.geom) as intersect_bound
+    #     FROM ara_seg_perp as r, (select public.ST_BOUNDARY(geom) AS geom FROM %s) as b
+    #     WHERE r.id = b.id;
+    # ALTER TABLE ara_intersect_bound ADD COLUMN id_intersect serial;
+    # CREATE INDEX IF NOT EXISTS intersect_bati_geom_gist ON ara_intersect_bound USING GIST (geom);
+    # """  %(tab_rgpt)
 
-    print(bold + cyan + "Calcul les statistiques (longueur, largeur et élongation) des formes végétales pour l'instant classées 'regroupement':" + endC)
+    # if debug >= 3:
+    #     print(query_intersect)
+    # executeQuery(connexion, query_intersect)
 
-    # Requête de récupération de longueur et largeur moyenne des formes végétales
-    query = """
-    CREATE TABLE long_larg_rgpt AS
-        SELECT t1.fid, public.ST_LENGTH(t2.geom) AS long, t1.largeur_moy AS larg 
-        FROM (
-            SELECT t2.fid, AVG(public.ST_LENGTH(t1.geom)) AS largeur_moy 
-            FROM ara_intersect_bound AS t1, %s AS t2 
-            WHERE public.ST_INTERSECTS(t2.geom, t1.geom) 
-            GROUP BY t2.fid
-            ) as t1,
-            %s AS t2 
-        WHERE t1.fid = t2.fid;
-    """ %(tab_rgpt, tab_sqt)
+    # print(bold + cyan + "Calcul les statistiques (longueur, largeur et élongation) des formes végétales pour l'instant classées 'regroupement':" + endC)
 
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # # Requête de récupération de longueur et largeur moyenne des formes végétales
+    # query = """
+    # CREATE TABLE long_larg_rgpt AS
+    #     SELECT t1.fid, public.ST_LENGTH(t2.geom) AS long, t1.largeur_moy AS larg 
+    #     FROM (
+    #         SELECT t2.fid, AVG(public.ST_LENGTH(t1.geom)) AS largeur_moy 
+    #         FROM ara_intersect_bound AS t1, %s AS t2 
+    #         WHERE public.ST_INTERSECTS(t2.geom, t1.geom) 
+    #         GROUP BY t2.fid
+    #         ) as t1,
+    #         %s AS t2 
+    #     WHERE t1.fid = t2.fid;
+    # """ %(tab_rgpt, tab_sqt)
 
-    # Ajout de la colonne de l'indicateur élongation et implémentation 
-    query = """
-    ALTER TABLE %s ADD COLUMN id_elong float;
-    """ %(tab_rgpt)
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # # Ajout de la colonne de l'indicateur élongation et implémentation 
+    # query = """
+    # ALTER TABLE %s ADD COLUMN id_elong float;
+    # """ %(tab_rgpt)
 
-    query = """
-    UPDATE %s AS t1 SET id_elong = (t2.long/t2.larg) FROM long_larg_rgpt AS t2 WHERE t1.fid = t2.fid
-    """ %(tab_rgpt)
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # query = """
+    # UPDATE %s AS t1 SET id_elong = (t2.long/t2.larg) FROM long_larg_rgpt AS t2 WHERE t1.fid = t2.fid
+    # """ %(tab_rgpt)
 
-    if not save_intermediate_result:
-        dropTable(connexion, tab_sqt)
-        dropTable(connexion, tab_sgt_sqt)
-        dropTable(connexion, 'long_larg_rgpt')
-        dropTable(connexion, 'ara_intersect_bound')
-        dropTable(connexion, 'ara_seg_perp')
-        dropTable(connexion, 'ara_temp1_seg')
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
+    # if not save_intermediate_result:
+    #     dropTable(connexion, tab_sqt)
+    #     dropTable(connexion, tab_sgt_sqt)
+    #     dropTable(connexion, 'long_larg_rgpt')
+    #     dropTable(connexion, 'ara_intersect_bound')
+    #     dropTable(connexion, 'ara_seg_perp')
+    #     dropTable(connexion, 'ara_temp1_seg')
+    closeConnection(connexion)
     return tab_rgpt
 
 
