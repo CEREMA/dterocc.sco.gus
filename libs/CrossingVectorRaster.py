@@ -32,11 +32,11 @@ A Reflechir/A faire :
 # Import des bibliothèques python
 import os,sys,glob,argparse,shutil
 from osgeo import ogr
-from rasterstats2 import raster_stats
-from Lib_display import bold,red,green,yellow,cyan,endC,displayIHM
-from Lib_raster import getPixelSizeImage, getEmpriseImage, identifyPixelValues
-from Lib_vector import getEmpriseFile, cleanMiniAreaPolygons
-from Lib_file import copyVectorFile, removeVectorFile, renameVectorFile
+from libs.rasterstats2 import raster_stats
+from libs.Lib_display import bold,red,green,yellow,cyan,endC,displayIHM
+from libs.Lib_raster import getPixelSizeImage, getEmpriseImage, identifyPixelValues
+from libs.Lib_vector import getEmpriseFile, cleanMiniAreaPolygons
+from libs.Lib_file import copyVectorFile, removeVectorFile, renameVectorFile
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 1 : affichage intermédiaire de commentaires lors de l'execution du script
@@ -325,6 +325,8 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
 
     polygone_count = 0
 
+    print(stats_info_list)
+
     for polygone_stats in stats_info_list : # Pour chaque polygone représenté dans stats_info_list - et il y a autant de polygone que dans le fichier vecteur
 
         # Extraction de feature
@@ -444,13 +446,16 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
             else :
                 name_col = stats                                         # Nom de la colonne. Ex : 'majority', 'max'
                 value_statis = polygone_stats[stats]                     # Valeur à associer à la colonne, par exemple '2011'
-
-                if (name_col == 'majority' or name_col == 'minority') and class_label_dico != [] : # Cas où la colonne fait référence à une valeur du dictionnaire
+                print(class_label_dico)
+                print("value_statis :",value_statis)
+                if (name_col == 'majority' or name_col == 'minority') and class_label_dico !={}  : # Cas où la colonne fait référence à une valeur du dictionnaire
                     value_statis_class = class_label_dico[value_statis]
                 else:
                     value_statis_class = value_statis
+                    if value_statis == None:
+                        value_statis_class = 'nan'
 
-                feature.SetField(name_col, value_statis_class)
+                feature.SetField(name_col, str(value_statis_class))
 
         layer.SetFeature(feature)
         feature.Destroy()

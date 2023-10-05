@@ -149,6 +149,7 @@ def ogr_srs(vector, layer_num):
 def ogr_records(vector, layer_num=0):
     ds = get_ogr_ds(vector)
     layer = ds.GetLayer(layer_num)
+    print(ds, layer)
     for feature in layer:
         try:
             feature = feature
@@ -167,6 +168,7 @@ def get_features(vectors, layer_num=0):
     from osgeo import osr
     spatial_ref = osr.SpatialReference()
     if isinstance(vectors, basestring):
+        print(vectors)
         try:
         # either an OGR layer ...
             get_ogr_ds(vectors)
@@ -192,6 +194,6 @@ def get_features(vectors, layer_num=0):
         # ... or an iterable of objects
         features_iter = geo_records(vectors)
         strategy = "iter_geo"
-
+    print(features_iter, strategy, spatial_ref)
     return features_iter, strategy, spatial_ref
 
