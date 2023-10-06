@@ -1,19 +1,6 @@
 # -*- coding: utf-8 -*-
 #!/usr/bin/python
-
-#############################################################################
-# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
-#############################################################################
-
-#############################################################################
-#                                                                           #
-# FONCTIONS EN LIEN AVEC L'AFFICHAGE D'INFORMATIONS                         #
-#                                                                           #
-#############################################################################
-"""
-Ce module défini des fonctions d'affichage utiles a la chaine.
-"""
-
+#Import des librairies Python
 import os, platform
 
 import six

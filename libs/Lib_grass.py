@@ -1,29 +1,17 @@
-# -*- coding: utf-8 -*-
-#!/usr/bin/python
-
-#############################################################################
-# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
-#############################################################################
-
-#############################################################################
-#                                                                           #
-# FONCTIONS POUR L'APPEL À DES FONCTIONS GRASS                              #
-#                                                                           #
-#############################################################################
-"""
- Ce module défini des fonctions faisant  l'outil GRASS.
-"""
-import sys,os,shutil,glob, time, subprocess
-from libs.Lib_display import bold,red,green,blue,cyan,endC
-from libs.Lib_file import deleteDir
+#Import des librairies Python
 import grass.script as grass
 import grass.script.setup as gsetup
+import sys,os,shutil,glob, time, subprocess
+
+#Import des librairies de /libs
+from libs.Lib_display import bold,red,green,blue,cyan,endC
+from libs.Lib_file import deleteDir
 from libs.Lib_raster import getPixelSizeImage, getProjectionImage, getEmpriseImage, getPixelWidthXYImage
 
 # debug = 0 : affichage minimum de commentaires lors de l'exécution du script
 # debug = 3 : affichage maximum de commentaires lors de l'exécution du script. Intermédiaire : affichage intermédiaire
 
-debug = 3
+# debug = 3
 
 # ATTENTION : pour appeler GRASS, il faut avoir mis à jour le fichier .profile (/home/scgsi/.profile). Ajouter à la fin du fichier (attention au numéro de version de GRASS qui peut changer, ici 7.2) :
 '''

@@ -1,6 +1,10 @@
+#Import des librairie Python
+import math
+
+#Import des librairies de /libs
 from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection
 from libs.Lib_display import endC, bold, yellow, cyan, red
-import math
+
 
 #################################################
 ## Concaténation des trois tables pour obtenir ##

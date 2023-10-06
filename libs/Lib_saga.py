@@ -14,7 +14,10 @@
  Ce module défini des fonctions faisant  l'outil SAGA.
 """
 
+#Import des librairies Python
 import sys,os
+
+#Import des librairies /libs
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 from libs.Lib_operator import *
 from libs.Lib_file import cleanTempData, deleteDir
@@ -22,7 +25,7 @@ from libs.Lib_file import cleanTempData, deleteDir
 # debug = 0 : affichage minimum de commentaires lors de l'exécution du script
 # debug = 3 : affichage maximum de commentaires lors de l'exécution du script. Intermédiaire : affichage intermédiaire
 
-debug = 3
+# debug = 3
 
 # ATTENTION : pour appeler SAGA, il faut avoir installé l'outil SAGA sur la machine hôte
 

@@ -1,24 +1,11 @@
-# -*- coding: utf-8 -*-
-#!/usr/bin/python
-
-#############################################################################
-# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
-#############################################################################
-
-#############################################################################
-#                                                                           #
-# FONCTIONS DE MODIFICATION DE FICHIERS OU DE REPERTOIRES                   #
-#                                                                           #
-#############################################################################
-"""
- Ce module défini des fonctions de manipulation, modification de fichiers et de répertoires.
-"""
-
+#IMport des librairies Python
 import os, sys, shutil, copy, time
 from osgeo import ogr
+
+#Import des librairies /libs
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 
-debug = 1
+# debug = 1
 
 #########################################################################
 # FONCTION cleanTempData()                                              #

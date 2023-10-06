@@ -1,21 +1,7 @@
-# -*- coding: utf-8 -*-
-#!/usr/bin/python
-
-#############################################################################
-# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
-#############################################################################
-
-#############################################################################
-#                                                                           #
-# FONCTIONS MATHEMATIQUES DE BASE                                           #
-#                                                                           #
-#############################################################################
-"""
- Ce module contient des fonctions mathématique de base.
- Doc sur les lists : https://docs.python.org/2/tutorial/datastructures.html.
-"""
-
+#Import des librairies Python
 import sys, math
+
+#Import des librairies /libs
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 
 #########################################################################

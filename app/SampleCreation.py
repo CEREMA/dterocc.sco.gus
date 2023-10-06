@@ -1,14 +1,7 @@
-"""
-Date de création : 26/06/2023
-
-Choses à faire :
-    - remplacer les paramètres en entrée de macroSamplePrepare par des listes de couches à traiter
-    - boucler le fonction sur la liste des couches à traiter
-"""
-
-
-# Import des bibliothèques python
+#Import des librairies Python
 import os,sys,glob,shutil
+
+#Import des librairies /libs
 from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_file import cleanTempData, deleteDir, removeFile, removeVectorFile, copyVectorFile
 from libs.Lib_raster import createBinaryMaskThreshold, applyMaskAnd, rasterizeBinaryVector
@@ -18,7 +11,7 @@ from libs.Lib_vector import simplifyVector, cutoutVectors, bufferVector, fusionV
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 1 : affichage intermédiaire de commentaires lors de l'execution du script
 # debug = 2 : affichage supérieur de commentaires lors de l'execution du script etc...
-debug = 3
+# debug = 3
 
 ###########################################################################################################################################
 # FONCTION createAllSamples()                                                                                                             #

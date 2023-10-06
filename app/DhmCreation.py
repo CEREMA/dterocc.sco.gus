@@ -1,33 +1,15 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-
-#############################################################################################################################################
-# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.                                                                               #
-#############################################################################################################################################
-
-#############################################################################################################################################
-#                                                                                                                                           #
-# SCRIPT DE CREATION D'UN MNH A PARTIR D'UN MNS ET D'UN MNT EN ENTRÉE                                                                       #
-#                                                                                                                                           #
-#############################################################################################################################################
-
-"""
-Nom de l'objet : MnhCreation.py
-Description    :
--------------
-Objectif   : Créé un modèle numérique de hauteur à partir d'un modèle numérique de surface et d'un modèle numérique de terrain
-
-Date de creation : 12/06/2023
-"""
-# Import des bibliothèques python
+#Import des bibliothèques python
 import os, sys
 from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
+
+#Import des librairies de /libs
 from libs.Lib_display import bold,red,cyan,endC
 from libs.Lib_raster import  getProjectionImage, cutImageByVector, getNodataValueImage
 from libs.Lib_file import removeFile
-debug = 3
+
+#debug = 3 pour afficher les états de debug
 
 #########################################################################
 # FONCTION mnhCreation()                                                #

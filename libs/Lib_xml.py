@@ -15,15 +15,17 @@
   quelques fonctions basés sut la lib lxml, mais majoritairement les fonctions de cette librairie sont basées sur dom.
 """
 
-# IMPORTS DIVERS
+#Import des librairies Python
 import sys,os
 from lxml import etree
 from xml.dom import minidom
+
+#Import de la librairie /libs
 from libs.Lib_display import bold,red,cyan,endC
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire
-debug = 3
+# debug = 3
 
 #########################################################################
 # FONCTION parseLxml()                                                  #

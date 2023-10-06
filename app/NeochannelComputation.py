@@ -1,14 +1,16 @@
+#Import des librairies Python
 import os, sys
 from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
+#Import des librairies de /libs
 from libs.Lib_display import bold,red,green,blue,cyan,endC
 from libs.Lib_vector import getEmpriseFile, createEmpriseShapeReduced
 from libs.Lib_raster import cutImageByVector
 from libs.Lib_file import removeFile
 from libs.Lib_grass import convertRGBtoHIS
 
-debug = 2
+#debug = 2
 PRECISION = 0.0000001
 
 #########################################################################

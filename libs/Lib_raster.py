@@ -14,9 +14,8 @@
  Ce module contient un certain nombre de fonctions de bases pour réaliser des traitement sur les images raster, ils reposent tous sur les bibliothèques GDAL et OTB.
 """
 
-# IMPORTS DIVERS
+#Import des librairies Python 
 import os,glob,sys,shutil,time, numpy
-
 from sklearn.cluster import KMeans
 from osgeo import gdal, osr, gdalnumeric, gdalconst
 from osgeo.gdalnumeric import *
@@ -24,19 +23,18 @@ from osgeo.gdalconst import *
 from osgeo import gdal_array
 from PIL import Image
 from pylab import *
-import matplotlib.pyplot as plt
-import matplotlib.ticker as mtick
+
+#Import des librairies /libs
 from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 from Lib_operator import *
 from Lib_vector import getEmpriseFile
 from Lib_text import writeTextFile, appendTextFileCR
 from Lib_file import renameFile, removeFile
 from Lib_xml import parseDom, getListNodeDataDom, getListValueAttributeDom
-#import otbApplication
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire
-debug = 3
+# debug = 3
 
 # Les parametres de la fonction OTB otbcli_BinaryMorphologicalOperation a changé à partir de la version 7.0 de l'OTB
 pythonpath = os.environ["PYTHONPATH"]

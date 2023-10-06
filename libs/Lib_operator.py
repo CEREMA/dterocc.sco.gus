@@ -1,4 +1,4 @@
-# IMPORTS DIVERS
+#Import des librairies Python 
 import os, platform
 
 #########################################################################

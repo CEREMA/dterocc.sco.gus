@@ -8,22 +8,15 @@
 #############################################################################################################################################
 #                                                                                                                                           #
 # SCRIPT DE RECHERCHE ET DE DECOUPAGE D'IMAGE RASTER SELON UN MASQUE VECTEUR                                                                #
-#                                                                                                                                           #
-#############################################################################################################################################
-
-"""
-Nom de l'objet : ImagesAssembly.py
-Description    :
--------------
-Objectif   : Assemble et/ou découpe des images raster
-
-Date de creation : 07/06/2023
-"""
+                                                                                                                                       #
 # Import des bibliothèques python
 import os, sys, glob
 from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
+
+#Import des librairies de /libs
+
 from libs.Lib_display import bold,black,red,cyan,endC
 from libs.Lib_vector import getEmpriseFile, createEmpriseShapeReduced
 from libs.Lib_raster import getPixelWidthXYImage, getProjectionImage, updateReferenceProjection, cutImageByVector, getNodataValueImage, getDataTypeImage

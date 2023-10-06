@@ -1,46 +1,14 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-
-#############################################################################################################################################
-# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.                                                                               #
-#############################################################################################################################################
-
-#############################################################################################################################################
-#                                                                                                                                           #
-# SCRIPT QUI APPLIQUE UN FILTRE MAJORITAIRE A UNE IMAGE (classee ou non)                                                                    #
-#                                                                                                                                           #
-#############################################################################################################################################
-"""
-Nom de l'objet : MajorityFilter.py
-Description :
--------------
-Objectif : appliquer un filtre majoritaire a une image (classee ou non)
-Rq : utilisation des OTB Applications :   otbcli_ClassificationMapRegularization
-
-Date de creation : 29/07/2014
-----------
-Histoire :
-----------
-Origine : le script originel provient du fichier Chain8_MapRegularization.py cree en 2013 et utilise par la chaine de traitement OCSOL V1.X
-29/07/2013 : Transformation en brique elementaire (suppression des liens avec la chaine OCSOL)
------------------------------------------------------------------------------------------------------
-Modifications :
-04/08/2014 : ajout parametre overwrite et mise en forme commentaires parametres, amélioration gestion des listes simples dans args
-01/10/2014 : refonte du fichier harmonisation des régles de qualitées des niveaux de boucles et des paramétres dans args
-21/05/2015 : simplification des parametres en argument plus de liste d'image en emtrée à traiter uniquement une image
-------------------------------------------------------
-A Reflechir/A faire :
-sauvegarder les résultats dans un autre dossier que le dossier en entree ?
-"""
-
+#Import des librairies python
 import os,sys,glob
+
+#Import des librairies de /libs
 from libs.Lib_display import bold,red,green,cyan,endC
 from libs.Lib_file import removeFile
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 1 : affichage intermédiaire de commentaires lors de l'execution du script
 # debug = 2 : affichage supérieur de commentaires lors de l'execution du script etc...
-debug = 3
+# debug = 3
 
 ###########################################################################################################################################
 # FONCTION filterImageMajority()                                                                                                          #

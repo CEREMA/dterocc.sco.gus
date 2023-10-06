@@ -17,12 +17,15 @@
  il est préférable d'être déconnecté de la base de données (conflit d'accès).
 """
 
+#Import des librairies Python
 import os, sys, csv, psycopg2, re, platform
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+#Import des librairies de /apps
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 from libs.Lib_text import readTextFile, appendTextFileCR
 
-debug = 3
+# debug = 3
 
 ########################################################################
 # FONCTION openConnection()                                            #

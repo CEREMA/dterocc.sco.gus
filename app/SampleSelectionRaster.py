@@ -1,40 +1,8 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-
-#############################################################################################################################################
-# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.                                                                               #
-#############################################################################################################################################
-
-#############################################################################################################################################
-#                                                                                                                                           #
-# SCRIPT FAIT UNE SELECTIONNE DES POINTS D'ECHANTILLONS D'APPRENTISSAGE DIRECTEMENT DANS LES FICHIERS MASK MACRO D'APPRENTISSAGE            #
-#                                                                                                                                           #
-#############################################################################################################################################
-"""
-Nom de l'objet : selectSamples.py
-Description :
--------------
-Objectif : Selectionner des points d'echantillons d'apprentissage par tirage aléatoire, pour la classification dans les fichiers masques macro d'apprentissage
-ceux-ci sont d'abord fusionnés.
-Rq : utilisation des OTB Applications :  otbcli_BandMath, otbcli_SampleExtraction
-
-Date de creation : 16/03/2017
-----------
-Histoire :
-----------
-Origine : Nouveau
-16/03/2017 : Création
------------------------------------------------------------------------------------------------------
-Modifications :
-
-------------------------------------------------------
-A Reflechir/A faire :
-
-"""
-
-# Import des bibliothèques python
+#Import des librairies Python
 import os, sys, glob, copy, random, math, threading
 from osgeo import gdal, ogr
+
+#Import des librairies /libs
 from libs.Lib_raster import identifyPixelValues, countPixelsOfValue, getRawDataImage, getGeometryImage, getEmpriseImage, getPixelWidthXYImage, getProjectionImage
 from libs.Lib_vector import createPointsFromCoordList, getAttributeValues, getAttributeNameList, createEmpriseShapeReduced, fusionVectors
 from libs.Lib_text import writeTextFile, appendTextFileCR

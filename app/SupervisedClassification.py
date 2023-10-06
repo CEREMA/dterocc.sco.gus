@@ -1,41 +1,7 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-
-#############################################################################################################################################
-# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.                                                                               #
-#############################################################################################################################################
-
-#############################################################################################################################################
-#                                                                                                                                           #
-# SCRIPT QUI APPLIQUE UNE CLASSIFICATION SUPERVISEE                                                                                         #
-#                                                                                                                                           #
-#############################################################################################################################################
-"""
-Nom de l'objet : SupervisedClassification.py
-Description :
--------------
-Objectif : exécute une classification supervisée SVM sur des images (brutes ou avec neocanaux) en se basant sur des échantillons d'entrainement vectorisés
-Rq : utilisation des OTB Applications : otbcli_ComputeImagesStatistics, otbcli_ImageClassifier, otbcli_PolygonClassStatistics, otbcli_SampleExtraction, otbcli_TrainVectorClassifier
-
-Date de creation : 29/07/2014
-----------
-Histoire :
-----------
-Origine : le script originel provient du fichier Chain6_SupervisedClassification.py cree en 2013 et utilise par la chaine de traitement OCSOL V1.X
-30/07/2013 : Transformation en brique elementaire (suppression des liens avec la chaine OCSOL)
------------------------------------------------------------------------------------------------------
-Modifications :
-4/08/2014 : ajout overwrite
-01/10/2014 : refonte du fichier harmonisation des régles de qualitées des niveaux de boucles et des paramétres dans args
-21/05/2015 : simplification des parametres en argument plus de liste d'image en emtrée à traiter uniquement une image
-09/03/2017 : refonte de l'application et éclatement de l'application otbcli_TrainImagesClassifier en 4 applis : PolygonClassStatistics, otbcli_SampleSelection,SampleSelection,SampleExtraction,TrainVectorClassifier
-
-------------------------------------------------------
-A Reflechir/A faire :
-
-"""
-
+#Import des librairie de Python
 import os,sys,time
+
+#Import des librairies /libs
 from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_operator import getExtensionApplication
 from libs.Lib_raster import updateReferenceProjection, getGeometryImage, computeStatisticsImage

@@ -14,7 +14,7 @@
  Ce module défini des fonctions de modification de fichiers textes ou binaires.
 """
 
-# IMPORTS UTILES
+#Import des librairies
 import sys, os, re
 import six
 if six.PY2:
@@ -28,12 +28,14 @@ else:
     except Exception:
         import pysal
         IS_libpysal = False
+
+#Import des librairies /libs
 from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_math import findPositionList
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire
-debug = 2
+# debug = 2
 
 #########################################################################
 # FONCTION readTextFileBySeparator()                                    #

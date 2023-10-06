@@ -1,4 +1,7 @@
+#Import des librairies Python
 import os,sys,glob
+
+#Import des librairies de /libs
 from libs.Lib_display import bold,red,yellow,cyan,endC
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_postgis import readTable, executeQuery, addColumn, addUniqId, addIndex, addSpatialIndex, dropTable, dropColumn, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection
@@ -277,9 +280,9 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s;
     """ %(tab_ref, dic_seuil["seuil_txt"])
 
-    # query += """
-    # UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
-    # """ %(tab_ref, dic_seuil["seuil_txt"], 1)
+    query += """
+    UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
+    """ %(tab_ref, dic_seuil["seuil_txt"], 1)
 
     #Exécution de la requête SQL
     if debug >= 3:

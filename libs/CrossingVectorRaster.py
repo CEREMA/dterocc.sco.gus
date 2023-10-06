@@ -1,37 +1,8 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-
-#############################################################################################################################################
-# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.                                                                               #
-#############################################################################################################################################
-
-#############################################################################################################################################
-#                                                                                                                                           #
-# SCRIPT FAIT UN CROISEMENT DES DONNEES VECTEUR VERS UN FICHIER RASTER POUR EN EXTRAIRE DES STATISTIQUES                                    #
-#                                                                                                                                           #
-#############################################################################################################################################
-"""
-Nom de l'objet : CrossingVectorRaster.py
-Description :
--------------
-Objectif : Calcule les statstiques de l'intersection d'un image_input (tif) pour chaque polygones d'un jeu de vecteurs (shape)
-
-Date de creation : 01/10/2014
-----------
-Histoire :
-----------
-Origine : nouveau
-
------------------------------------------------------
-Modifications :
-
-------------------------------------------------------
-A Reflechir/A faire :
-
-"""
-# Import des bibliothèques python
+#Import des librairies Python
 import os,sys,glob,argparse,shutil
 from osgeo import ogr
+
+#Import des librairie de /libs
 from libs.rasterstats2 import raster_stats
 from libs.Lib_display import bold,red,green,yellow,cyan,endC,displayIHM
 from libs.Lib_raster import getPixelSizeImage, getEmpriseImage, identifyPixelValues

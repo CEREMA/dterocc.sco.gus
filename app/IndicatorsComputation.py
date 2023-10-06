@@ -1,4 +1,7 @@
+#Import des librairies python
 import os,sys
+
+#Import des librairies de /libs
 from libs.Lib_display import green,endC
 from libs.Lib_file import removeFile
 from libs.CrossingVectorRaster import statisticsVectorRaster

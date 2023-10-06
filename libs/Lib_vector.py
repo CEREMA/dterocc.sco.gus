@@ -14,10 +14,12 @@
  Ce module contient un certain nombre de fonctions de bases pour réaliser des géotraitements sur les shapefiles, ils reposent tous sur les bibliothèques OGR ou ogr2ogr.
 """
 
-# IMPORTS DIVERS
+#Import des librairies Python
 import sys,os,glob
 from osgeo import ogr ,osr
 from rasterstats2 import raster_stats
+
+#Import des librairies /libs
 from libs.Lib_operator import *
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 from libs.Lib_file import renameVectorFile, removeVectorFile, removeFile
