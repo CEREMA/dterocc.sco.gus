@@ -22,7 +22,7 @@ def createFeatures(connexion, connexion_dic, tab_ref, dic_attributs):
     dic_columname ={} 
     for attr in dic_attributs.keys():
         dic_columnname[attr] = [] 
-        for i in range(len(dic_attributs[attr]))
+        for i in range(len(dic_attributs[attr])):
             addColumn(connexion, tab_ref, dic_attributs[attr][i][0], dic_attributs[attr][i][1])
             dic_columnname[attr] = dic_columnname[attr].append(dic_attributs[attr][i][0])
 
@@ -31,7 +31,7 @@ def createFeatures(connexion, connexion_dic, tab_ref, dic_attributs):
 ###########################################################################################################################################
 # FONCTION createAndImplementFeatures()                                                                                                             #
 ###########################################################################################################################################
-def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs, dic_params, output_layer = '', repertory, save_intermediate_result = False, debug = 0):
+def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs, repertory, dic_params, output_layer = '', save_intermediate_result = False, debug = 0):
     """
     Rôle :
 
@@ -58,19 +58,19 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
 
     #Implémentation de la surface de la FV 
-    areaIndicator(connexion, tab_ref, dic_columname["areaIndicator"][0], debug = debug)
+    areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
 
     #Implémentation des attributs de hauteur des FV 
-    heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["heightIndicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, , debug = debug)
+    heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, , debug = debug)
     
     #Implémentation du type "persistant" ou "caduc" des FV 
-    evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["thresh_evergdecid"], columns_indics_name = dic_columname["evergreenDeciduousIndicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_results = save_intermediate_result, debug = debug)
+    evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["ndvi_difference_everdecid_thr"], columns_indics_name = dic_columname["evergreendeciduous_indicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_results = save_intermediate_result, debug = debug)
     
     #Implémentation du type "conifère" ou "feuillu" des FV 
-    coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["thresh_deciconif"], columns_indics_name = dic_columname["coniferousDeciduousIndicators"], repertory = repertory_tmp,save_intermediate_results = save_intermediate_result, debug = debug)
+    coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["pir_difference_thr"], columns_indics_name = dic_columname["coniferousdeciduous_indicators"], repertory = repertory_tmp,save_intermediate_results = save_intermediate_result, debug = debug)
     
     #Implémentation du type de sol support des FV 
-    typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["thresh_soltype"], column_indic_name = dic_columname["typeOfGroundIndicator"][0], repertory = repertory_tmp, save_intermediate_results = save_intermediate_result, debug = debug)
+    typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["ndvi_difference_groundtype_thr"], column_indic_name = dic_columname["typeofground_indicator"][0], repertory = repertory_tmp, save_intermediate_results = save_intermediate_result, debug = debug)
 
     #Export résultat au format GPKG
     if output_layer != '':
