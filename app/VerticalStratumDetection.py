@@ -91,14 +91,14 @@ def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize
 ###########################################################################################################################################
 # FONCTION classificationVerticalStratum()                                                                                                #
 ###########################################################################################################################################
-def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = 0):
+def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = 0):
     """
     Rôle : classe les segments en trois strates : arborée, arbustive et herbacée
 
     Paramètres :
         connexion : correspond à la variable de connexion à la base de données
         connexion_dic : dictionnaire des paramètres de connexion selon le modèle : {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : 'postgres', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
-        output_layer : couche vectorielle de sortie composée des segments 
+        output_layers : dictionnaire des couches vectorielles de sortie composé de quatres chemins : une pour chaque strate et un contenant toutes les strates 
         sgts_input : fichier vecteur de segmentation
         raster_dic : dictionnaire associant le type de donnée récupéré avec le fichier raster contenant les informations, par exemple : {"mnh" : filename}
         tab_ref : nom de la table principale. Par défaut : 'segments_vegetation'
@@ -116,7 +116,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     if debug >= 2 :
         print(cyan + "classificationVerticalStratum() : Début de la classification en strates verticales végétales" + endC)
         print(cyan + "classificationVerticalStratum : " + endC + "connexion_dic : " + str(connexion_dic) + endC)
-        print(cyan + "classificationVerticalStratum : " + endC + "output_layer : " + str(output_layer) + endC)
+        print(cyan + "classificationVerticalStratum : " + endC + "output_layers : " + str(output_layers) + endC)
         print(cyan + "classificationVerticalStratum : " + endC + "sgts_input : " + str(sgts_input) + endC)
         print(cyan + "classificationVerticalStratum : " + endC + "raster_dic : " + str(raster_dic) + endC)
         print(cyan + "classificationVerticalStratum : " + endC + "dic_seuil : " + str(dic_seuil) + endC)
@@ -188,7 +188,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
 
 
     # #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
-    tab_sgt_ini = 'segments_vegetation_ini_t1'
+    tab_sgt_ini = 'segments_vegetation_ini_t0'
     # query = """
     # CREATE TABLE %s AS
     #     SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
@@ -270,19 +270,19 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
 
     query = """
     UPDATE %s as t SET strate = 'A' WHERE t.txt < %s AND t.mnh  > %s;
-    """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
+    """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
 
     query += """
     UPDATE %s as t SET strate = 'Au' WHERE t.txt < %s AND  t.mnh  <= %s;
-    """ %(tab_ref, dic_seuil["seuil_txt"],dic_seuil["seuil_h1"])
+    """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
 
     query += """
     UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s;
-    """ %(tab_ref, dic_seuil["seuil_txt"])
+    """ %(tab_ref, dic_seuil["texture_thr"])
 
-    query += """
-    UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
-    """ %(tab_ref, dic_seuil["seuil_txt"], 1)
+    # query += """
+    # UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
+    # """ %(tab_ref, dic_seuil["texture_thr"], dic_seuil["height_shrubgrass_thr"])
 
     #Exécution de la requête SQL
     if debug >= 3:
@@ -353,6 +353,26 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
 
     tab_ref = reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil, save_intermediate_result, debug)
 
+    query = """
+    DROP TABLE IF EXISTS sgts_strate_arboree;
+    CREATE TABLE sgts_strate_arboree AS
+        SELECT *
+        FROM %s
+        WHERE strate = 'A';
+
+    DROP TABLE IF EXISTS sgts_strate_arbustive;
+    CREATE TABLE sgts_strate_arbustive AS
+        SELECT *
+        FROM %s
+        WHERE strate = 'Au';
+
+    DROP TABLE IF EXISTS sgts_strate_herbace;
+    CREATE TABLE sgts_strate_arboree AS
+        SELECT *
+        FROM %s
+        WHERE strate = 'A';
+    """ %(tab_ref, tab_ref, tab_ref)
+
     if not save_intermediate_result : 
         dropTable(connexion, tab_rgpt_arbu)
         dropTable(connexion, tab_arbu_de_rgpt)
@@ -361,11 +381,47 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layer, sgts_i
     #############################################################
     ## Sauvegarde des résultats en tant que couche vectorielle ##  
     #############################################################
-    if output_layer == '' :
+    if output_layers == {}  :
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
-    else:
+    elif output_layers["tree"] != '' :
+        query = """
+        DROP TABLE IF EXISTS sgts_strate_arboree;
+        CREATE TABLE sgts_strate_arboree AS
+            SELECT *
+            FROM %s
+            WHERE strate = 'A';
+        """ %(tab_ref)
+        executeQuery(connexion, query)
+        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["tree"], 'sgts_strate_arboree', user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+        dropTable(connexion, 'sgts_strate_arboree')
+
+    elif output_layers["shrub"] != '' :
+        query = """
+        DROP TABLE IF EXISTS sgts_strate_arbustive;
+        CREATE TABLE sgts_strate_arbustive AS
+            SELECT *
+            FROM %s
+            WHERE strate = 'Au';
+        """ %(tab_ref)
+        executeQuery(connexion, query)
+        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["shrub"], 'sgts_strate_arbustive', user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+        dropTable(connexion, 'sgts_strate_arbustive')
+
+    elif output_layers["herbaceous"] != '' :
+        query = """
+        DROP TABLE IF EXISTS sgts_strate_herbace;
+        CREATE TABLE sgts_strate_herbace AS
+            SELECT *
+            FROM %s
+            WHERE strate = 'H';
+        """ %(tab_ref)
+        executeQuery(connexion, query)
+        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["herbaceous"], 'sgts_strate_herbace', user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+        dropTable(connexion, 'sgts_strate_herbace')
+        
+    elif output_layers["output_stratesv"] != '' :
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-    
+
     return tab_ref
 
 ###########################################################################################################################################
@@ -641,7 +697,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
     query = """
     UPDATE %s SET strate = sgt_touch_herbarbo.strate_touch FROM sgt_touch_herbarbo 
                                                             WHERE %s.fid = sgt_touch_herbarbo.id_arbu AND sgt_touch_herbarbo.diff_h <= %s;
-    """ %(tab_ref, tab_ref, dic_seuil["seuil_h2"])
+    """ %(tab_ref, tab_ref, dic_seuil["height_max_difference"])
 
     #Exécution de la requête SQL
     if debug >= 3:
@@ -786,7 +842,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
                     FROM arbu_uniq_mindiffh_surfstats AS r3
                     WHERE r3.surf_sgt/r3.surf_touch_arbo > %s AND r3.min_diffh <= %s) AS t 
             WHERE fid = t.fid_sgt ;
-    """ %(tab_ref, dic_seuil["seuil_ratio_surf"], dic_seuil["seuil_ratio_surf"], dic_seuil["seuil_h2"])
+    """ %(tab_ref, dic_seuil["surface_rate"], dic_seuil["surface_rate"], dic_seuil["height_max_difference"])
 
      #Exécution de la requête SQL
     if debug >= 3:
@@ -886,7 +942,7 @@ def reclassIsolatedSgtsByAreaRatio(connexion, tab_ref, arbu_uniq, dic_seuil, sav
                 %s AS s 
             WHERE t.fid_touch = s.fid) AS t
     WHERE fid = t.fid_sgt ;
-    """ %(tab_ref, dic_seuil["seuil_ratio_surf"], dic_seuil["seuil_ratio_surf"], dic_seuil["seuil_h2"], tab_ref)
+    """ %(tab_ref, dic_seuil["surface_rate"], dic_seuil["surface_rate"], dic_seuil["height_max_difference"], tab_ref)
 
      #Exécution de la requête SQL
     if debug >= 3:
@@ -960,7 +1016,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
         SELECT * FROM %s WHERE public.ST_AREA(geom) < %s;
-    """ %(tab_rgpt_to_treat, tab_rgpt_to_treat, tab_rgpt_arbu, dic_seuil["seuil_arbu_repres"])
+    """ %(tab_rgpt_to_treat, tab_rgpt_to_treat, tab_rgpt_arbu, dic_seuil["shrub_sign"])
 
     if debug >= 3:
         print(query)
@@ -1073,7 +1129,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
                     FROM %s AS t1, (SELECT * FROM rgpt_arbu_surf_stats3 AS r WHERE r.surf_rgpt/r.surf_touch_arbo <= %s) AS t2 
                     WHERE t1.fid_rgpt = t2.fid_rgpt) AS t2
             WHERE t1.fid = t2.fid ;
-    """ %(tab_ref, arbu_de_rgpt, dic_seuil["seuil_ratio_surf"])
+    """ %(tab_ref, arbu_de_rgpt, dic_seuil["surface_rate"])
 
     if debug >= 3:
         print(query)
@@ -1131,7 +1187,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
                         (SELECT * FROM %s WHERE strate = 'A') AS t2
                     WHERE public.ST_INTERSECTS(t1.geom, t2.geom)) AS t2
             WHERE t1.fid = t2.fid_arbu AND t2.diff_h <= %s;
-    """ %(tab_ref, tab_ref, dic_seuil["seuil_touch_arbo_vs_herba"], dic_seuil["seuil_touch_herba_vs_arbo"], tab_ref, dic_seuil["seuil_h2"])
+    """ %(tab_ref, tab_ref, dic_seuil["shrub_touch_treevsgrass"], dic_seuil["shrub_touch_grassvstree"], tab_ref, dic_seuil["height_max_difference"])
     
     # Exécution de la requête SQL
     if debug >= 3:
@@ -1141,7 +1197,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
     # Suppression des regroupements de la liste à traiter avec itération si le regroupement partage une plus grande longueur de frontière avec l'herbacé que l'arbore
     query = """
     DELETE FROM tab_interm_rgptarbu_toucharboetherbo AS t1 USING (SELECT * FROM rgpt_herbarbotouch_longbound AS t WHERE t.long_bound_inters_arbo * 100 / t.long_bound_arbu < %s AND t.long_bound_inters_herbe * 100 / t.long_bound_arbu > %s) AS t2 WHERE t1.fid = t2.fid; 
-    """ %(dic_seuil["seuil_touch_arbo_vs_herba"], dic_seuil["seuil_touch_herba_vs_arbo"])
+    """ %(dic_seuil["shrub_touch_treevsgrass"], dic_seuil["shrub_touch_grassvstree"])
    
     # Exécution de la requête SQL
     if debug >= 3:
@@ -1166,7 +1222,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
                 GROUP BY fid_rgpt_arbu
             ) AS t4
         WHERE t3.fid_rgpt_arbu = t4.fid_rgpt_arbu; 
-    """ %(arbore,herbace)
+    """ %('arbore','herbace')
 
     if debug >= 3:
         print(query)
@@ -1176,7 +1232,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
     query = """
     DELETE FROM tab_interm_rgptarbu_toucharboetherbo AS t1 USING (SELECT fid_rgpt_arbu AS fid FROM surface_rgpts WHERE (s_rgpt_arbu/(s_rgpt_arbo_touch+s_rgpt_herba_touch)) >= %s) AS t2
                         WHERE t1.fid = t2.fid;
-    """ %(dic_seuil["seuil_ratio_surf"])
+    """ %(dic_seuil["surface_rate"])
 
     if debug >= 3:
         print(query)
@@ -1185,14 +1241,14 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
     #Création table contenant les valeurs de hauteur moyenne des segments arborés et herbacés accolés aux regroupements arbustifs 
     query = """
     CREATE TABLE h_moys AS
-        SELECT t1.fid AS fid_rgpt, t1.h_arbu_moy, 0 AS h_arbo_moy, 0 AS h_herba_moy
+        SELECT t1.fid AS fid_rgpt, t1.h_arbu_moy, 0 AS h_arbo_moy, 0 AS h_herbo_moy
         FROM ( SELECT t4.fid, t5.h_arbu_moy
                 FROM tab_interm_rgptarbu_toucharboetherbo as t4,
-                    (SELECT t1.fid_rgpt, AVG(t1.mnh) AS h_arbu_moy
+                    (SELECT t1.fid_rgpt, AVG(t2.mnh) AS h_arbu_moy
                     FROM %s AS t1, %s AS t2
                     WHERE t1.fid = t2.fid
                     GROUP BY t1.fid_rgpt) AS t5
-                WHERE t3.fid = t4.fid_rgpt
+                WHERE t4.fid = t5.fid_rgpt
               ) AS t1
     """ %(arbu_de_rgpt, tab_ref)
 
@@ -1203,19 +1259,19 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
     query = """
     UPDATE h_moys AS t1 SET h_arbo_moy = t2.h_arbo_moy FROM (SELECT t4.fid, AVG(t5.mnh) AS h_arbo_moy
                                                             FROM tab_interm_rgptarbu_toucharboetherbo AS t4, 
-                                                                (SELECT figeomd, mnh FROM %s WHERE strate = 'A') AS t5
+                                                                (SELECT fid, geom, mnh FROM %s WHERE strate = 'A') AS t5
                                                                 WHERE public.ST_INTERSECTS(t4.geom, t5.geom)
                                                                 GROUP BY t4.fid) AS t2 
-                                                        WHERE t1.fid = t2.fid;
+                                                        WHERE t1.fid_rgpt = t2.fid;
     """ %(tab_ref)
 
     query += """
-    UPDATE h_moys AS t1 SET h_arbo_moy = t2.h_arbo_moy FROM (SELECT t4.fid, AVG(t5.mnh) AS h_herbo_moy
+    UPDATE h_moys AS t1 SET h_herbo_moy = t2.h_herbo_moy FROM (SELECT t4.fid, AVG(t5.mnh) AS h_herbo_moy
                                                             FROM tab_interm_rgptarbu_toucharboetherbo AS t4, 
-                                                                (SELECT figeomd, mnh FROM %s WHERE strate = 'H') AS t5
-                                                                WHERE public.ST_INTERSECTS(t4.geom, t5.geom)
-                                                                GROUP BY t4.fid) AS t2 
-                                                        WHERE t1.fid = t2.fid;
+                                                                (SELECT fid, geom, mnh FROM %s WHERE strate = 'H') AS t5
+                                                            WHERE public.ST_INTERSECTS(t4.geom, t5.geom)
+                                                            GROUP BY t4.fid) AS t2 
+                                                        WHERE t1.fid_rgpt = t2.fid;
     """ %(tab_ref)
 
     if debug >= 3:
@@ -1440,7 +1496,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
                         (SELECT * FROM %s WHERE strate = 'A') AS t2
                     WHERE public.ST_INTERSECTS(t1.geom, t2.geom)) AS t2
             WHERE t1.fid = t2.fid_arbu AND t2.diff_h <= %s;
-    """ %(tab_ref, tab_ref, dic_seuil["seuil_touch_arbo_vs_herba"], dic_seuil["seuil_touch_herba_vs_arbo"], tab_ref, dic_seuil["seuil_h2"])
+    """ %(tab_ref, tab_ref, dic_seuil["shrub_touch_treevsgrass"], dic_seuil["shrub_touch_grassvstree"], tab_ref, dic_seuil["height_max_difference"])
     
     # Exécution de la requête SQL
     if debug >= 3:
@@ -1450,7 +1506,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     # Suppression des regroupements de la liste à traiter avec itération si le regroupement partage une plus grande longueur de frontière avec l'herbacé que l'arbore
     query = """
     DELETE FROM tab_interm_rgptarbu_toucharboetherbo AS t1 USING (SELECT * FROM rgpt_herbarbotouch_longbound AS t WHERE t.long_bound_inters_arbo * 100 / t.long_bound_arbu < %s AND t.long_bound_inters_herbe * 100 / t.long_bound_arbu > %s) AS t2 WHERE t1.fid = t2.fid; 
-    """ %(dic_seuil["seuil_touch_arbo_vs_herba"], dic_seuil["seuil_touch_herba_vs_arbo"])
+    """ %(dic_seuil["shrub_touch_treevsgrass"], dic_seuil["shrub_touch_grassvstree"])
    
     # Exécution de la requête SQL
     if debug >= 3:
@@ -1558,7 +1614,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         strate = sgt_rgpt_bordure.strate_touch
         FROM sgt_rgpt_bordure
         WHERE t.fid = sgt_rgpt_bordure.id_arbu AND sgt_rgpt_bordure.diff_h <= %s;
-    """ %(tab_ref, dic_seuil["seuil_h2"])
+    """ %(tab_ref, dic_seuil["height_max_difference"])
 
     # Exécution de la requête SQL
     if debug >= 3:
@@ -1568,7 +1624,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     # Suppression dans la table "sgt_rgpt_arbu_to_treat" des segments arbustifs traités précédemment
     query = """
     DELETE FROM sgt_rgpt_arbu_to_treat USING sgt_rgpt_bordure WHERE sgt_rgpt_arbu_to_treat.fid = sgt_rgpt_bordure.id_arbu AND sgt_rgpt_bordure.diff_h <= %s;
-    """ %(dic_seuil["seuil_h2"])
+    """ %(dic_seuil["height_max_difference"])
    
     # Exécution de la requête SQL
     if debug >= 3:
@@ -1650,7 +1706,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
             strate = sgt_rgpt_bordure.strate_touch
             FROM sgt_rgpt_bordure
             WHERE %s.fid = sgt_rgpt_bordure.id_arbu and sgt_rgpt_bordure.diff_h <= %s;
-        """ %(tab_ref, tab_ref, dic_seuil["seuil_h2"])
+        """ %(tab_ref, tab_ref, dic_seuil["height_max_difference"])
 
          # Exécution de la requête SQL
         if debug >= 3:
@@ -1661,7 +1717,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         # Suppression dans la table "sgt_rgpt_touch_arbo_herbe" des segments arbustifs traités précédemment
         query = """
         DELETE FROM sgt_rgpt_arbu_to_treat USING sgt_rgpt_bordure WHERE sgt_rgpt_arbu_to_treat.fid = sgt_rgpt_bordure.id_arbu AND sgt_rgpt_bordure.diff_h <= %s;
-        """ %( dic_seuil["seuil_h2"])
+        """ %( dic_seuil["height_max_difference"])
         
         # Exécution de la requête SQL
         if debug >= 3:
