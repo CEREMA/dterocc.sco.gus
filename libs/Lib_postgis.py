@@ -25,7 +25,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 from libs.Lib_text import readTextFile, appendTextFileCR
 
-# debug = 3
+debug = 2
 
 ########################################################################
 # FONCTION openConnection()                                            #
@@ -994,7 +994,7 @@ def getAllSchemas(connection):
     query = "SELECT nspname FROM pg_catalog.pg_namespace;"
     cursor.execute(query)
     schemas_list = cursor.fetchall()
-    print(bold + "Liste des schémas de la base de données '%s' :" % (database_name) + endC)
+
     for row in sorted(schemas_list):
         print("    %s" % (row))
     return schemas_list
@@ -1134,11 +1134,53 @@ def createExtension(connexion, extension_name):
     """
     query = """
     CREATE EXTENSION IF NOT EXISTS %s;
-    """
+    """ %(extension_name)
     if debug >= 3:
         print(query)
-    executeQuery(query)
+    executeQuery(connexion, query)
 
     print(cyan + "createExtension(): création de l'extension " + extension_name + endC)
     return
 
+def dataBaseExist(connexion, dbname):
+    """
+    Rôle : renvoie si la base de données existe déjà
+
+    Paramètre : 
+        connexion : laisser tel quel, récupère les informations de connexion à la base
+        dbname : nom de la base de données
+
+    Sortie :
+        True ou False en fonction de l'existence de la BD
+    """
+    exist = False
+
+    query = """ SELECT 1 FROM pg_database WHERE datname = '%s';""" %(dbname)
+
+    cursor = connexion.cursor()
+    cursor.execute(query)
+    result = cursor.fetchone()[0]
+
+    if result == 1 :
+        exist = True
+    
+    return exist
+    
+def schemaExist(connexion, schema_name):
+    """
+    Rôle : renvoie si le schema existe déjà
+
+    Paramètre : 
+        connexion : laisser tel quel, récupère les informations de connexion à la base
+        schema_name : nom du schema
+
+    Sortie :
+        True ou False en fonction de l'existence du schéma dans la db
+    """
+    exist = False
+    li_schema = getAllSchemas(connexion)
+
+    if schema_name in li_schema:
+        exist = True
+
+    return exist
