@@ -34,7 +34,7 @@ from Lib_xml import parseDom, getListNodeDataDom, getListValueAttributeDom
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire
-# debug = 3
+debug = 2
 
 # Les parametres de la fonction OTB otbcli_BinaryMorphologicalOperation a changé à partir de la version 7.0 de l'OTB
 pythonpath = os.environ["PYTHONPATH"]
