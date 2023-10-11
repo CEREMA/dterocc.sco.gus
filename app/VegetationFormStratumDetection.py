@@ -55,8 +55,6 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         for el in tables_schema:
             executeQuery(connexion, el[0])
 
-    closeConnection(connexion)
-
     #1# Formes végétales arborées
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate arborée" + endC)
@@ -125,8 +123,19 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
 
     #0# Attribution de valeurs par défaut pour les seuils si non renseignés
     if thresholds == 0:
-        thresholds = {"seuil_surface" : 30, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.7, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 7, "val_buffer" : 1}
-
+        thresholds = {
+            "isolatedtree_max_surface" : 100,
+            "isolatedtree_min_surface" : 12,
+            "woodtree_sure_surface" : 5000,
+            "buffer_compacity_thr" : 0.5,
+            "compacity_1_thr" : 0.7,
+            "compacity_2_thr" : 0.2,
+            "convexity_1_thr" : 0.65,
+            "convexity_2_thr" : 0.5,
+            "extension_1_thr" : 4,
+            "extension_2_thr" : 2,
+            "extension_3_thr" : 2.5
+        } 
     ###################################################
     ## Préparation de la couche arborée de référence ## 
     ###################################################
@@ -188,7 +197,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     addColumn(connexion, tab_arb, 'fv', 'varchar(100)')
 
     #Création et calcul de l'indicateur de forme : compacité
-    createCompactnessIndicator(connexion, tab_arb, thresholds["val_buffer"], debug = debug)
+    createCompactnessIndicator(connexion, tab_arb, thresholds["buffer_compacity_thr"], debug = debug)
 
     #3# Classement des segments en "arbre isole", "tache arboree" et "regroupement arbore"
     # basé sur un critère de surface et de seuil sur l'indice de compacité
@@ -291,28 +300,36 @@ def firstClassification(connexion, tab_ref, thresholds, typeclass = 'arbore', de
 
     if typeclass == 'arbore':
         query = """
-        UPDATE %s AS arb SET fv = 'AI' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp > %s;
-        """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_1_compacite"])
+        UPDATE %s SET fv = 'AI' WHERE public.ST_AREA(geom) <= %s AND public.ST_AREA(geom) >= %s AND id_comp >= %s;
+        """ %(tab_ref, thresholds["isolatedtree_max_surface"], thresholds["isolatedtree_min_surface"], thresholds["compacity_1_thr"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'TA' WHERE public.ST_AREA(arb.geom) <= %s AND arb.id_comp <= %s;
-        """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_1_compacite"])
+        UPDATE %s SET fv = 'TA' WHERE public.ST_AREA(geom) <= %s AND public.ST_AREA(geom) >= %s AND id_comp < %s;
+        """ %(tab_ref, thresholds["isolatedtree_max_surface"], thresholds["isolatedtree_min_surface"], thresholds["compacity_1_thr"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'RGPTA' WHERE public.ST_AREA(arb.geom) > %s;
-        """ %(tab_ref, thresholds["seuil_surface"])
+        UPDATE %s SET fv = 'TA' WHERE public.ST_AREA(geom) < %s;
+        """ %(tab_ref, thresholds["isolatedtree_min_surface"])
+
+        query += """
+        UPDATE %s SET fv = 'RGPTA' WHERE public.ST_AREA(geom) > %s;
+        """ %(tab_ref, thresholds["isolatedtree_max_surface"])
     else :
         query = """
-        UPDATE %s AS arb SET fv = 'AuI' WHERE public.ST_AREA(geom) <= %s AND id_comp > %s;
-        """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_1_compacite"])
+        UPDATE %s SET fv = 'AuI' WHERE public.ST_AREA(geom) <= %s AND public.ST_AREA(geom) >= %s AND id_comp >= %s;
+        """ %(tab_ref, thresholds["isolatedshrub_max_surface"],  thresholds["isolatedshrub_min_surface"], thresholds["compacity_1_thr"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'TAu' WHERE public.ST_AREA(geom) <= %s AND id_comp <= %s;
-        """ %(tab_ref, thresholds["seuil_surface"], thresholds["seuil_1_compacite"])
+        UPDATE %s SET fv = 'TAu' WHERE public.ST_AREA(geom) <= %s AND public.ST_AREA(geom) >= %s AND id_comp < %s;
+        """ %(tab_ref, thresholds["isolatedshrub_max_surface"],  thresholds["isolatedshrub_min_surface"], thresholds["compacity_1_thr"])
 
         query += """
-        UPDATE %s AS arb SET fv = 'RGPTAu' WHERE public.ST_AREA(geom) > %s;
-        """ %(tab_ref, thresholds["seuil_surface"])
+        UPDATE %s SET fv = 'TAu' WHERE public.ST_AREA(geom) < %s;
+        """ %(tab_ref, thresholds["isolatedshrub_min_surface"])
+
+        query += """
+        UPDATE %s SET fv = 'RGPTAu' WHERE public.ST_AREA(geom) > %s;
+        """ %(tab_ref, thresholds["isolatedshrub_max_surface"])
 
     #Exécution de la requête SQL
     if debug >= 3:
@@ -379,7 +396,7 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, save_intermediate
     createConvexityIndicator(connexion, tab_out, debug = debug)
 
     #Création et calcul de l'indicateur de compacité
-    createCompactnessIndicator(connexion, tab_out, thresholds["val_buffer"], debug = debug)
+    createCompactnessIndicator(connexion, tab_out, thresholds["buffer_compacity_thr"], debug = debug)
 
     #Création et calcul de l'indicateur d'élongation
     createExtensionIndicator(connexion,tab_out)
@@ -387,9 +404,11 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, save_intermediate
     if tab_ref == 'arbore' :
         name_algt = 'AA'
         name_bst = 'BOA'
+        thr_wood_sure = thresholds["woodtree_sure_surface"]
     else :
         name_algt = 'AAu'
         name_bst = 'BOAu'
+        thr_wood_sure = thresholds["woodshrub_sure_surface"]
 
     ## CLASSIFICATION ##
 
@@ -404,16 +423,16 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, save_intermediate
 
     #2 : on attribut la classe algt aux FV selon les règles suivantes pour toutes les FV dont la surface strictement inférieure à une certaine surface de boisement
     query = """
-    UPDATE %s AS rgt SET fv = rgt2.value FROM (SELECT '%s' AS value, fid FROM %s WHERE public.ST_AREA(geom) < %s) AS rgt2 WHERE rgt.fid = rgt2.fid ans rgt.id_elong > %s;
-    """ %(tab_out, name_algt, tab_out, thresholds["seuil_surface_bst"], thresholds["seuil_1_elongation"])
+    UPDATE %s AS rgt SET fv = rgt2.value FROM (SELECT '%s' AS value, fid FROM %s WHERE public.ST_AREA(geom) < %s) AS rgt2 WHERE rgt.fid = rgt2.fid and rgt.id_elong > %s;
+    """ %(tab_out, name_algt, tab_out, thr_wood_sure, thresholds["extension_1_thr"])
 
     query += """
     UPDATE %s AS rgt SET fv = rgt2.value FROM (SELECT '%s' AS value, fid FROM %s WHERE public.ST_AREA(geom) < %s) AS rgt2 WHERE rgt.fid = rgt2.fid and rgt.id_conv > %s and rgt.id_elong > %s;
-    """ %(tab_out, name_algt, tab_out, thresholds["seuil_surface_bst"], thresholds["seuil_1_convexite"], thresholds["seuil_2_elongation"])
+    """ %(tab_out, name_algt, tab_out, thr_wood_sure, thresholds["convexity_1_thr"], thresholds["extension_2_thr"])
 
     query += """
     UPDATE %s AS rgt SET fv = rgt2.value FROM (SELECT '%s' AS value, fid FROM %s WHERE public.ST_AREA(geom) < %s) AS rgt2 WHERE rgt.fid = rgt2.fid and rgt.id_conv < %s and rgt.id_comp < %s and rgt.id_elong > %s;
-    """ %(tab_out, name_algt, tab_out, thresholds["seuil_surface_bst"],thresholds["seuil_2_convexite"], thresholds["seuil_2_compacite"], thresholds["seuil_3_elongation"])
+    """ %(tab_out, name_algt, tab_out, thr_wood_sure, thresholds["convexity_2_thr"], thresholds["compacity_2_thr"], thresholds["extension_3_thr"])
 
 
     # Exécution de la requête SQL
@@ -511,7 +530,19 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
 
     #0# Attribution de valeurs par défaut pour la connexion
     if thresholds == 0:
-        thresholds = {"seuil_surface" : 5, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.7, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 7, "val_buffer" : 1}
+        thresholds = {
+            "isolatedshrub_max_surface" : 20,
+            "isolatedshrub_min_surface" : 3,
+            "woodshrub_sure_surface" : 100,
+            "buffer_compacity_thr" : 0.5,
+            "compacity_1_thr" : 0.7,
+            "compacity_2_thr" : 0.2,
+            "convexity_1_thr" : 0.65,
+            "convexity_2_thr" : 0.5,
+            "extension_1_thr" : 4,
+            "extension_2_thr" : 2,
+            "extension_3_thr" : 2.5
+        } 
 
 
     #1# Récupération de la table composée uniquement des segments arbustifs
@@ -572,7 +603,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     addColumn(connexion, tab_arbu, 'fv', 'varchar(100)')
 
     # #Création et calcul de l'indicateur de forme : compacité
-    createCompactnessIndicator(connexion, tab_arbu, thresholds['val_buffer'], debug = debug)
+    createCompactnessIndicator(connexion, tab_arbu, thresholds['buffer_compacity_thr'], debug = debug)
 
     #3# Classement des segments en "arbuste isole", "tache arbustive" et "regroupement arbustif"
        # basé sur un critère de surface et de seuil sur l'indice de compacité
@@ -1251,7 +1282,6 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
     #     dropTable(connexion, 'ara_intersect_bound')
     #     dropTable(connexion, 'ara_seg_perp')
     #     dropTable(connexion, 'ara_temp1_seg')
-    closeConnection(connexion)
     return tab_rgpt
 
 
