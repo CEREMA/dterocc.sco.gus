@@ -65,7 +65,6 @@ def raster_stats(vectors, raster, layer_num=0, band_num=1, nodata_value=None,
         nodata_value = rb.GetNoDataValue()
 
     features_iter, strategy, spatial_ref = get_features(vectors, layer_num)
-    print("les features" ,features_iter, strategy, spatial_ref)
     if global_src_extent:
         # create an in-memory numpy array of the source raster data
         # covering the whole extent of the vector layer
@@ -88,7 +87,6 @@ def raster_stats(vectors, raster, layer_num=0, band_num=1, nodata_value=None,
     results = []
 
     for i, feat in enumerate(features_iter):
-        print(i,feat)
         if feat['type'] == "Feature":
             try :
                 geom = shape(feat['geometry'])

@@ -523,7 +523,7 @@ def addColumn(connexion, tablename, columnname, columntype):
     """
 
     query = """
-    ALTER TABLE %s ADD COLUMN %s %s;
+    ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s;
     """ %(tablename, columnname, columntype)
 
     #Exécution de la requête SQL

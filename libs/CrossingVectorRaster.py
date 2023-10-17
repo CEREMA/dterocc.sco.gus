@@ -119,8 +119,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
         # Suppression de la valeur no date à 0
         if 0 in class_label_dico :
             del class_label_dico[0]
-    if debug >= 2:
-        print(class_label_dico)
+    
 
     # ETAPE 2/4 : CREATION DES COLONNES DANS LE FICHIER SHAPE
     if debug >= 2:
@@ -213,7 +212,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
     if ("UniqueID" in col_to_add_list) or ("uniqueID" in col_to_add_list) or ("ID" in col_to_add_list):
         field_defn = ogr.FieldDefn("ID", ogr.OFTInteger)    # Création du nom du champ dans l'objet stat_classif_field_defn
         layer.CreateField(field_defn)
-        if debug >= 3:
+        if debug >= 5:
             print(cyan + "statisticsVectorRaster() : " + endC + "Creation de la colonne : ID")
 
     # Creation des colonnes de col_to_add_inter01_list ([majority/DateMaj/SrcMaj, minority, min, max, mean, median, sum, std, unique, range])
@@ -229,7 +228,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
                 # Définition de la précision du champ valeur flottante
                 stat_classif_field_defn.SetPrecision(2)
                 layer.CreateField(stat_classif_field_defn)
-            if debug >= 3:
+            if debug >= 35:
                 print(cyan + "statisticsVectorRaster() : " + endC + "Creation de la colonne : " + str(col))
 
     # Creation des colonnes reliées au dictionnaire
@@ -246,7 +245,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
             name_col_area =  PREFIX_AREA_COLUMN + name_col
             if len(name_col_area) > 10:
                 name_col_area = name_col_area[:10]
-                if debug >= 3:
+                if debug >= 5:
                     print(cyan + "statisticsVectorRaster() : " + bold + yellow + "Nom de la colonne trop long. Il sera tronque a 10 caracteres en cas d'utilisation: " + endC + name_col_area)
 
             # Ajout des colonnes de % de répartition des éléments du raster
@@ -257,7 +256,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
                     stat_classif_field_defn.SetWidth(20)
                     # Définition de la précision du champ valeur flottante
                     stat_classif_field_defn.SetPrecision(2)
-                    if debug >= 3:
+                    if debug >= 5:
                         print(cyan + "statisticsVectorRaster() : " + endC + "Creation de la colonne : " + str(name_col))
                     layer.CreateField(stat_classif_field_defn)                          # Ajout du champ
 
@@ -295,8 +294,6 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
         print(cyan + "statisticsVectorRaster() : " + endC + "Nombre total de polygones : " + str(num_features))
 
     polygone_count = 0
-
-    print(stats_info_list)
 
     for polygone_stats in stats_info_list : # Pour chaque polygone représenté dans stats_info_list - et il y a autant de polygone que dans le fichier vecteur
 
@@ -417,8 +414,6 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
             else :
                 name_col = stats                                         # Nom de la colonne. Ex : 'majority', 'max'
                 value_statis = polygone_stats[stats]                     # Valeur à associer à la colonne, par exemple '2011'
-                print(class_label_dico)
-                print("value_statis :",value_statis)
                 if (name_col == 'majority' or name_col == 'minority') and class_label_dico !={}  : # Cas où la colonne fait référence à une valeur du dictionnaire
                     value_statis_class = class_label_dico[value_statis]
                 else:
