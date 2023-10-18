@@ -35,13 +35,13 @@ if __name__ == "__main__":
     img_ref_PAN = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/ORT_P1AP_MGN.tif'
     #NB : l'image PAN doit aussi être découpée à la même emprise que l'image de référence --> pour que la superposition des résultats suivant puisse se faire correctement 
 
-    shp_zone = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/MGN_contours.shp'
+    shp_zone = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/ProjetGUS/MGN_contours.shp'
 
     img_mnt =  r''
 
     img_mns = r''
 
-    img_mnh = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/mnh.tif'
+    img_mnh = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/ProjetGUS/mnh.tif'
 
     img_spring = img_ref
 
@@ -281,6 +281,8 @@ if __name__ == "__main__":
     img_sfs = path_tmp_neochannels + os.sep + 'img_ref_SFS.tif'
     img_teinte = path_tmp_neochannels + os.sep + 'img_ref_SFS.tif'
 
+    img_sfs = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/ProjetGUS/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
+
     dic_neochannels = {
       "img_ndvi" : img_ndvi,
       "img_ndwi": img_ndwi,
@@ -366,6 +368,8 @@ if __name__ == "__main__":
         "eau" : [eau_prepare, eau_clean],
         "vegetation" : [vegetation_prepare, vegetation_clean]     
     } 
+
+    correction_images_dic
 
     
     #Chemin d'accès vers la couche unique des échantillons d'apprentissage 
@@ -525,7 +529,7 @@ if __name__ == "__main__":
     if debug >= 1:
       print(cyan + "\nNettoyage des échantillons d'apprentissage" + endC) 
 
-    #cleanAllSamples(images_in_output, correction_images_dic, extension_raster = ".tif", save_results_intermediate = False, overwrite = False)
+    #cleanAllSamples(dic_img_cleansamples, correction_images_dic, extension_raster = ".tif", save_results_intermediate = False, overwrite = False)
 
     
     #4.Nettoyage recouvrement des échantillons d'apprentissage
@@ -584,14 +588,14 @@ if __name__ == "__main__":
     if debug >= 1:
       print(cyan + "\nSegmentation de l'image de végétation " + endC)
    
-    segmentationImageVegetetation(img_ref, img_classif_filtered, sgts_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = False, overwrite = False)
+    #segmentationImageVegetetation(img_ref, img_classif_filtered, sgts_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = False, overwrite = False)
 
     #2.Classification en strates verticales
     if debug >= 1:
       print(cyan + "\nClassification des segments végétation en strates verticales " + endC)
 
     #Ouverture connexion 
-   # connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
+    connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
     raster_dic = {
       "MNH" : dic_neochannels["img_mnh"],
       "TXT" : dic_neochannels["img_sfs"]
@@ -601,9 +605,9 @@ if __name__ == "__main__":
     tab_ref_stratesv = 'segments_vegetation'
     schem_tab_ref_stratesv = 'classification_stratesv.segments_vegetation'
     
-   # output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
+    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
     
-   # closeConnection(connexion)
+    closeConnection(connexion)
 
     #3# DETECTION DES FORMES VEGETALES HORIZONTALES #3# 
     if debug >= 1:
