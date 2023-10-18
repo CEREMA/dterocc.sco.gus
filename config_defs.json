@@ -1,0 +1,208 @@
+{
+    "repertory":"chemin du repertoire de sauvegarde du projet",
+    "data_entry": {
+        "img_RVBPIR_ref": "image ortho Pléiades de référence(printemps/été) RVBPIR (raster .tif)",
+        "img_PAN_ref": "image ortho Pléiades de référence(printemps/été) PANCHROMATIC (raster .tif)",
+        "studyzone_shp": "emprise de la zone d'étude (vecteur .shp)",
+        "img_winter": "image ortho Pléiades d'hiver RVBPIR (raster .tif)",
+        "img_dtm": "image du MNT (raster .tif)",
+        "img_dsm": "image du MNS (raster .tif)",
+        "img_grasscrops": "image classée prairie/cultures (raster .tif)",
+        "entry_options" : {
+            "dir_img_assembly" : "repertoire contenant les imagettes Pléaides à assembler",
+            "img_dhm": "image du MNH (raster .tif)",
+            "img_ocs": "image de classification en 5 classes (raster .tif)",
+            "data_classes": {
+                "build": "vecteur des polygones de bâti (vecteur .shp)",
+                "road": "vecteur des polygones de route (vecteur .shp)",
+                "baresoil": "vecteur des polygones de sol nu (vecteur .shp)",
+                "water": "vecteur des polygones d'eau (vecteur .shp)",
+                "vegetation": "vecteur des polygones de végétation (vecteur .shp)"
+                }
+            }
+    },
+    "database_params": {
+        "dbname": "gus",
+        "user_db": "identifiant de connexion à la bd",
+        "password_db": "mot de passe de connexion à la bd",
+        "server_db": "numéro du serveur psotgres où on se connecte",
+        "port_number": "numéro de port"
+    },
+    "vegetation_extraction": {
+        "samples_creation": {
+            "build": {
+                "data1": {
+                "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'bati'",
+                "buffer": "valeur du buffer appliqué sur le polygone",
+                "exp": "expression sql avec les conditions de récupération des polygones dans la db"
+                }
+            },
+            "road": {
+                "data1": {
+                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'route'",
+                    "buffer": "valeur du buffer appliqué sur le polygone",
+                    "exp": "expression sql avec les conditions de récupération des polygones dans la db"
+                    }
+            },
+            "baresoil": {
+                "data1": {
+                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'sol nu'",
+                    "buffer": "valeur du buffer appliqué sur le polygone",
+                    "exp": "expression sql avec les conditions de récupération des polygones dans la db"
+                    }
+            },
+            "water": {
+                "data1": {
+                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'eau'",
+                    "buffer": "valeur du buffer appliqué sur le polygone",
+                    "exp": "expression sql avec les conditions de récupération des polygones dans la db"
+                    }
+            },
+            "vegetation": {
+                "data1": {
+                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'vegetation'",
+                    "buffer": "valeur du buffer appliqué sur le polygone",
+                    "exp": "expression sql avec les conditions de récupération des polygones dans la db"
+                    }
+            }
+        },
+        "samples_cleaning": {
+            "build": {
+                "data1": {
+                    "name": "nom de l'indice radiométrique",
+                    "source": "chemin d'accès à l'image de l'indice radiométrique",
+                    "min": "valeur minimale du filtre sur l'indice",
+                    "max": "valeur maximale du filtre sur l'indice"
+                }
+            },
+            "road": {
+                "data1": {
+                    "name": "nom de l'indice radiométrique",
+                    "source": "chemin d'accès à l'image de l'indice radiométrique",
+                    "min": "valeur minimale du filtre sur l'indice",
+                    "max": "valeur maximale du filtre sur l'indice"
+                }
+            },
+            "baresoil": {
+                "data1": {
+                    "name": "nom de l'indice radiométrique",
+                    "source": "chemin d'accès à l'image de l'indice radiométrique",
+                    "min": "valeur minimale du filtre sur l'indice",
+                    "max": "valeur maximale du filtre sur l'indice"
+                }
+            },
+            "water": {
+                "data1": {
+                    "name": "nom de l'indice radiométrique",
+                    "source": "chemin d'accès à l'image de l'indice radiométrique",
+                    "min": "valeur minimale du filtre sur l'indice",
+                    "max": "valeur maximale du filtre sur l'indice"
+                }
+            },
+            "vegetation": {
+                "data1": {
+                    "name": "nom de l'indice radiométrique",
+                    "source": "chemin d'accès à l'image de l'indice radiométrique",
+                    "min": "valeur minimale du filtre sur l'indice",
+                    "max": "valeur maximale du filtre sur l'indice"
+                }
+            }
+        },
+        "samples_selection": {
+            "build_ratio": "ratio de sélection des pixels d'entraînement pour la classe 'bati'",
+            "road_ratio":  "ratio de sélection des pixels d'entraînement pour la classe 'route'",
+            "baresoil_ratio":  "ratio de sélection des pixels d'entraînement pour la classe 'eau'",
+            "water_ratio":  "ratio de sélection des pixels d'entraînement pour la classe 'sol nu'",
+            "vegetation_ratio":  "ratio de sélection des pixels d'entraînement pour la classe 'vegetation'"
+        },
+        "classes_numbers": {
+          "bati": 1,
+          "route": 2,
+          "solnu": 3,
+          "eau": 4,
+          "vegetation": 5
+        },
+        "rf_params": {
+          "depth_tree": "Profondeur maximale de l’arbre",
+          "sample_min": "Nombre minimum d’échantillons dans chaque nœud",
+          "termin_criteria": "Critères de terminaison pour l’arbre de régression",
+          "cluster": "Nombre de valeurs possibles dans un cluster",
+          "size_features": "Taille du sous-ensemble de caractéristiques sélectionné de manière aléatoire pour chaque nœud de l’arbre",
+          "num_tree": "Nombre maximal d’arbres dans la forêt",
+          "obb_erreur": "Précision suffisante"
+        }
+      },
+      "vertical_stratum_detection": {
+        "height_treeshrub_thr": "seuil de hauteur de distinction entre arboré et arbustif",
+        "height_shrubgrass_thr":  "seuil de hauteur de distinction entre arbustif et herbacé",
+        "texture_thr":  "seuil de texture de distinction entre végétation haute et basse",
+        "height_max_difference": "Différence de hauteur maximale de dissociation d’un segment arbustif avec un segment arboré ou herbacé",
+        "shrub_touch_treevsgrass_perc": "Pourcentage maximal de la frontière d’un regroupement arbustif avec de l’arboré pour considérer les segments comme réellement arbustifs",
+        "shrub_touch_grassvsshrub_perc": "Pourcentage minimal de la frontière d’un regroupement arbustif avec de l’herbacé pour considérer les segments comme réellement arbustifs",
+        "shrub_sign": "Ratio maximal du rapport  pour le segment arbustif isolé ou le regroupement arbustif  pour considérer le regroupement arbustif comme « non représentatif »",
+        "surface_rate": "Surface maximale de considération d’un regroupement arbustif comme « non représentatif "
+      },
+      "vegetation_form_stratum_Detection": {
+        "isolatedtree_max_surface": "Valeur maximale de la surface d’un arbre isolé",
+        "isolatedtree_min_surface": "Valeur minimale de la surface d’un arbre isolé",
+        "woodtree_sure_surface": "Valeur de la surface de 50 arbres. Valeur à partir de laquelle il s’agit de « boisements » (1ʳᵉ règle)",
+        "isolatedshrub_max_surface": "Valeur maximale de la surface d’un arbuste isolé",
+        "isolatedshrub_min_surface": "Valeur minimale de la surface d’un arbre isolé",
+        "woodshrub_sure_surface": "Valeur de la surface de 50 arbustes. Valeur à partir de laquelle il s’agit de « boisements » (1ʳᵉ règle)",
+        "buffer_compacity_thr": "Valeur minimale de la surface d’un arbuste isolé",
+        "compacity_1_thr": "Valeur seuil à partir de laquelle la forme est estimée compacte pour un arbre/arbuste isolé",
+        "compacity_2_thr": "Valeur maximale de compacité pour un alignement et considérer le polygone comme non compacte (4ᵉ règle)",
+        "convexity_1_thr": "Valeur de convexité minimale pour considérer un polygone comme convexes (3ᵉ règle)",
+        "convexity_2_thr": "Valeur maximale de convexité pour un alignement non convexe (4ᵉ règle)",
+        "extension_1_thr": "Valeur d’élongation à partir de laquelle le polygone est 4 fois plus long que large (2ᵉ règle)",
+        "extension_2_thr": "Valeur d’élongation minimale pour un alignement (3ᵉ règle)",
+        "extension_3_thr": "Valeur d’élongation minimale pour un alignement (4ᵉ règle)"
+      },
+      "indicators_computation": {
+        "area": {
+          "area_feature": "surface",
+          "area_type": "float",
+          "trust_area_feature": "idc_surface",
+          "trust_area_type": "float"
+        },
+        "height": {
+          "mean_height_feature": "h_moy",
+          "mean_height_type": "float",
+          "median_height_feature": "h_med",
+          "median_height_type": "float",
+          "std_height_feature": "h_et",
+          "std_height_type": "float",
+          "max_height_feature": "h_max",
+          "max_height_type": "float",
+          "min_height_feature": "h_min",
+          "min_height_type": "float",
+          "trust_height_feature": "idc_h",
+          "trust_height_type": "float"
+        },
+        "evergreen_deciduous": {
+          "evergreen_feature": "perc_persistant",
+          "evergreen_type": "float",
+          "deciduous_feature": "perc_caduc",
+          "deciduous_type": "float",
+          "ndvi_difference_thr": "Valeur seuil de différence de NDVI à partir de laquelle on considère que le pixel appartient à un couvert caduc",
+          "trust_everdecid_feature": "idc_perscadu",
+          "trust_everdecid_type": "float"
+        },
+        "coniferous_deciduous": {
+          "coniferous_feature": "perc_conifere",
+          "coniferous_type": "float",
+          "deciduous_feature": "perc_feuillu",
+          "deciduous_type": "float",
+          "pir_difference_thr": "Valeur seuil de réflectance dans le PIR à partir de laquelle il s’agit d’un pixel appartenant à un feuillu",
+          "trust_conifdecid_feature": "idc_coniffeuil",
+          "trust_conifdecid_type": "float"
+        },
+        "ground_type": {
+          "groundtype_feature": "type_sol",
+          "groundtype_type": "varchar(100)",
+          "ndvi_difference_thr": "Valeur seuil de NDVI hiver à partir de laquelle on considère que le pixel représente un couvert avec sol support de surface végétalisée",
+          "trust_groundtype_feature": "idc_typesol",
+          "trust_groundtype_type": "float"
+        }
+      }   
+}

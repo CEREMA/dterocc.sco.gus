@@ -69,7 +69,7 @@ Version Python 3. 10. 12
 
 Le lancement du code se décompose en trois étapes :
 1. le téléchargement du repertoire complet
-2. le remplissage du fichier `config.xml`
+2. le remplissage du fichier `config.json`
 3. le lancement des scripts en ouvrant une invite de commande à la racine du dossier (là où se situe le fichier main) et en lançant la commande : `python main.py`
 
 NB : il faudra bien vérifier dans le fichier `main.py` que toutes les étapes sont bien décommentées
@@ -146,9 +146,8 @@ Certaines fonctions sont optionnelles lorsqu'il y a possibilité que l'opérateu
 
 ## Fichier de configuration
 
-Nous mettons à disposition un fichier de configuration `config.xml` qui permet de renseigner les éléments nécessaires au bon déroulement des étapes de cartographie. Les grandes lignes sont présentées dans le tableau suivant, mais vous trouverez un fichier `config_ini.xml` dans le dépôt.
-NB : 
-
+Nous mettons à disposition un fichier de configuration `config.json` qui permet de renseigner les éléments nécessaires au bon déroulement des étapes de cartographie. Les grandes lignes sont présentées dans le tableau suivant, mais vous trouverez un fichier `config_defs.json` définissant chacun des termes à renseigner dans le dépôt.
+ 
 | Balise | Définition |
 | :-------- | :------------------------- |
 | *repertory* | Répertoire de création du dossier du projet |
@@ -159,15 +158,9 @@ NB :
 | *vegetation_form_stratum_detection* | Paramètres de détection des formes végétales horizontales |
 | *indicators_computation* | Paramètres de calcul des attributs descriptifs |
 
-Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'opérateur peut très bien apporter lui-même certaines données :
+Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'opérateur peut très bien apporter lui-même certaines données via la balise `data_entry > entry_options`.
 
-| Balise optionnelle | Définition |
-| :------------------- | :--------- |
-| *dir_img_assembly* | Repertoire des imagettes à assembler |
-| *img_dhm* | image MNH |
-| *img_ocs* | image de classification en classes |
-| *data_classes* | 5 couches vecteurs dans lesquelles on va sélectionner les échantillons d'apprentissage |
-| *samples_creation* | informations pour créer les échantillons d'apprentissage automatiquement (dans le cas où la balise data_classes n'est pas renseignée) |
+De plus, il existe une particularité pour le renseignement des informations en balise `vegetation_extraction > samples_cleaning` : si les indices radiométriques servants à nettoyer et filtrer les échantillons d'apprentissage ont été produits dans une étape précédente au script, nous retrouverons l'information `source` via l'arborescence du dossier de projet créé (à condition de bien respecter les noms des indices attribués dans le code : ndvi, msavi, ndwi, hue, mnh, etc.). Cette balise permet à l'opérateur d'ajouter une autre donnée de filtrage qui n'est pas produite via les scripts.
 
 ## Auteur
 
