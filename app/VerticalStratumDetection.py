@@ -123,7 +123,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
         print(cyan + "classificationVerticalStratum : " + endC + "format_type : " + str(format_type) + endC)
         print(cyan + "classificationVerticalStratum : " + endC + "save_intermediate_result : " + str(save_intermediate_result) + endC)
         print(cyan + "classificationVerticalStratum : " + endC + "overwrite : " + str(overwrite) + endC)
-        print(cyan + "/nclassificationVerticalStratum : /nSortie :" + endC + "file_output : " + str(output_layer) + endC)
+        print(cyan + "/nclassificationVerticalStratum : /nSortie :" + endC + "files_output : " + str(output_layers) + endC)
 
     ##################################################################### 
     ## Création et export en base de la couche des segments végétation ##
@@ -142,86 +142,86 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
             executeQuery(connexion, el[0])
     
     #Fichiers intermédiaires
-    # repertory_output = os.path.dirname(output_layer)
-    # file_name = os.path.splitext(os.path.basename(sgts_input))[0]
-    # extension_vecteur = os.path.splitext(output_layer)[1]
+    repertory_output = os.path.dirname(output_layers["output_stratesv"])
+    file_name = os.path.splitext(os.path.basename(sgts_input))[0]
+    extension_vecteur = os.path.splitext(output_layers["output_stratesv"])[1]
 
     ##################################################################### 
     ##    Collect des statistiques de hauteur et texture pour chaque   ##
     ##                             segment                             ## 
     #####################################################################
 
-    # if debug >= 1:
-    #     print(bold + "Collecte des valeurs médianes de hauteur et de texture pour chaque segment." + endC)
+    if debug >= 1:
+        print(bold + "Collecte des valeurs médianes de hauteur et de texture pour chaque segment." + endC)
 
-    # ## Collecte données de hauteur pour chaque segment  
-    # file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
+    ## Collecte données de hauteur pour chaque segment  
+    file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
 
-    # if os.path.exists(file_mnh_out) and overwrite == True:
-    #     os.remove(file_mnh_out)
+    if os.path.exists(file_mnh_out) and overwrite == True:
+        os.remove(file_mnh_out)
 
-    # #Calcul de la valeur médiane de hauteur pour chaque segment de végétation 
-    # calc_statMedian(sgts_input, raster_dic["MNH"], file_mnh_out)
+    #Calcul de la valeur médiane de hauteur pour chaque segment de végétation 
+    calc_statMedian(sgts_input, raster_dic["MNH"], file_mnh_out)
 
-    # #Export du fichier vecteur des segments végétation avec une valeur médiane de hauteur dans la BD
-    # tablename_mnh = "table_sgts_mnh"
-    # importVectorByOgr2ogr(connexion_dic["dbname"], file_mnh_out, tablename_mnh, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
+    #Export du fichier vecteur des segments végétation avec une valeur médiane de hauteur dans la BD
+    tablename_mnh = "table_sgts_mnh"
+    importVectorByOgr2ogr(connexion_dic["dbname"], file_mnh_out, tablename_mnh, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
-    # ## Collecte données de texture pour chaque segment
-    # file_txt_out = repertory_output + os.sep + file_name + "TXT" + extension_vecteur
+    ## Collecte données de texture pour chaque segment
+    file_txt_out = repertory_output + os.sep + file_name + "TXT" + extension_vecteur
 
-    # if os.path.exists(file_txt_out) and overwrite == True:
-    #     os.remove(file_txt_out)
+    if os.path.exists(file_txt_out) and overwrite == True:
+        os.remove(file_txt_out)
     
-    # #Calcul de la valeur médiane de texture pour chaque segment de végétation 
-    # calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
+    #Calcul de la valeur médiane de texture pour chaque segment de végétation 
+    calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
 
-    # #Export du fichier vecteur des segments végétation avec une valeur médiane de texture dans la BD
-    # tablename_txt = "table_sgts_txt"
-    # importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
-
-
-    # #Supprimer le fichier si on ne veut pas les sauvegarder
-    # if not save_intermediate_result :
-    #     os.remove(file_mnh_out)
-    #     os.remove(file_txt_out)
+    #Export du fichier vecteur des segments végétation avec une valeur médiane de texture dans la BD
+    tablename_txt = "table_sgts_txt"
+    importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
 
 
-    # #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
+    #Supprimer le fichier si on ne veut pas les sauvegarder
+    if not save_intermediate_result :
+        os.remove(file_mnh_out)
+        os.remove(file_txt_out)
+
+
+    #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
     tab_sgt_ini = 'segments_vegetation_ini_t0'
-    # query = """
-    # CREATE TABLE %s AS
-    #     SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
-    #     FROM %s AS t1, %s AS t2
-    #     WHERE t1.dn = t2.dn;
-    # """ %(tab_sgt_ini, tablename_txt, tablename_mnh)
+    query = """
+    CREATE TABLE %s AS
+        SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
+        FROM %s AS t1, %s AS t2
+        WHERE t1.dn = t2.dn;
+    """ %(tab_sgt_ini, tablename_txt, tablename_mnh)
 
-    # #Exécution de la requête SQL
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
     #Traitement des artefacts au reflet blanc
-    # tab_sgt_txt_val0 = 'segments_txt_val0'
-    # query = """
-    # CREATE TABLE %s AS
-    #     SELECT * 
-    #     FROM %s
-    #     WHERE txt = 0;
+    tab_sgt_txt_val0 = 'segments_txt_val0'
+    query = """
+    CREATE TABLE %s AS
+        SELECT * 
+        FROM %s
+        WHERE txt = 0;
 
-    # DELETE FROM %s WHERE txt = 0;
-    # """ %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
+    DELETE FROM %s WHERE txt = 0;
+    """ %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
 
-    # #Exécution de la requête SQL
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
     #Suppression des deux tables txt et mnh
-   # if tablename_txt != '' :
-    #     dropTable(connexion, tablename_txt) 
-   # if tablename_mnh != '':
-    #     dropTable(connexion, tablename_mnh) 
+    if tablename_txt != '' :
+        dropTable(connexion, tablename_txt) 
+    if tablename_mnh != '':
+        dropTable(connexion, tablename_mnh) 
 
 
     ###################################################################### 
