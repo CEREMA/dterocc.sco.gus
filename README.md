@@ -1,7 +1,6 @@
 # dterocc.sco.gus
 
 # Projet Green Urban Sat (GUS)
-=
 
 Ce projet a pour volonté de produire une méthodologie de cartographie détaillée de la végétation en milieu urbain répondant à plusieurs objectifs :
 - réplicable mondialement
@@ -11,7 +10,6 @@ Ce projet a pour volonté de produire une méthodologie de cartographie détaill
 
 
 ## Principe
-=
 
 Ce dépôt GITHUB présente l'ensemble des scripts python produits afin de générer automatiquement une cartographie détaillée de la végétation, à partir d'une image Pléaides THRS donnée.
 
@@ -27,7 +25,6 @@ Les indices de confiance :
 | Indice de confiance de la surface | Indice de confiance de la hauteur | Indice de confiance du pourcentage de caduc et persistant | Indice de confiance du pourcentage de caduc et persistant | Indice de confiance sur la valeur de type de sol renseignée |
 
 ## Composition du dépôt
-=
 
 Le dépot est composé de deux dossiers et d'un fichier `main.py` à la racine :
 
@@ -38,12 +35,10 @@ Le dépot est composé de deux dossiers et d'un fichier `main.py` à la racine :
 |`main.py` | Script principal du lancement de l'application |
 
 ## Configuration des librairies et du code
-=
 
 Nous garantissons un bon fonctionnement de l'application sous la configuration Ubuntu 22. 04. 2 LTS.
 
 ### Librairies python
--
 
 Version Python 3. 10. 12
 
@@ -60,7 +55,6 @@ Version Python 3. 10. 12
 | numpy |
 
 ### Logiciels annexes
--
 
 | Logiciel | Version                |
 | :-------- | :------------------------- |
@@ -72,7 +66,6 @@ Version Python 3. 10. 12
 
 
 ## Téléchargement et lancement 
-=
 
 Le lancement du code se décompose en trois étapes :
 1. le téléchargement du repertoire complet
@@ -82,7 +75,6 @@ Le lancement du code se décompose en trois étapes :
 NB : il faudra bien vérifier dans le fichier `main.py` que toutes les étapes sont bien décommentées
 
 ## Utilisation du main
-=
 
 Le main est divisé en deux parties : 
     - les imports
@@ -95,6 +87,7 @@ Il y a deux types d'imports :
 - les imports de fonctions provenants des `.py` de `/app`
 
 ### Le lancement des scripts
+
 Cette partie est divisée en quatre sous-parties : 
 - le renseignement des données d'entrée
 - la création et l'implémentation des variables à partir des données fournies 
@@ -132,6 +125,7 @@ Certaines fonctions sont optionnelles lorsqu'il y a possibilité que l'opérateu
 | *openConnection()* | Nécessaire pour la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
 | *segmentationImageVegetation()* | Création de la couche vecteur des segments de végétation à partir de l'algorithme de segmentation Meanshift | Non |
 | *classificationVerticalStratum()* | Classification des segments végétation en strates verticales (arboré, arbustif et herbacé) | Non |
+| *closeConnection()* | Nécessaire pour fermer la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
 
 #### Détection de formes végétales horizontales
 
@@ -139,6 +133,7 @@ Certaines fonctions sont optionnelles lorsqu'il y a possibilité que l'opérateu
 | :------- | :----| :---------- |
 | *openConnection()* | Nécessaire pour la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
 | *cartographyVegetation()* | Cartographie des formes végétales horizontales de la végétation  | Non | 
+| *closeConnection()* | Nécessaire pour fermer la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
 
 #### Calcul des attributs descriptifs
 
@@ -146,10 +141,10 @@ Certaines fonctions sont optionnelles lorsqu'il y a possibilité que l'opérateu
 | :------- | :----| :---------- |
 | *openConnection()* | Nécessaire pour la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |  
 | *createAndImplementFeatures()* | Création et calcul des attributs descriptifs des formes végétales produites précedemment | Non |
+| *closeConnection()* | Nécessaire pour fermer la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
 
 
 ## Fichier de configuration
-=
 
 Nous mettons à disposition un fichier de configuration `config.xml` qui permet de renseigner les éléments nécessaires au bon déroulement des étapes de cartographie. Les grandes lignes sont présentées dans le tableau suivant, mais vous trouverez un fichier `config_ini.xml` dans le dépôt.
 NB : 
@@ -175,10 +170,9 @@ Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'
 | *samples_creation* | informations pour créer les échantillons d'apprentissage automatiquement (dans le cas où la balise data_classes n'est pas renseignée) |
 
 ## Auteur
-=
 
 Cerema Toulouse / DT / OSECC (pôle satellite)
 
 ## Diagramme de classe
-=
+
 ![Diagramme de structure](https://github.com/CEREMA/dterocc.sco.gus/blob/main/README.md)
