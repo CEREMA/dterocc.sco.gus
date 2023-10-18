@@ -5,7 +5,7 @@ import os,sys
 from libs.Lib_display import green,endC
 from libs.Lib_file import removeFile
 from libs.CrossingVectorRaster import statisticsVectorRaster
-from libs.Lib_postgis import addColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr
+from libs.Lib_postgis import addColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection
 
 ###########################################################################################################################################
 # FONCTION createFeatures()                                                                                                             #
@@ -21,17 +21,18 @@ def createFeatures(connexion, connexion_dic, tab_ref, dic_attributs):
     """
     dic_columname ={} 
     for attr in dic_attributs.keys():
-        dic_columnname[attr] = [] 
+        col = [] 
         for i in range(len(dic_attributs[attr])):
             addColumn(connexion, tab_ref, dic_attributs[attr][i][0], dic_attributs[attr][i][1])
-            dic_columnname[attr] = dic_columnname[attr].append(dic_attributs[attr][i][0])
+            col.append(dic_attributs[attr][i][0])
+        dic_columname[attr] = col
 
-    return dic_columnname
+    return dic_columname
 
 ###########################################################################################################################################
 # FONCTION createAndImplementFeatures()                                                                                                             #
 ###########################################################################################################################################
-def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs, repertory, dic_params, output_layer = '', save_intermediate_result = False, debug = 0):
+def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs, dic_params, repertory, output_layer = '',  save_intermediate_result = False, debug = 0):
     """
     Rôle :
 
@@ -41,8 +42,8 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
         tab_ref : nom de la table 
         dic_attributs : dictionnaire des attributs desciptifs à ajouter et implémenter
         dic_params : dictionnaire des paramètres utiles au calcul des attributs
-        output_layer : chemin de sauvegarde du fichier final de la cartographie. Par défaut : ''
         repertory : répertoire de calcul des attributs descriptifs
+        output_layer : chemin de sauvegarde du fichier final de la cartographie. Par défaut : ''
         save_intermediate_result : choix de sauvegarde des fichiers intermédiaires. Par défaut : False
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
@@ -57,20 +58,22 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     #Ajout des attributs descriptifs à la table principale + création d'un dictionnaire de nom des colonnes par indicateur 
     dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
 
-    #Implémentation de la surface de la FV 
-    areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
+    # #Implémentation de la surface de la FV 
+    # areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
 
-    #Implémentation des attributs de hauteur des FV 
-    heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, , debug = debug)
+    # #Implémentation des attributs de hauteur des FV 
+    # heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
     
     #Implémentation du type "persistant" ou "caduc" des FV 
-    evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["ndvi_difference_everdecid_thr"], columns_indics_name = dic_columname["evergreendeciduous_indicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_results = save_intermediate_result, debug = debug)
+    evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["ndvi_difference_everdecid_thr"], columns_indics_name = dic_columname["evergreendeciduous_indicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
     
     #Implémentation du type "conifère" ou "feuillu" des FV 
-    coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["pir_difference_thr"], columns_indics_name = dic_columname["coniferousdeciduous_indicators"], repertory = repertory_tmp,save_intermediate_results = save_intermediate_result, debug = debug)
+    coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["pir_difference_thr"], columns_indics_name = dic_columname["coniferousdeciduous_indicators"], repertory = repertory_tmp,save_intermediate_result = save_intermediate_result, debug = debug)
     
     #Implémentation du type de sol support des FV 
-    typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["ndvi_difference_groundtype_thr"], column_indic_name = dic_columname["typeofground_indicator"][0], repertory = repertory_tmp, save_intermediate_results = save_intermediate_result, debug = debug)
+    typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["ndvi_difference_groundtype_thr"], column_indic_name = dic_columname["typeofground_indicator"][0], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+
+    closeConnection(connexion)
 
     #Export résultat au format GPKG
     if output_layer != '':
@@ -78,6 +81,8 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     else :
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur de la cartographie finale de la végétation (détaillée). Vous n'avez pas fournit de chemin de sauvegarde." + endC) 
     
+        
+
     return 
 
 ###########################################################################################################################################
@@ -172,11 +177,11 @@ def heightIndicators(connexion, connexion_dic, tab_ref, columnnamelist, img_mnh,
     
     
     #Suppression du dossier temporaire
-    if not save_intermediate_results:
+    if not save_intermediate_result:
         if os.path.exists(filetablevegin):
             removeFile(filetablevegin)
         if os.path.exists(filetablevegout):
-            removeFile(filetafiletablevegoutblevegin)
+            removeFile(filetablevegout)
 
         dropTable(connexion, tab_refout)
 
@@ -221,7 +226,7 @@ def calculateSpringAndWinterNdviImage(img_spg_input, img_wtr_input, repertory = 
 ###########################################################################################################################################
 # FONCTION evergreenDeciduousIndicators()                                                                                                  #
 ###########################################################################################################################################
-def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg, img_ndvi_wtr, tab_ref, seuil = 0.10, columns_indics_name = ['perc_persistant', 'perc_caduque'], superimpose_choice = False, repertory = '', save_intermediate_results = False, debug = 0):
+def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg, img_ndvi_wtr, tab_ref, seuil = 0.10, columns_indics_name = ['perc_persistant', 'perc_caduque'], superimpose_choice = False, repertory = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : calcul le pourçentage de persistants et de caduques sur les polygones en entrée
 
@@ -236,7 +241,7 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
         columns_indics_name : liste des noms de colonne des indicateurs à implémenter. Par défaut :['perc_persistant', 'perc_caduque'] 
         superimpose_choice : choix d'appliquer un superimpose sur une des deux images ndvi produites pour qu'elles se superposent parfaitement. Par défaut : False
         repertory : répertoire de sauvegarde des fichiers intermédiaires. Par défaut : ''
-        save_intermediate_results : garder ou non les fichiers temporaires. Par défaut : False
+        save_intermediate_result : garder ou non les fichiers temporaires. Par défaut : False
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
 
@@ -299,6 +304,7 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
     importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_pers_out, table_pers, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg = str(2154))
 
     query = """
+    DROP TABLE IF EXISTS tab_indic_pers_cadu;
     CREATE TABLE tab_indic_pers_cadu AS
         SELECT t1.ogc_fid AS fid, t1.oui AS pers_count, t2.oui AS cadu_count
         FROM %s AS t1, %s AS t2
@@ -313,11 +319,11 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
     #Update de l'attribut perc_caduque et perc_persistant
 
     query = """
-    UPDATE %s AS t SET %s = t2.pers_count FROM tab_indic_pers_cadu AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustif');
+    UPDATE %s AS t SET %s = t2.pers_count FROM tab_indic_pers_cadu AS t2 WHERE t.fid = t2.fid and t.strate in ('A', 'Au');
     """ %(tab_ref, columns_indics_name[0])
 
     query += """
-    UPDATE %s AS t SET %s = t2.cadu_count FROM tab_indic_pers_cadu AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustif');
+    UPDATE %s AS t SET %s = t2.cadu_count FROM tab_indic_pers_cadu AS t2 WHERE t.fid = t2.fid and t.strate in ('A', 'Au');
     """ %(tab_ref, columns_indics_name[1])
 
     #Exécution de la requête SQL
@@ -326,7 +332,7 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
     executeQuery(connexion, query)
 
     #Suppression du dossier temporaire
-    if not save_intermediate_results:
+    if not save_intermediate_result:
         if os.path.exists(image_pers_out):
             removeFile(image_pers_out)
         if os.path.exists(image_cadu_out):
@@ -340,14 +346,15 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
 
     #Suppression des tables intermédiaires
     dropTable(connexion,table_cadu) 
-    dropTable(connexion,table_pers )
+    dropTable(connexion,table_pers)
+    dropTable(connexion, 'tab_indic_pers_cadu')
 
     return
 
 ###########################################################################################################################################
 # FONCTION coniferousDeciduousIndicators()                                                                                                 #
 ###########################################################################################################################################
-def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, seuil = 1300, columns_indics_name = ['perc_conifere', 'perc_feuillu'], repertory = '',save_intermediate_results = False, debug = 0):
+def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, seuil = 1300, columns_indics_name = ['perc_conifere', 'perc_feuillu'], repertory = '',save_intermediate_result = False, debug = 0):
     """
     Rôle : cette fonction permet de calculer le pourçentage de feuillus et de conifères sur les polygones en entrée
 
@@ -359,7 +366,7 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
         seuil : valeur du seuil de PIR pour distinguer les conifères des feuillus. Par défaut : 1300
         columns_indics_name : liste des noms de colonne des indicateurs à implémenter. Par défaut :['perc_conifere', 'perc_feuillu'] 
         repertory : repertoire de sauvegarde des fichiers intermédiaire. Par défaut : ''
-        save_intermediate_results : garder ou non les fichiers temporaires
+        save_intermediate_result : garder ou non les fichiers temporaires
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     """
@@ -408,6 +415,7 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
     importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_feuill_out, table_feuill, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     query = """
+    DROP TABLE IF EXISTS tab_indic_conif_decid;
     CREATE TABLE tab_indic_conif_decid AS
         SELECT t1.ogc_fid as fid, t1.oui AS conif_perc, t2.oui AS decid_perc
         FROM %s AS t1, %s AS t2
@@ -422,11 +430,11 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
     #Update de l'attribut perc_conif et perc_decid
 
     query = """
-    UPDATE %s AS t SET %s = t2.conif_perc FROM tab_indic_conif_decid AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustif');
+    UPDATE %s AS t SET %s = t2.conif_perc FROM tab_indic_conif_decid AS t2 WHERE t.fid = t2.fid and t.strate in ('A', 'Au');
     """ %(tab_ref, columns_indics_name[0])
 
     query += """
-    UPDATE %s AS t SET %s = t2.decid_perc FROM tab_indic_conif_decid AS t2 WHERE t.fid = t2.fid and t.strate in ('arbore', 'arbustif');
+    UPDATE %s AS t SET %s = t2.decid_perc FROM tab_indic_conif_decid AS t2 WHERE t.fid = t2.fid and t.strate in ('A', 'Au');
     """ %(tab_ref, columns_indics_name[1])
 
     #Exécution de la requête SQL
@@ -434,20 +442,29 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
         print(query)
     executeQuery(connexion, query)
 
-    # #Suppression du dossier temporaire
-    # if not save_intermediate_results:
-    #     if os.path.exists(repertory):
-    #         os.rmdir(repertory)
+    #Suppression du dossier temporaire
+    if not save_intermediate_result:
+        if os.path.exists(image_conif_out):
+            removeFile(image_conif_out)
+        if os.path.exists(image_feuill_out):
+            removeFile(image_feuill_out)
+        if os.path.exists(vect_fv_conif_out):
+            removeFile(vect_fv_conif_out)
+        if os.path.exists(vect_fv_feuill_out):
+            removeFile(vect_fv_feuill_out)
+        
 
     #Suppression des tables intermédiaires  
     dropTable(connexion, table_conif)
     dropTable(connexion, table_feuill)
+    dropTable(connexion, 'tab_indic_conif_decid')
+    
     return
 
 ###########################################################################################################################################
 # FONCTION typeOfGroundIndicator()                                                                                                        #
 ###########################################################################################################################################
-def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_ref, seuil  = 0.3, column_indic_name = 'type_sol', repertory = '', save_intermediate_results = False, debug = 0):
+def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_ref, seuil  = 0.3, column_indic_name = 'type_sol', repertory = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : cette fonction permet d'indiquer si le sol sous-jacent à la végétation est de type perméable ou imperméable
 
@@ -459,7 +476,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
         seuil : valeur du seuil de NDVI pour distinguer les surfaces perméables d'imperméables. Par défaut : 0.3
         column_indic_name : nom de la colonne de l'indicateur de type de sol. Par défaut : 'type_sol'
         repertory : repertoire de sauvegarde des fichiers intermédiaires. Par défaut : ''
-        save_intermediate_results : garder ou non les fichiers temporaires
+        save_intermediate_result : garder ou non les fichiers temporaires
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     """
@@ -502,18 +519,19 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     
     #Import des données dans la BD et concaténation des colonnes
 
-    table_perm = 'tab_fv_perm'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_perm_out, table_perm, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    table_surfveg = 'tab_fv_surfveg'
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_perm_out, table_surfveg, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
-    table_imperm = 'tab_fv_imperm'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_imperm_out, table_imperm, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    table_surfnonveg = 'tab_fv_surfnonveg'
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_imperm_out, table_surfnonveg, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     query = """
-    CREATE TABLE tab_indic_perm_imperm AS
+    DROP TABLE IF EXISTS tab_indic_surfveg_nonveg;
+    CREATE TABLE tab_indic_surfveg_nonveg AS
         SELECT t1.ogc_fid AS fid, t1.oui AS perm_count, t2.oui AS imp_count
         FROM %s AS t1, %s AS t2
         WHERE t1.ogc_fid = t2.ogc_fid;
-    """ %(table_perm,table_imperm)
+    """ %(table_surfveg,table_surfnonveg)
 
    # Exécution de la requête SQL
     if debug >= 1:
@@ -523,11 +541,11 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     #Update de l'attribut perc_caduque et perc_persistant
 
     query = """
-     UPDATE %s AS t SET %s = 'permeable herbace' FROM tab_indic_perm_imperm AS t2 WHERE t.fid = t2.fid AND t2.perm_count >= 50.0;
+     UPDATE %s AS t SET %s = 'surface vegetalisee' FROM tab_indic_surfveg_nonveg AS t2 WHERE t.fid = t2.fid AND t2.perm_count >= 50.0;
     """ %(tab_ref, column_indic_name)
     
     query += """
-     UPDATE %s AS t SET %s = 'impermeable' FROM tab_indic_perm_imperm AS t2 WHERE t.fid = t2.fid AND t2.perm_count < 50.0;
+     UPDATE %s AS t SET %s = 'surface non vegetalisee' FROM tab_indic_surfveg_nonveg AS t2 WHERE t.fid = t2.fid AND t2.perm_count < 50.0;
     """ %(tab_ref, column_indic_name)
 
     #Exécution de la requête SQL
@@ -535,21 +553,24 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
         print(query)
     executeQuery(connexion, query)
 
-    #Correction pour les boisements et la strate herbacée --> hypothèse que ce n'est que du sol perméable sous-jacent
+    #Correction pour les boisements et la strate herbacée --> hypothèse que ce n'est que du sol végétalisé sous-jacent
     query = """
-    UPDATE %s AS t SET %s = 'permeable herbace' WHERE t.fv in ('boisement arbore', 'boisement arbustif');
+    UPDATE %s AS t SET %s = 'surface vegetalisee' WHERE t.fv in ('BOA', 'BOAu', 'H', 'C');
     """ %(tab_ref, column_indic_name) 
 
     #Exécution de la requête SQL
     if debug >= 1:
         print(query)
     executeQuery(connexion, query)
-    closeConnection(connexion)
 
     # #Suppression du dossier temporaire
-    # if not save_intermediate_results:
+    # if not save_intermediate_result:
     #     if os.path.exists(repertory):
     #         os.rmdir(repertory)
+
+    dropTable(connexion, 'tab_indic_surfveg_nonveg')
+    dropTable(connexion, table_surfveg)
+    dropTable(connexion, table_surfnonveg)
 
     return
 

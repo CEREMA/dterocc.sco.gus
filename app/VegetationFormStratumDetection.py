@@ -1,9 +1,11 @@
 #Import des librairie Python
-import math
+import math,os
 
 #Import des librairies de /libs
 from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection
 from libs.Lib_display import endC, bold, yellow, cyan, red
+from libs.CrossingVectorRaster import statisticsVectorRaster
+from libs.Lib_file import removeFile
 
 
 #################################################
@@ -63,12 +65,12 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     #2# Formes végétales arbustives
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate arbustive" + endC)
-    tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["schrub"], save_intermediate_results = save_intermediate_results, debug = debug)
+    tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["shrub"], save_intermediate_results = save_intermediate_results, debug = debug)
     
     #3# Formes végétales herbacées
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate herbacée" + endC)
-    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layers["herbaceous"], save_intermediate_results = save_intermediate_results, debug = debug)
+    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref,  dic_thresholds["herbaceous"], output_layers["herbaceous"], save_intermediate_results = save_intermediate_results, debug = debug)
 
     #4# Concaténation des données en une seule table 'végétation'
     tab_name = 'vegetation'
@@ -77,16 +79,19 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
 
     query = """
     CREATE TABLE %s AS
-    SELECT fid, geom, strate, fv FROM %s
+    SELECT geom, strate, fv FROM %s
     UNION
     SELECT fid, geom, strate, fv FROM %s
     UNION 
-    SELECT fid, geom, strate, fv FROM %s
+    SELECT fid, geom, strate, fv FROM %s;
     """ %(tab_name, tab_arbore, tab_arbustive, tab_herbace)
     
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
+
+    addSpatialIndex(connexion, tab_name)
+    addUniqId(connexion, tab_name)
 
     if output_layers["output_fv"] == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
@@ -511,7 +516,7 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
 ###########################################################################################################################################
 # FONCTION detectInShrubStratum()                                                                                                         #
 ###########################################################################################################################################
-def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layer = '', save_intermediate_results = False, debug = 0):
+def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0, output_layer = '', save_intermediate_results = False, debug = 0):
     """
     Rôle : détecté les formes végétales horizontales au sein de la strate arbustive
 
@@ -519,7 +524,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
         connexion : connexion à la base donnée et au schéma correspondant
         connexion_dic : dictionnaire contenant les paramètres de connexion (pour la sauvegarde en fin de fonction)
         schem_tab_ref : schema.nom de la table
-        dic_thresholds : dictionnaire des seuils à appliquer, par défaut : {"seuil_surface" : 0, "seuil_compacite_1" : 0, "seuil_compacite_2" : 0, "seuil_convexite" : 0, "seuil_elongation" : 0, "val_largeur_max_alignement" : 0, "val_buffer" : 0}
+        thresholds : dictionnaire des seuils à appliquer, par défaut : {"seuil_surface" : 0, "seuil_compacite_1" : 0, "seuil_compacite_2" : 0, "seuil_convexite" : 0, "seuil_elongation" : 0, "val_largeur_max_alignement" : 0, "val_buffer" : 0}
         output_layer : sauvegarde ou non du résultat final en une couche vectorielle, par défaut ''
         save_intermediate_results : sauvegarde ou non des tables intermédiaires. Par défaut : False
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
@@ -553,7 +558,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
         SELECT *
         FROM %s
         WHERE strate = 'Au';
-    """ %(tab_arbu_ini, tab_ref)
+    """ %(tab_arbu_ini, schem_tab_ref)
 
     #Exécution de la requête SQL
     if debug >= 3:
@@ -639,7 +644,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     if output_layer == '':
         print(yellow + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification des FV arbustives. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
-        exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_arbustif, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
+        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_arbustif, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
     
     return tab_arbustif
 
@@ -708,7 +713,7 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass, debug = 0):
 ###########################################################################################################################################
 # FONCTION detectInHerbaceousStratum()                                                                                                    #
 ###########################################################################################################################################
-def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layer = '', save_intermediate_results = False, debug = 0):
+def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, thresholds,  output_layer = '', save_intermediate_results = False, debug = 0):
     """
     Rôle : détecter les formes végétales horizontales au sein de la strate herbacée
 
@@ -734,7 +739,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
         SELECT *
         FROM %s
         WHERE strate = 'H';
-    """ %(tab_herb_ini, tab_ref)
+    """ %(tab_herb_ini, schem_tab_ref)
 
     #Exécution de la requête SQL
     if debug >= 3:
@@ -782,10 +787,10 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     tab_herbace = ''
 
     #Complétion de l'attribut fv
-    tab_herbace = classificationGrassOrCrop(connexion, connexion_dic, tab_in, tab_out, img_input, save_intermediate_results = save_intermediate_results, debug = debug) 
+    tab_herbace = classificationGrassOrCrop(connexion, connexion_dic, tab_out, thresholds, save_intermediate_results = save_intermediate_results, debug = debug) 
 
     if tab_herbace == '':
-        tab_herbace = 'herbace'
+        tab_herbace = 'strate_herbace'
 
     # SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
     if not save_intermediate_results :
@@ -795,50 +800,54 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     if output_layer == '' :
         print(yellow + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification des FV herbacées. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
-        exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_herbace, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
+        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_herbace, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
     return tab_herbace  
 
 ########################################################################
 # FONCTION classificationGrassOrCrop()                                #
 ########################################################################
-def classificationGrassOrCrop(connexion, connexion_dic, tab_in, tab_out, img_input, save_intermediate_results = False, debug = 0) :
+def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save_intermediate_results = False, debug = 0) :
     """
     Rôle : produire les formes végétales herbacée 'Pr' (prairie) ou 'C' (culture)
 
     Paramètres :
         connexion :
+        connexion_dic :
         tab_in : nom de la table contenant les segments de végétation herbacée
-        tab_out : nom de la table en sortie contenant les polygones des formes végétales herbacées détectées
-        img_input : image de classification prairie vs culture en entrée
+        thresholds : dictionnaire des paramètres pour détecter les formes végétales herbacées
         save_intermediate_result : paramètre de sauvegarde des tables et/ou fichiers intermédiaires. Par défaut : False
         debug : paramètre du niveau de debug. Par défaut : 0
     """
     #Crossing vector raster + majority
 
-    layer_sgts_veg_h = repertory + 'sgts_vegetation_herbace.gpkg'
-    vector_output = repertory + 'sgts_vegetation_hebace_plus_maj.gpkg'
+    repertory = os.path.dirname(thresholds["img_ocs"])
+    layer_sgts_veg_h = repertory + os.sep + 'sgts_vegetation_herbace.gpkg'
+    vector_output = repertory + os.sep + 'sgts_vegetation_hebace_plus_maj.gpkg'
 
     #Export des le donnée vecteur des segments herbacés en couche GPKG
-    exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_in, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+    exportVectorByOgr2ogr(connexion_dic["dbname"], layer_sgts_veg_h, tab_in, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
 
     #Calcul de la classe majoritaire par segments herbacé 
     col_to_add_list = ["majority"]
     col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range", "median", "minority" ]
     class_label_dico = {} 
-    statisticsVectorRaster(img_input, layer_sgts_veg_h, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    statisticsVectorRaster(thresholds["img_ocs"], layer_sgts_veg_h, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
     
     #Import en base de la ocuche vecteur
     tab_cross = 'tab_cross_h_classif'
     importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
+    #Suppression des fichiers créés
+    removeFile(layer_sgts_veg_h)
+    removeFile(vector_output)
 
     # Attribution du label 'PR' (prairie) ou 'C' (culture)
     query = """
-    UPDATE %s AS t1 SET fv = 'PR' FROM %s AS t2 WHERE t2.majority = '1' AND t1.fid = t2.fid;
-    UPDATE %s AS t1 SET fv = 'C' FROM %s AS t2 WHERE t2.majority = '2' AND t1.fid = t2.fid;
-    """  %(tab_in, tab_cross ,tab_in,tab_cross)
+    UPDATE %s AS t1 SET fv = 'PR' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    UPDATE %s AS t1 SET fv = 'C' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    """  %(tab_in, tab_cross, thresholds["label_prairie"],tab_in,tab_cross, thresholds["label_culture"])
 
     if debug >= 3:
         print(query)
@@ -853,8 +862,8 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, tab_out, img_inp
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom 
-        FROM (SELECT geom FROM %s WHERE majority = '%s') AS t1);
-    """ %(tab_grass, tab_grass, tab_in, class_ocs["prairie"])
+        FROM (SELECT geom FROM %s WHERE fv = 'PR') AS t1;
+    """ %(tab_grass, tab_grass, tab_in)
 
     if debug >= 3:
         print(query)
@@ -866,12 +875,14 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, tab_out, img_inp
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom 
-        FROM (SELECT geom FROM %s WHERE majority = '%s') AS t1);
-    """ %(tab_crop, tab_crop, tab_in, class_ocs["culture"])
+        FROM (SELECT geom FROM %s WHERE fv = 'C') AS t1;
+    """ %(tab_crop, tab_crop, tab_in)
 
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
+
+    tab_out = 'strate_herbace'
 
     query = """
     DROP TABLE IF EXISTS %s;
@@ -885,9 +896,9 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, tab_out, img_inp
 
     if debug >= 3:
         print(query)
-    ecuteQUery(connexion, query)
+    executeQuery(connexion, query)
 
-    addUniqId(connexion, tab_out)
+    addIndex(connexion, tab_out, 'fid', 'fid_veg_idx')
     addSpatialIndex(connexion, tab_out)
 
     dropTable(connexion, tab_cross)

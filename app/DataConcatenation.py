@@ -5,13 +5,15 @@ from libs.Lib_file import removeFile
 ###########################################################################################################################################
 # FONCTION concatenateData()                                                                                                              #
 ###########################################################################################################################################
-def concatenateData(images_input_list, stack_image_output, code = "float", save_intermediate_results = False, overwrite = True):
+def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, code = "float", save_intermediate_results = False, overwrite = True):
     """
     Rôle : ajout de neocanaux (mnh, textures et/ou indices) deja calcules ou non a l'image d'origine
 
     Paramètres :
-        images_input_list : liste de fichiers a stacker ensemble
+        images_input_dic : dictionnaire des fichiers a stacker ensemble
         stack_image_output : le nom de l'empilement image de sortie
+        img_ref : image de référence du projet
+        shp_zone : emprise de la zone d'étude
         code : encodage du fichier de sortie, par défaut : float
         save_intermediate_results : fichiers de sorties intermediaires non nettoyees, par defaut = False
         overwrite : si vrai, ecrase les fichiers existants, par défaut True
@@ -29,6 +31,10 @@ def concatenateData(images_input_list, stack_image_output, code = "float", save_
         print(cyan + "concatenateData() : " + endC + "code : " + str(code) + endC)
         print(cyan + "concatenateData() : " + endC + "save_intermediate_results : " + str(save_intermediate_results) + endC)
         print(cyan + "concatenateData() : " + endC + "overwrite : " + str(overwrite) + endC)
+
+    images_input_list = [] 
+    for el in images_input_dic.values():
+        images_input_list.append(el)
 
     check = os.path.isfile(stack_image_output)
     if check and not overwrite: # Si l'empilement existe deja et que overwrite n'est pas activé
@@ -72,8 +78,30 @@ def concatenateData(images_input_list, stack_image_output, code = "float", save_
                 print(command)
             exitCode = os.system(command)
             if exitCode != 0:
-                print(command)
-                raise NameError(cyan + "concatenateChannels() : " + bold + red + "An error occured during otbcli_ConcatenateImages command. See error message above." + endC)
+                #Si otbcli n'a pas fonctionné -> cela peut forcément venir de la donnée d'élévation apportée qu'il faut superimpose avec le reste des néochannels
+                repertory = os.path.dirname(images_input_dic["img_ndvi"])
+                file_name_mnh = os.path.splitext(os.path.basename(images_input_dic["img_mnh"]))[0]
+                extension = os.path.splitext(images_input_dic["img_mnh"])[1]
+                file_tmp_mnh = repertory + os.sep + file_name_mnh + "_tmp_SI" + extension
+                file_mnh = repertory + os.sep + file_name_mnh + extension
+
+                cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_ref, images_input_dic["img_mnh"], file_tmp_mnh)
+                os.system(cmd_superimpose)
+                cutImageByVector(shp_zone ,file_tmp_mnh, file_mnh)
+                images_input_dic["img_mnh"] = file_mnh
+ 
+                elements_to_stack_list_str = ""
+                for el in images_input_dic.values():
+                    elements_to_stack_list_str += " " + el
+
+                #Relance de la concaténation
+                command = "otbcli_ConcatenateImages -progress true -il %s -out %s %s" %(elements_to_stack_list_str,stack_image_output,code)
+                if debug >= 3:
+                    print(command)
+                exitCode = os.system(command)
+                if exitCode != 0:
+                    print(command)
+                    raise NameError(cyan + "concatenateChannels() : " + bold + red + "An error occured during otbcli_ConcatenateImages command. See error message above." + endC)
             print(bold + green + "concatenateChannels() : Channels successfully assembled" + endC)
 
-    return
+    return images_input_dic

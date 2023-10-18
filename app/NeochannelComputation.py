@@ -16,14 +16,14 @@ PRECISION = 0.0000001
 #########################################################################
 # FONCTION neochannelComputation()                                      #
 #########################################################################
-def neochannelComputation(image_input, image_pan_input, repertory, empriseVector, imagechannel_order = ["Red","Green","Blue","NIR"], codage="float",save_intermediate_results = False):
+def neochannelComputation(image_input, image_pan_input, dic_neochannels, empriseVector, imagechannel_order = ["Red","Green","Blue","NIR"], codage="float",save_intermediate_results = False):
     """
     Rôle : Cette fonction permet de créer l'ensemble des indices radiométriques
 
     Paramètres :
            image_input : fichier image d'entrée multi bandes
            image_pan_input : fichier image panchromatique d'entrée monobande
-           repertory : repertoire de sauvegarde des données
+           dic_neochannels : dictionnaire des fichiers de sauvegarde de chacun des néocanaux
            empriseVector : fichier vecteur emprise de la zone d'étude
            channel_order : liste d'ordre des bandes de l'image. Par défaut : ["Red","Green","Blue","NIR"]
            codage : type de codage du fichier de sortie. Par défaut : float
@@ -33,130 +33,91 @@ def neochannelComputation(image_input, image_pan_input, repertory, empriseVector
         liste des fichiers d'indices radiométriques
     """
     # Utilisation de fichiers temporaires pour produire les indices radiométriques
-    repertory_neochannels = repertory + os.sep + 'TMP_NEOCHANNELSCOMPUTATION'
-    file_name = os.path.splitext(os.path.basename(image_input))[0]
-    extension = os.path.splitext(image_input)[1]
+    repertory = os.path.dirname(dic_neochannels["img_ndvi"])
+    file_name_ndvi = os.path.splitext(os.path.basename(dic_neochannels["img_ndvi"]))[0]
+    file_name_ndwi = os.path.splitext(os.path.basename(dic_neochannels["img_ndwi"]))[0]
+    file_name_msavi = os.path.splitext(os.path.basename(dic_neochannels["img_msavi"]))[0]
+    file_name_sfs = os.path.splitext(os.path.basename(dic_neochannels["img_sfs"]))[0]
+    file_name_teinte = os.path.splitext(os.path.basename(dic_neochannels["img_teinte"]))[0]
 
-    # if not os.path.exists(repertory_neochannels):
-    #     os.makedirs(repertory_neochannels)
+    extension = os.path.splitext(dic_neochannels["img_ndvi"])[1]
+
+    file_out_tmp = "_tmp"
 
     #Fichiers intermédiaires NDVI
-    file_out_suffix_ndvi = "_tmp_ndvi"
-    ndvi_file_tmp = repertory_neochannels + os.sep + file_name + file_out_suffix_ndvi + extension
+    ndvi_file_tmp = repertory + os.sep + file_name_ndvi + file_out_tmp + extension
 
-    # if os.path.exists(ndvi_file_tmp):
-    #     os.remove(ndvi_file_tmp)
-
-    file_out_suffix_cut_ndvi = "_ndvi"
-    ndvi_out_file = repertory_neochannels + os.sep + file_name + file_out_suffix_cut_ndvi + extension
-
-    # if os.path.exists(ndvi_out_file):
-    #     os.remove(ndvi_out_file)
+    if os.path.exists(ndvi_file_tmp):
+        os.remove(ndvi_file_tmp)
 
     #Fichiers intermédiaires MSAVI2
-    file_out_suffix_msavi2 = "_tmp_msavi2"
-    msavi2_file_tmp = repertory_neochannels + os.sep + file_name + file_out_suffix_msavi2 + extension
+    msavi2_file_tmp = repertory + os.sep + file_name_msavi + file_out_tmp + extension
 
-    # if os.path.exists(msavi2_file_tmp):
-    #     os.remove(msavi2_file_tmp)
+    if os.path.exists(msavi2_file_tmp):
+        os.remove(msavi2_file_tmp)
 
-    file_out_suffix_cut_msavi2 = "_msavi2"
-    msavi2_out_file = repertory_neochannels + os.sep + file_name + file_out_suffix_cut_msavi2 + extension
-
-    # if os.path.exists(msavi2_out_file):
-    #     os.remove(msavi2_out_file)
 
     #Fichiers intermédiaires NDWI2
-    file_out_suffix_ndwi2 = "_tmp_ndwi2"
-    ndwi2_file_tmp = repertory_neochannels + os.sep + file_name + file_out_suffix_ndwi2 + extension
+    ndwi2_file_tmp = repertory + os.sep + file_name_ndwi + file_out + extension
 
-    # if os.path.exists(ndwi2_file_tmp):
-    #     os.remove(ndwi2_file_tmp)
-
-    file_out_suffix_cut_ndwi2 = "_ndwi2"
-    ndwi2_out_file = repertory_neochannels + os.sep + file_name + file_out_suffix_cut_ndwi2 + extension
-
-    # if os.path.exists(ndwi2_out_file):
-    #     os.remove(ndwi2_out_file)
+    if os.path.exists(ndwi2_file_tmp):
+        os.remove(ndwi2_file_tmp)
 
     #Fichiers intermédiaires teinte Hue
-    file_out_suffix_h = "_tmp_hue_H"
-    h_file_tmp = repertory_neochannels + os.sep + file_name + file_out_suffix_h + extension
+    h_file_tmp = repertory + os.sep + file_name_teinte + file_out + extension
 
-    # if os.path.exists(h_file_tmp):
-    #     os.remove(h_file_tmp)
-
-    file_out_suffix_cut_hue = "_hue"
-    hue_out_file = repertory_neochannels + os.sep + file_name + file_out_suffix_cut_hue + extension
-
-    # if os.path.exists(hue_out_file):
-    #     os.remove(hue_out_file)
-
+    if os.path.exists(h_file_tmp):
+        os.remove(h_file_tmp)
 
     #Fichiers intermédiaire texture SFS
-    file_out_suffix_sfs = "_tmp_txtSFS"
-    sfs_file_tmp = repertory_neochannels + os.sep + file_name + file_out_suffix_sfs + extension
+    sfs_file_tmp = repertory + os.sep + file_name_sfs + file_out + extension
 
-    # if os.path.exists(sfs_file_tmp):
-    #     os.remove(sfs_file_tmp)
+    if os.path.exists(sfs_file_tmp):
+        os.remove(sfs_file_tmp)
 
-    file_out_suffix_cut_sfs = "_txtSFS"
-    sfs_out_file = repertory_neochannels + os.sep + file_name + file_out_suffix_cut_sfs + extension
-
-    # if os.path.exists(sfs_out_file):
-    #     os.remove(sfs_out_file)
-
-
-    # #Calcul du NDVI
-    # createNDVI(image_input, ndvi_file_tmp)
-    # #Decoupe sur la zone d'étude
-    # cutImageByVector(empriseVector ,ndvi_file_tmp, ndvi_out_file)
-
-    # #Calcul du MSAVI2
-    # createMSAVI2(image_input, msavi2_file_tmp)
-    # #Decoupe sur la zone d'étude
-    # cutImageByVector(empriseVector ,msavi2_file_tmp, msavi2_out_file)
-
-    # #Calcul du NDWI2
-    # createNDWI2(image_input, ndwi2_file_tmp)
-    # #Decoupe sur la zone d'étude
-    # cutImageByVector(empriseVector ,ndwi2_file_tmp, ndwi2_out_file)
-
-    # #Calcul de la teinte
-    # h_file_tmp = createHIS(image_input, h_file_tmp, li_choice = ["H"])[0]
+    #Calcul du NDVI
+    createNDVI(image_input, ndvi_file_tmp)
     #Decoupe sur la zone d'étude
-   # cutImageByVector(empriseVector ,h_file_tmp, hue_out_file)
+    cutImageByVector(empriseVector ,ndvi_file_tmp, dic_neochannels["img_ndvi"])
+
+    #Calcul du MSAVI2
+    createMSAVI2(image_input, msavi2_file_tmp)
+    #Decoupe sur la zone d'étude
+    cutImageByVector(empriseVector ,msavi2_file_tmp, dic_neochannels["img_msavi"])
+
+    #Calcul du NDWI2
+    createNDWI2(image_input, ndwi2_file_tmp)
+    #Decoupe sur la zone d'étude
+    cutImageByVector(empriseVector ,ndwi2_file_tmp, dic_neochannels["img_ndwi"])
+
+    #Calcul de la teinte
+    createHIS(image_input, h_file_tmp, li_choice = ["H"])[0]
+    #Decoupe sur la zone d'étude
+    cutImageByVector(empriseVector ,h_file_tmp, dic_neochannels["img_teinte"])
 
     #Calcul de la texture SFS
-    #createSFS(image_pan_input, sfs_file_tmp)
+    createSFS(image_pan_input, sfs_file_tmp)
     #Decoupe sur la zone d'étude
-    # cutImageByVector(empriseVector ,sfs_file_tmp, sfs_out_file)
+    cutImageByVector(empriseVector ,sfs_file_tmp, dic_neochannels["img_sfs"])
 
-    # Suppression du fichier temporaire
-    # if not save_intermediate_results:
-    #     if os.path.exists(ndvi_file_tmp):
-    #         removeFile(ndvi_file_tmp)
+    #Suppression des fichiers temporaires
+    if not save_intermediate_results:
+        if os.path.exists(ndvi_file_tmp):
+            removeFile(ndvi_file_tmp)
 
-    #     if os.path.exists(msavi2_file_tmp):
-    #         removeFile(msavi2_file_tmp)
+        if os.path.exists(msavi2_file_tmp):
+            removeFile(msavi2_file_tmp)
 
-    #     if os.path.exists(ndwi2_file_tmp):
-    #         removeFile(ndwi2_file_tmp)
+        if os.path.exists(ndwi2_file_tmp):
+            removeFile(ndwi2_file_tmp)
 
-    #     if os.path.exists(h_file_tmp):
-    #         removeFile(h_file_tmp)
+        if os.path.exists(h_file_tmp):
+            removeFile(h_file_tmp)
 
-    #     if os.path.exists(sfs_file_tmp):
-    #         removeFile(sfs_file_tmp)
+        if os.path.exists(sfs_file_tmp):
+            removeFile(sfs_file_tmp)
 
-    dic_out = {}
-    dic_out["ndvi"] = ndvi_out_file
-    dic_out["msavi"] = msavi2_out_file
-    dic_out["ndwi"] = ndwi2_out_file
-    dic_out["hue"] = hue_out_file
-    dic_out["sfs"] = sfs_out_file
-
-    return dic_out
+    return 
 
 
 
