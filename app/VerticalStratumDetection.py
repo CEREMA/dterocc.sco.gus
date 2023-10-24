@@ -1769,7 +1769,7 @@ def calc_statMedian(vector_input, image_input, vector_output):
     
     col_to_add_list = ["median"]
     col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range"]
-    class_label_dico = []
+    class_label_dico = { } 
     statisticsVectorRaster(image_input, vector_input, vector_output, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
     
     return
