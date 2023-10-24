@@ -7,11 +7,12 @@
         "img_winter":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/img_hiver.tif",
         "img_dtm":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/img_mnt.tif",
         "img_dsm":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/img_mns.tif",
-        "img_grasscrops":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/img_ocs_prairie_culture.tif",
         "entry_options" : {
+            "repertory_img_assembly" : null,
             "img_dhm": null,
             "img_ocs": null,
             "data_classes": {
+                "createsamples" : "True",
                 "build": null,
                 "road": null,
                 "baresoil": null,
@@ -25,7 +26,8 @@
         "user_db": "postgres",
         "password_db": "postgres",
         "server_db": "",
-        "port_number": 5432
+        "port_number": 5432,
+        "schema" : ""
     },
     "vegetation_extraction": {
         "samples_creation": {
@@ -199,8 +201,11 @@
           "num_tree": 50,
           "obb_erreur": 0.001
         }
-      },
-      "vertical_stratum_detection": {
+    },
+    "segmentation" : {
+        "minsize" : 10
+    }, 
+    "vertical_stratum_detection": {
         "height_treeshrub_thr": 3,
         "height_shrubgrass_thr": 1,
         "texture_thr": 11,
@@ -209,24 +214,41 @@
         "shrub_touch_grassvsshrub_perc": 50,
         "shrub_sign": 25,
         "surface_rate": 0.25
-      },
-      "vegetation_form_stratum_Detection": {
-        "isolatedtree_max_surface": 100,
-        "isolatedtree_min_surface": 12,
-        "woodtree_sure_surface": 5000,
-        "isolatedshrub_max_surface": 20,
-        "isolatedshrub_min_surface": 3,
-        "woodshrub_sure_surface": 100,
-        "buffer_compacity_thr": 0.5,
-        "compacity_1_thr": 0.7,
-        "compacity_2_thr": 0.2,
-        "convexity_1_thr": 0.65,
-        "convexity_2_thr": 0.5,
-        "extension_1_thr": 4,
-        "extension_2_thr": 2,
-        "extension_3_thr": 2.5
-      },
-      "indicators_computation": {
+    },
+    "vegetation_form_stratum_detection": {
+        "tree" :{
+            "isolatedtree_max_surface": 100,
+            "isolatedtree_min_surface": 12,
+            "woodtree_sure_surface": 5000,
+            "buffer_compacity_thr": 0.5,
+            "compacity_1_thr": 0.7,
+            "compacity_2_thr": 0.2,
+            "convexity_1_thr": 0.65,
+            "convexity_2_thr": 0.5,
+            "extension_1_thr": 4,
+            "extension_2_thr": 2,
+            "extension_3_thr": 2.5
+        }, 
+        "shrub":{
+            "isolatedshrub_max_surface": 20,
+            "isolatedshrub_min_surface": 3,
+            "woodshrub_sure_surface": 100,
+            "buffer_compacity_thr": 0.5,
+            "compacity_1_thr": 0.7,
+            "compacity_2_thr": 0.2,
+            "convexity_1_thr": 0.65,
+            "convexity_2_thr": 0.5,
+            "extension_1_thr": 4,
+            "extension_2_thr": 2,
+            "extension_3_thr": 2.5
+        },
+        "herbaceous" : {
+            "img_grasscrops":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/img_ocs_prairie_culture.tif",
+            "label_prairie" : 1,
+            "label_culture" : 2
+        } 
+    },
+    "indicators_computation": {
         "area": {
           "area_feature": "surface",
           "area_type": "float",
