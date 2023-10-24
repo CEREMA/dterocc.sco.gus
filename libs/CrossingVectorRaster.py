@@ -184,6 +184,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
     if "range" in col_to_add_list:
         col_to_add_inter01_list.append("range")
 
+    print("col_to_add_list : ", col_to_add_list)
     # Copy de col_to_add_inter01_list dans col_to_add_inter02_list
     col_to_add_inter02_list = list(col_to_add_inter01_list)
 
@@ -312,7 +313,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
             feature.SetField('ID', int(stats_info_list.index(polygone_stats)))
 
         # Initialisation à 0 des colonnes contenant le % de répartition de la classe - Verifier ce qu'il se passe si le nom dépasse 10 caracteres
-        if ('all' in col_to_add_list) or ('count' in col_to_add_list):
+        if ('all' in col_to_add_list) or ('count' in col_to_add_list) and class_label_dico != {}:
             for element in class_label_dico:
                 name_col = class_label_dico[element]
                 if len(name_col) > 10:
@@ -320,7 +321,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
                 feature.SetField(name_col,0)
 
         # Initialisation à 0 des colonnes contenant la surface correspondant à la classe - Verifier ce qu'il se passe si le nom dépasse 10 caracteres
-        if ('all_S' in col_to_add_list) or ('count_S' in col_to_add_list):
+        if ('all_S' in col_to_add_list) or ('count_S' in col_to_add_list) and  class_label_dico != {}:
             for element in class_label_dico:
                 name_col = class_label_dico[element]
                 name_col_area =  PREFIX_AREA_COLUMN + name_col
@@ -329,7 +330,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
                 feature.SetField(name_col_area,0)
 
         # Remplissage des colonnes contenant le % de répartition et la surface des classes
-        if ('all' in col_to_add_list) or ('count' in col_to_add_list) or ('all_S' in col_to_add_list) or ('count_S' in col_to_add_list):
+        if ('all' in col_to_add_list) or ('count' in col_to_add_list) or ('all_S' in col_to_add_list) or ('count_S' in col_to_add_list) and class_label_dico != {} :
             # 'all' est une liste des couples : (Valeur_du_pixel_sur_le_raster, Nbr_pixel_ayant_cette_valeur) pour le polygone observe.
             # Ex : [(0,183),(803,45),(801,4)] : dans le polygone, il y a 183 pixels de valeur 0, 45 pixels de valeur 803 et 4 pixels de valeur 801
             majority_all = polygone_stats['all']
