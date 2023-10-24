@@ -79,16 +79,16 @@ def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, cod
             exitCode = os.system(command)
             if exitCode != 0:
                 #Si otbcli n'a pas fonctionné -> cela peut forcément venir de la donnée d'élévation apportée qu'il faut superimpose avec le reste des néochannels
-                repertory = os.path.dirname(images_input_dic["img_ndvi"])
-                file_name_mnh = os.path.splitext(os.path.basename(images_input_dic["img_mnh"]))[0]
-                extension = os.path.splitext(images_input_dic["img_mnh"])[1]
+                repertory = os.path.dirname(images_input_dic["ndvi"])
+                file_name_mnh = os.path.splitext(os.path.basename(images_input_dic["mnh"]))[0]
+                extension = os.path.splitext(images_input_dic["mnh"])[1]
                 file_tmp_mnh = repertory + os.sep + file_name_mnh + "_tmp_SI" + extension
                 file_mnh = repertory + os.sep + file_name_mnh + extension
 
-                cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_ref, images_input_dic["img_mnh"], file_tmp_mnh)
+                cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_ref, images_input_dic["mnh"], file_tmp_mnh)
                 os.system(cmd_superimpose)
                 cutImageByVector(shp_zone ,file_tmp_mnh, file_mnh)
-                images_input_dic["img_mnh"] = file_mnh
+                images_input_dic["mnh"] = file_mnh
  
                 elements_to_stack_list_str = ""
                 for el in images_input_dic.values():
