@@ -93,6 +93,9 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     addSpatialIndex(connexion, tab_name)
     addUniqId(connexion, tab_name)
 
+    #5# Nettoyage des formes végétales 
+   # formStratumCleaning(connexion, tab_name) 
+
     if output_layers["output_fv"] == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
@@ -1297,6 +1300,366 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
 
 
 
+########################################################################
+# FONCTION formStratumCleaning()                                       #
+########################################################################
+def formStratumCleaning(connexion, tab_ref):
+    """
+    Rôle : nettoyer les formes végétales horizontales parfois mal classées
 
+    Paramètres :
+        connexion : connexion à la base donnée et au schéma correspondant
+        tab_ref : nom de la table contenant les formes végétales à nettoyer
+    """
 
+    #pour l'instant tab_ref = 'vegetation' 
+
+    #1# Suppression des FV dont la surface est strictement inférieure à 1m² 
+    QUERY = """
+    DROP TABLE IF EXISTS fv_arbo_delete;
+    CREATE TABLE fv_arbo_delete AS
+	    SELECT t.ogc_fid
+	    FROM (
+            SELECT * FROM %s WHERE strate = 'A'
+            ) AS t
+	    WHERE public.ST_AREA(t.geom) < 1;
+
+    DROP TABLE IF EXISTS fv_arbu_delete;
+    CREATE TABLE fv_arbu_delete AS
+	    SELECT t.ogc_fid
+	    FROM (
+            SELECT * FROM %s WHERE strate = 'Au'
+            ) AS t
+	    WHERE public.ST_AREA(t.geom) < 1;
+
+    DROP TABLE IF EXISTS fv_herba_delete;
+    CREATE TABLE fv_herba_delete AS
+	    SELECT t.ogc_fid
+	    FROM (
+            SELECT * FROM %s WHERE strate = 'H'
+            ) AS t
+	    WHERE public.ST_AREA(t.geom) < 1;
+    """ %(tab_ref, tab_ref, tab_ref)
+
+    if debug > 3 :
+        print(query)
+    executeQuery(connexion, query)
+
+    query = """
+    DELETE FROM %s AS t1 USING fv_arbo_delete AS t2 WHERE t1.ogc_fid = t2.ogc_fid;
+
+    DELETE FROM %s AS t1 USING fv_arbu_delete AS t2 WHERE t1.ogc_fid = t2.ogc_fid;
+
+    DELETE FROM %s AS t1 USING fv_herba_delete AS t2 WHERE t1.ogc_fid = t2.ogc_fid;
+    """ %(tab_ref, tab_ref, tab_ref)
+
+    if debug > 3 :
+        print(query)
+    executeQuery(connexion, query)
+
+    dropTable(connexion, 'fv_arbo_delete')
+    dropTable(connexion, 'fv_arbu_delete')
+    dropTable(connexion, 'fv_herba_delete')
+
+    #2# Reclassification des taches arborées et arbustives ('TA' et 'TAu') en boisements arborés et arbustifs ('BOA' et 'BOAu')
+
+    query = """
+    UPDATE %s SET fv = 'BOA' WHERE fv = 'TA';
+    UPDATE %s SET fv = 'BOAu' WHERE fv = 'TAu';
+    """ %(tab_ref, tab_ref)
+
+    if debug > 3 :
+        print(query)
+    executeQuery(connexion, query)
+
+    #3# Reclassification des formes végétales arborées et arbustives touchant uniquement de l'arboré et de l'arbustif
+    query = """
+    DROP TABLE IF EXISTS fv_arbu_touch_arbo;
+    CREATE TABLE fv_arbu_touch_arbo AS
+        SELECT t1.ogc_fid AS fid_arbu, t1.strate AS strate_arbu, t1.fv AS fv_arbu, t1.geom AS geom_arbu,
+                t2.ogc_fid AS fid_arbo, t2.strate AS strate_arbo, t2.fv AS fv_arbo, t2.geom AS geom_arbo
+        FROM (SELECT * FROM %s WHERE strate = 'Au') as t1, (SELECT * FROM %s WHERE strate = 'A') AS t2
+        WHERE public.ST_INTERSECTS(t1.geom, t2.geom);
+
+    DROP TABLE IF EXISTS fv_arbu_touch_herba;
+    CREATE TABLE fv_arbu_touch_herba AS
+        SELECT t1.ogc_fid AS fid_arbu, t1.strate AS strate_arbu, t1.fv AS fv_arbu, t1.geom AS geom_arbu,
+                t2.ogc_fid AS fid_herba, t2.strate AS strate_herba, t2.fv AS fv_herba, t2.geom AS geom_herba
+        FROM (SELECT * FROM %s WHERE strate = 'Au') as t1, (SELECT * FROM %s WHERE strate = 'H') AS t2
+        WHERE public.ST_INTERSECTS(t1.geom, t2.geom);
+
+    DROP TABLE IF EXISTS fv_arbo_touch_herba;
+    CREATE TABLE fv_arbo_touch_herba AS
+        SELECT t1.ogc_fid AS fid_arbo, t1.strate AS strate_arbo, t1.fv AS fv_arbo, t1.geom AS geom_arbo,
+                t2.ogc_fid AS fid_herba, t2.strate AS strate_herba, t2.fv AS fv_herba, t2.geom AS geom_herba
+        FROM (SELECT * FROM %s WHERE strate = 'A') as t1, (SELECT * FROM %s WHERE strate = 'H') AS t2
+        WHERE public.ST_INTERSECTS(t1.geom, t2.geom);
+    """ %(tab_ref, tab_ref, tab_ref, tab_ref, tab_ref, tab_ref)
+
+    if debug >= 3 :
+        print(query)
+    executeQuery(connexion, query)
+
+    #3.1# Les FV arbustives 
+    # Les fvs arbustives ne touchant qu'une fv arborée
+    query = """
+    DROP TABLE IF EXISTS fv_arbu_touch_only_1_arbo;
+    CREATE TABLE fv_arbu_touch_only_1_arbo AS
+	    SELECT t1.* 
+	    FROM (
+            SELECT * 
+            FROM fv_arbu_touch_arbo 
+            WHERE fid_arbu NOT IN (SELECT fid_arbu FROM fv_arbu_touch_herba)
+            ) AS t1, 
+	        (
+            SELECT fid_arbu, count(fid_arbo) AS c 
+            FROM fv_arbu_touch_arbo 
+            GROUP BY fid_arbu
+            ) AS t2
+	    WHERE t1.fid_arbu = t2.fid_arbu AND c = 1 ;
+    """
+
+    if debug >= 3 :
+        print(query)
+    executeQuery(connexion, query)
+
+    #Ré-attribution de la strate 'A' pour les fvs arbustifs concernés 
+    query = """
+    UPDATE %s AS t1 SET strate = 'A' 
+        FROM (
+            SELECT t1.fid_arbu
+            FROM (
+                SELECT fid_arbu, fid_arbo, fv_arbu, fv_arbo, public.ST_AREA(geom_arbu)/public.ST_AREA(geom_arbo) AS ratio_surface
+	            FROM fv_arbu_touch_only_1_arbo
+                ) AS t1 
+            WHERE t1.ratio_surface < 0.5
+            ) AS t2
+        WHERE t1.ogc_fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
+    """ %(tab_ref)
+
+    if debug >= 3 :
+        print(query)
+    executeQuery(connexion, query)
+
+    #Ré-attribution de la fv avec laquelle la fv arbustive est en contact
+    query = """
+    UPDATE %s AS t1 SET fv = t2.fv_arbo 
+        FROM (
+            SELECT t1.fid_arbu, t1.fv_arbo 
+            FROM (
+                SELECT fid_arbu, fid_arbo, fv_arbu, fv_arbo, public.ST_AREA(geom_arbu)/public.ST_AREA(geom_arbo) AS ratio_surface
+	            FROM fv_arbu_touch_only_1_arbo
+                ) AS t1 
+            WHERE t1.ratio_surface < 0.5
+            ) as t2
+        WHERE t1.ogc_fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
+    """ %(tab_ref)
+    
+    if debug >= 3 :
+        print(query)
+    executeQuery(connexion, query)
+
+    # Les fvs arbustives touchant plus d'une fv arborée
+
+    query = """
+    DROP TABLE IF EXISTS fv_arbu_touch_more_2_arbo
+    CREATE TABLE fv_arbu_touch_more_2_arbo AS
+	    SELECT t1.* 
+	    FROM (
+            SELECT * 
+            FROM fv_arbu_touch_arbo 
+            WHERE fid_arbu NOT IN (SELECT fid_arbu FROM fv_arbu_touch_herba)
+            ) AS t1, 
+	    (SELECT fid_arbu, count(fid_arbo) AS c 
+            FROM fv_arbu_touch_arbo 
+            GROUP BY fid_arbu
+            ) AS t2
+	    WHERE t1.fid_arbu = t2.fid_arbu AND c > 1 ;
+    """
+
+    if debug >= 3 :
+        print(query)
+    executeQuery(connexion, query)
+
+    #Ré-attribution de la strate 'A' pour les fvs arbustifs concernés 
+    query = """
+    UPDATE fv_arbu_reclass AS t1 SET strate = 'A' 
+    FROM (
+        SELECT t1.fid_arbu 
+        FROM (
+            SELECT fid_arbu, fid_arbo, fv_arbu, fv_arbo, public.ST_AREA(geom_arbu)/public.ST_AREA(geom_arbo) AS ratio_surface
+	        FROM fv_arbu_touch_more_2_arbo
+            ) AS t1 
+        WHERE t1.ratio_surface < 0.5
+        ) AS t2
+    WHERE t1.ogc_fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
+    """
+
+    if debug >= 3 :
+        print(query)
+    executeQuery(connexion, query)
+
+    #Ré-attribution de la fv avec laquelle la fv arbustive est en contact avec règle de longueur de frontière partagée
+    query = """
+    UPDATE fv_arbu_reclass AS t1 SET fv = t2.fv_arbo
+        FROM (
+            SELECT t1.fid_arbu, t1.fv_arbo 
+            FROM (
+                SELECT t1.fid_arbu, t1.fid_arbo, t1.fv_arbu, t1.fv_arbo, public.ST_AREA(t1.geom_arbu)/public.ST_AREA(t1.geom_arbo) AS ratio_surface
+                FROM (
+                    SELECT t1.* 
+                    FROM fv_arbu_touch_more_2_arbo AS t1, 
+                        (
+                        SELECT t1.fid_arbu, max(public.ST_LENGTH(public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom_arbu), public.ST_INTERSECTION(t1.geom_arbu, t1.geom_arbo)))) AS maxi
+                        FROM fv_arbu_touch_more_2_arbo AS t1
+                        GROUP BY t1.fid_arbu
+                        ) as t2 
+                    WHERE t1.fid_arbu = t2.fid_arbu AND public.ST_LENGTH(public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom_arbu), public.ST_INTERSECTION(t1.geom_arbu, t1.geom_arbo))) = t2.maxi
+                    ) as t1
+                ) as t1 
+            WHERE t1.ratio_surface < 0.5
+            ) as t2
+        WHERE t1.ogc_fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
+    """
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    #3.2# Les FV arborées 
+    # Les fvs arborées ne touchant qu'une fv arbustive
+
+    query = """
+    DROP TABLE IF EXISTS fv_arbo_touch_only_1_arbu;
+    CREATE TABLE fv_arbo_touch_only_1_arbu AS
+	    SELECT t1.* 
+	    FROM (
+            SELECT * 
+            FROM fv_arbu_touch_arbo WHERE fid_arbo NOT IN (SELECT fid_arbo FROM fv_arbo_touch_herba)
+            ) AS t1, 
+	        (
+            SELECT fid_arbo, count(fid_arbu) AS c 
+            FROM fv_arbu_touch_arbo
+            GROUP BY fid_arbo
+            ) AS t2
+	    WHERE t1.fid_arbo = t2.fid_arbo AND c = 1 ;
+    """
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Ré-attribution de la strate 'Au' pour les fvs arbustifs concernées
+    query = """
+    UPDATE %s AS t1 SET strate = 'Au' 
+        FROM (
+            SELECT t1.fid_arbo 
+            FROM (
+                SELECT fid_arbo, fid_arbu, fv_arbo, fv_arbu, public.ST_AREA(geom_arbu)/public.ST_AREA(geom_arbo) AS ratio_surface
+	            FROM fv_arbo_touch_only_1_arbu
+                ) AS t1 
+            WHERE t1.ratio_surface > 2
+            ) AS t2 
+        WHERE t1.ogc_fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
+    """ %(tab_ref)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Ré-attribution de la fv avec laquelle la fv arborée est en contact avec règle de longueur de frontière partagée
+    query = """
+    UPDATE %s AS t1 SET fv = t2.fv_arbu 
+        FROM (
+            SELECT t1.fid_arbo, t1.fv_arbu 
+            FROM (
+                SELECT fid_arbo, fid_arbu, fv_arbo, fv_arbu, public.ST_AREA(geom_arbu)/public.ST_AREA(geom_arbo) AS ratio_surface
+	            FROM fv_arbo_touch_only_1_arbu
+                ) AS t1 
+            WHERE t1.ratio_surface > 2
+            ) AS t2
+        WHERE t1.ogc_fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
+    """ %(tab_ref)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    # Les fvs arborées touchant plus d'une fv arbustive
+    query = """
+    DROP TABLE IF EXISTS fv_arbo_touch_more_2_arbu;
+    CREATE TABLE fv_arbo_touch_more_2_arbu AS
+	    SELECT t1.* 
+	    FROM (
+            SELECT * 
+            FROM fv_arbu_touch_arbo 
+            WHERE fid_arbo NOT IN (SELECT fid_arbo FROM fv_arbo_touch_herba)
+            ) AS t1, 
+	        (
+                SELECT fid_arbo, count(fid_arbu) AS c 
+            FROM fv_arbu_touch_arbo 
+            GROUP BY fid_arbo
+            ) AS t2
+	    WHERE t1.fid_arbo = t2.fid_arbo AND c > 1 ;
+    """
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Ré-attribution de la strate 'Au' pour les fvs arborées concernées
+    query = """
+    UPDATE %s AS t1 SET strate = 'Au' 
+        FROM (
+            SELECT t1.fid_arbo 
+            FROM (
+                SELECT fid_arbo, fid_arbu, fv_arbo, fv_arbu, public.ST_AREA(geom_arbu)/public.ST_AREA(geom_arbo) AS ratio_surface
+	            FROM fv_arbo_touch_more_2_arbu
+                ) AS t1 
+            WHERE t1.ratio_surface > 2
+            ) as t2
+        WHERE t1.ogc_fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
+    """ %(tab_ref)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Ré-attribution de la fv avec laquelle la fv arborée est en contact avec règle de longueur de frontière partagée
+
+    query = """
+    UPDATE %s AS t1 SET fv = t2.fv_arbu 
+        FROM (
+            SELECT t1.fid_arbo, t1.fv_arbu 
+	        FROM (
+                SELECT t1.fid_arbo, t1.fid_arbu, t1.fv_arbo, t1.fv_arbu, public.ST_AREA(t1.geom_arbu)/public.ST_AREA(t1.geom_arbo) AS ratio_surface
+	            FROM (
+                    SELECT t1.* 
+                    FROM fv_arbo_touch_more_2_arbu AS t1, 
+                        (
+                        SELECT t1.fid_arbo, max(public.ST_LENGTH(public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom_arbo), public.ST_INTERSECTION(t1.geom_arbo, t1.geom_arbu)))) AS maxi
+                        FROM fv_arbo_touch_more_2_arbu AS t1
+                        GROUP BY t1.fid_arbo
+                        ) AS t2 
+                    WHERE t1.fid_arbo = t2.fid_arbo AND public.ST_LENGTH(public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom_arbo), public.ST_INTERSECTION(t1.geom_arbo, t1.geom_arbu))) = t2.maxi
+                    ) AS t1
+                ) AS t1 
+            WHERE t1.ratio_surface > 2
+        ) AS t2
+        WHERE t1.ogc_fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
+    """ %(tab_ref)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    dropTable(connexion, 'fv_arbu_touch_arbo')
+    dropTable(connexion, 'fv_arbu_touch_herba')
+    dropTable(connexion, 'fv_arbo_touch_herba')
+    dropTable(connexion, 'fv_arbu_touch_only_1_arbo')
+    dropTable(connexion, 'fv_arbu_touch_more_2_arbo')
+    dropTable(connexion, 'fv_arbo_touch_only_1_arbu')
+    dropTable(connexion, 'fv_arbo_touch_more_2_arbu')
+
+    return
 
