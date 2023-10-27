@@ -162,6 +162,11 @@ Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'
 
 De plus, il existe une particularité pour le renseignement des informations en balise `vegetation_extraction > samples_cleaning` : si les indices radiométriques servants à nettoyer et filtrer les échantillons d'apprentissage ont été produits dans une étape précédente au script, nous retrouverons l'information `source` via l'arborescence du dossier de projet créé (à condition de bien respecter les noms des indices attribués dans le code : ndvi, msavi, ndwi, hue, mnh, etc.). Cette balise permet à l'opérateur d'ajouter une autre donnée de filtrage qui n'est pas produite via les scripts.
 
+## Dossier configuration chaîne iota2
+
+Pour la distinction des formes végétales "prairie" et "culture" au sein de la strate herbacée, nous nécessitons l'apport d'une image classifiée "prairie/culture" sur la zone d'étude. Pour se faire, nous proposons l'utilisation de la chaîne iota2 développée par le Cesbio et disponible en OpenSource disponible au téléchargement via [lien](https://framagit.org/iota2-project/iota2).
+La méthode consiste à télécharger sur une année saisonnière complète 12 images Sentinel 2 produit L3 (=synthèse mensuelle) sur la zone d'étude.
+
 ## Auteur
 
 Cerema Toulouse / DT / OSECC (pôle satellite)
