@@ -164,8 +164,27 @@ De plus, il existe une particularité pour le renseignement des informations en 
 
 ## Dossier configuration chaîne iota2
 
-Pour la distinction des formes végétales "prairie" et "culture" au sein de la strate herbacée, nous nécessitons l'apport d'une image classifiée "prairie/culture" sur la zone d'étude. Pour se faire, nous proposons l'utilisation de la chaîne iota2 développée par le Cesbio et disponible en OpenSource disponible au téléchargement via [lien](https://framagit.org/iota2-project/iota2).
-La méthode consiste à télécharger sur une année saisonnière complète 12 images Sentinel 2 produit L3 (=synthèse mensuelle) sur la zone d'étude.
+Pour la distinction des formes végétales "prairie" et "culture" au sein de la strate herbacée, nous nécessitons l'apport d'une image classifiée "prairie/culture" sur la zone d'étude. L'opérateur fournit cette donnée via la variable `vegetation_form_stratum_detection > herbaceous > img_grasscrops`.
+
+Nous mettons à disposition une méthode de production de cette classification à partir de la chaîne iota2 développée par le Cesbio et disponible en gratuitement via ce [lien](https://framagit.org/iota2-project/iota2).
+
+La méthode se déroule en quatre grandes étapes :
+1. Télécharger 12 images Sentinel-2 (une image par mois) sur la zone d'étude. 
+
+NB : en France, nous disposons d'images Sentinel-2 L3 correspondant aux synthèses mensuelles. 
+
+2. Préparer les données d'entrée :
+- orthorectifier et ré-échantillonner les images les unes par rapport aux autres
+- calculer les néocanaux dérivés des bandes de chaque image : NDVI,NDWI et BI
+- concaténer l'ensemble des données en une unique image multi-bande 
+- préparer les données d'apprentissage en allant chercher dans le RPG les classes correspondant aux "prairies" et "cultures". 
+- nettoyer les échantillons d'apprentissage afin d'éviter un recouvrement de classes
+
+3. Remplir le fichier de configuration de la chaîne iota2 dont un exemple est disponible dans le dossier `config_iota\GusConfigIota2.cfg` 
+
+4. Lancer la chaîne
+
+Attention : nous préconisons la vérification du référentiel de projection de l'image classifiée finale. Si elle n'est pas dans le même référentiel que le projet, il faudra reprojeter l'image via, par exemple, l'application d'un gdalwarp.
 
 ## Auteur
 
