@@ -11,7 +11,7 @@ from libs.Lib_vector import simplifyVector, cutoutVectors, bufferVector, fusionV
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 1 : affichage intermédiaire de commentaires lors de l'execution du script
 # debug = 2 : affichage supérieur de commentaires lors de l'execution du script etc...
-# debug = 3
+debug = 3
 
 ###########################################################################################################################################
 # FONCTION createAllSamples()                                                                                                             #
@@ -33,11 +33,11 @@ def createAllSamples(image_input, vector_to_cut_input, vectors_samples_output, r
         save_results_intermediate : fichiers de sorties intermediaires nettoyees, par defaut = False
         overwrite : boolen ecrasement ou non des fichiers ayant un nom similaire, par defaut à True      
     """
-    for key in vectros_samples_output.keys():
+    for key in vectors_samples_output.keys():
         bd_vector_list = [params_to_find_samples[key][i][0] for i in range(len(params_to_find_samples[key]))]  
         bd_buff_list = [params_to_find_samples[key][i][1] for i in range(len(params_to_find_samples[key]))]    
         sql_expression_list = [params_to_find_samples[key][i][2] for i in range(len(params_to_find_samples[key]))]   
-        createSamples(image_input, vector_samples_output[key], rasters_samples_output[key], bd_vector_list, bd_buff_list, sql_expression_list, key,simplify_vector_param, format_vector, extension_vector, save_results_intermediate, overwrite)
+        createSamples(image_input, vector_to_cut_input, vectors_samples_output[key], rasters_samples_output[key], bd_vector_list, bd_buff_list, sql_expression_list, key,simplify_vector_param, format_vector, extension_vector, save_results_intermediate, overwrite)
 
     return 
 
@@ -100,6 +100,8 @@ def createSamples(image_input, vector_to_cut_input, vector_sample_output, raster
     # ETAPE 1 : NETTOYER LES DONNEES EXISTANTES
 
     print(cyan + "createSamples() : " + bold + green + "Nettoyage de l'espace de travail..." + endC)
+
+    print(raster_sample_output)
 
     # Nom du repertoire de calcul
     repertory_samples_output = os.path.dirname(vector_sample_output)
@@ -189,13 +191,15 @@ def createSamples(image_input, vector_to_cut_input, vector_sample_output, raster
                 vector_cut = vectors_cut_list[idx_vector]
                 if idx_vector < len(sql_expression_list) :
                     sql_expression = sql_expression_list[idx_vector]
+                    
                 else :
                     sql_expression = ""
                 vector_filtered = repertory_samples_filtering_temp + os.sep + vector_name + SUFFIX_VECTOR_FILTER + extension_vector
                 vectors_filtered_list.append(vector_filtered)
 
                 # Filtrage par ogr2ogr
-                if sql_expression != "":
+                print(sql_expression)
+                if sql_expression != "" or sql_expression != '':
                     names_attribut_list = getAttributeNameList(vector_cut, format_vector)
                     column = "'"
                     for name_attribut in names_attribut_list :
