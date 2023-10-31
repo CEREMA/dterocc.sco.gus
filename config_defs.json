@@ -1,5 +1,15 @@
 {
     "repertory":"chemin du repertoire de sauvegarde du projet",
+    "steps_to_run":{
+        "img_assembly" : "lancer l'étape d'assemblage des imagettes",
+        "create_DHM" : "lancer l'étape de création du MNH",
+        "neochannels_computation" : "lancer l'étape de calcul des néocanaux",
+        "data_concatenation" : "lancer l'étape de concaténation des données",
+        "vegetation_extraction" : "lancer l'étape d'extraction de la végétation",
+        "vertical_stratum_detection" : "lancer l'étape de distinction des strates verticales végétales",
+        "vegetation_form_stratum_detection" : "lancer l'étape de cartographie des formes végétales",
+        "indicators_computation" : "lancer l'étape de calcul des attributs descriptifs"
+    }, 
     "data_entry": {
         "img_RVBPIR_ref": "image ortho Pléiades de référence(printemps/été) RVBPIR (raster .tif)",
         "img_PAN_ref": "image ortho Pléiades de référence(printemps/été) PANCHROMATIC (raster .tif)",

@@ -151,12 +151,15 @@ Nous mettons à disposition un fichier de configuration `config.json` qui permet
 | Balise | Définition |
 | :-------- | :------------------------- |
 | *repertory* | Répertoire de création du dossier du projet |
+| *steps_to_run* | Gestion des étapes de traitements |   
 | *data_entry* | Données d'entrée initiales |
 | *db_params* | Paramètres de création de la base de données PgSql |
 | *vegetation_extraction* | Paramètres pour l'extraction de la végétation |
 | *vertical_stratum_detection* | Paramètres pour la distinction des strates verticales de végétation |
 | *vegetation_form_stratum_detection* | Paramètres de détection des formes végétales horizontales |
 | *indicators_computation* | Paramètres de calcul des attributs descriptifs |
+
+Via la balise *steps_to_run*, l'opérateur choisit quelles étapes il veut faire tourner. Attention, chaque étape nécessite l'apport de données qui sont à fournir dans les balises suivantes.
 
 Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'opérateur peut très bien apporter lui-même certaines données via la balise `data_entry > entry_options`.
 
