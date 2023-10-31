@@ -69,25 +69,15 @@ if __name__ == "__main__":
 
     #Données optionnelles fournis
 
-    #repertoire des imagettes à assembler
-    if config["data_entry"]["entry_options"]["repertory_img_assembly"] != None:
-      assembly = True 
-    else : 
-      assembly = False
-
     #mnh
     if config["data_entry"]["entry_options"]["img_dhm"] != None :
-      create_MNH = False
       img_mnh = config["data_entry"]["entry_options"]["img_dhm"]
-    else :
-      create_MNH = True
+    
 
     #ocs
     if config["data_entry"]["entry_options"]["img_ocs"] != None :
-      create_OCS = False
       img_ocs = config["data_entry"]["entry_options"]["img_ocs"]
-    else :
-      create_OCS = True
+    
 
     #polygones d'échantillons d'apprentissage  
     if config["data_entry"]["entry_options"]["data_classes"]["createsamples"] == 'False' : 
@@ -110,12 +100,30 @@ if __name__ == "__main__":
 
 
     #Paramètres de l'algorithme de classification supervisée RF 
-    params_RF = data["vegetation_extraction"]["rf_params"]
+    params_RF = config["vegetation_extraction"]["rf_params"]
 
     #Fournir les paramètres de connexion à la base de donnée 
     connexion_ini_dic = config["database_params"]
+    connexion_ini_dic ={
+        "dbname": "gus",
+        "user_db": "postgres",
+        "password_db": "postgres",
+        "server_db": "172.22.130.99",
+        "port_number": 5432,
+        "schema" : ""
+    } 
 
-    connexion_0 = config["database_params"]
+    connexion_0 ={
+        "dbname": "gus",
+        "user_db": "postgres",
+        "password_db": "postgres",
+        "server_db": "172.22.130.99",
+        "port_number": 5432,
+        "schema" : ""
+    } 
+
+
+   # connexion_0 = config["database_params"]
     connexion_0["dbname"] = ""
     connexion_0["schema"] = ""
 
@@ -177,7 +185,7 @@ if __name__ == "__main__":
     ########################################
 
     ##Emplacement du repertoire
-    repertory_prj = r'/mnt/RAM_disk'
+    repertory_prj = config["repertory"] 
     path_prj = repertory_prj + os.sep + 'ProjetGUS'
     
 
@@ -278,10 +286,10 @@ if __name__ == "__main__":
       bati = path_data_entry + os.sep + 'bati_vector.shp'
       bati_img = path_data_entry + os.sep + 'bati_raster.tif'
 
-      route =  path_data_entry + os.sep + 'route_vector.tif'
+      route =  path_data_entry + os.sep + 'route_vector.shp'
       route_img = path_data_entry + os.sep + 'route_raster.tif'
 
-      solnu =  path_data_entry + os.sep + 'solnu_vector.tif'
+      solnu =  path_data_entry + os.sep + 'solnu_vector.shp'
       solnu_img = path_data_entry + os.sep + 'solnu_raster.tif'
       
       eau =  path_data_entry + os.sep + 'eau_vector.shp'
@@ -307,20 +315,26 @@ if __name__ == "__main__":
         li_data_solnu = [] 
         li_data_eau = []
         li_data_vegetation = []
+
         for data in config["vegetation_extraction"]["samples_creation"]["build"]:
-          li_data_bati.append([data["source"], data["buffer"], data["exp"]])
+          dic = config["vegetation_extraction"]["samples_creation"]["build"].get(data)
+          li_data_bati.append([dic["source"], dic["buffer"], dic["exp"]])
 
         for data in config["vegetation_extraction"]["samples_creation"]["road"]:
-          li_data_route.append([data["source"], data["buffer"], data["exp"]])
+          dic = config["vegetation_extraction"]["samples_creation"]["road"].get(data)
+          li_data_route.append([dic["source"], dic["buffer"], dic["exp"]])
 
         for data in config["vegetation_extraction"]["samples_creation"]["baresoil"]:
-          li_data_solnu.append([data["source"], data["buffer"], data["exp"]])
+          dic = config["vegetation_extraction"]["samples_creation"]["baresoil"].get(data)
+          li_data_solnu.append([dic["source"], dic["buffer"], dic["exp"]])
 
         for data in config["vegetation_extraction"]["samples_creation"]["water"]:
-          li_data_eau.append([data["source"], data["buffer"], data["exp"]])
+          dic = config["vegetation_extraction"]["samples_creation"]["water"].get(data)
+          li_data_eau.append([dic["source"], dic["buffer"], dic["exp"]])
 
         for data in config["vegetation_extraction"]["samples_creation"]["vegetation"]:
-          li_data_vegetation.append([data["source"], data["buffer"], data["exp"]])
+          dic = config["vegetation_extraction"]["samples_creation"]["vegetation"].get(data)
+          li_data_vegetation.append([dic["source"], dic["buffer"], dic["exp"]])
 
         params_to_find_samples = {
           "bati" : li_data_bati,
@@ -376,35 +390,41 @@ if __name__ == "__main__":
     li_data_vegetation = []
 
     for data in config["vegetation_extraction"]["samples_cleaning"]["build"]:
-      if data["name"] in dic_neochannels :
-        name = str(data["name"])
-        data["source"] = dic_neochannels[name]
-      li_data_bati.append([data["name"], data["source"], data["min"], data["max"]])
+      dic = config["vegetation_extraction"]["samples_cleaning"]["build"].get(data)
+      if dic["name"] in dic_neochannels :
+        name = str(dic["name"])
+        print(dic["name"], name)
+        dic["source"] = dic_neochannels[name]
+      li_data_bati.append([dic["name"], dic["source"], dic["min"], dic["max"]])
         
 
     for data in config["vegetation_extraction"]["samples_cleaning"]["road"]:
-      if data["name"] in dic_neochannels :
-        name = str(data["name"])
-        data["source"] = dic_neochannels[name]
-      li_data_route.append([data["name"], data["source"], data["min"], data["max"]])
+      dic = config["vegetation_extraction"]["samples_cleaning"]["road"].get(data)
+      if dic["name"] in dic_neochannels :
+        name = str(dic["name"])
+        dic["source"] = dic_neochannels[name]
+      li_data_route.append([dic["name"], dic["source"], dic["min"], dic["max"]])
 
     for data in config["vegetation_extraction"]["samples_cleaning"]["baresoil"]:
-      if data["name"] in dic_neochannels :
-        name = str(data["name"])
-        data["source"] = dic_neochannels[name]
-      li_data_solnu.append([data["name"], data["source"], data["min"], data["max"]])
+      dic = config["vegetation_extraction"]["samples_cleaning"]["baresoil"].get(data)
+      if dic["name"] in dic_neochannels :
+        name = str(dic["name"])
+        dic["source"] = dic_neochannels[name]
+      li_data_solnu.append([dic["name"], dic["source"], dic["min"], dic["max"]])
 
     for data in config["vegetation_extraction"]["samples_cleaning"]["water"]:
-      if data["name"] in dic_neochannels :
-        name = str(data["name"])
-        data["source"] = dic_neochannels[name]
-      li_data_eau.append([data["name"], data["source"], data["min"], data["max"]])
+      dic = config["vegetation_extraction"]["samples_cleaning"]["water"].get(data)
+      if dic["name"] in dic_neochannels :
+        name = str(dic["name"])
+        dic["source"] = dic_neochannels[name]
+      li_data_eau.append([dic["name"], dic["source"], dic["min"], dic["max"]])
 
     for data in config["vegetation_extraction"]["samples_cleaning"]["vegetation"]:
-      if data["name"] in dic_neochannels :
-        name = str(data["name"])
-        data["source"] = dic_neochannels[name]
-      li_data_vegetation.append([data["name"], data["source"], data["min"], data["max"]])
+      dic = config["vegetation_extraction"]["samples_cleaning"]["vegetation"].get(data)
+      if dic["name"] in dic_neochannels :
+        name = str(dic["name"])
+        dic["source"] = dic_neochannels[name]
+      li_data_vegetation.append([dic["name"], dic["source"], dic["min"], dic["max"]])
 
     correction_images_dic = {
         "bati" : li_data_bati,
@@ -510,41 +530,45 @@ if __name__ == "__main__":
     if debug >= 1:
       print(bold + cyan + "\n*0* PRÉ-TRAITEMENTS" + endC)
     # IMAGES ASSEMBLY
-    if assembly == True:
+    if config["steps_to_run"]["img_assembly"] == True:
       if debug >= 1:
         print(cyan + "\nAssemblage des imagettes" + endC)
-       
-      #assemblyImages(repertory, img_tiles_repertory, img_ref, no_data_value, epsg, save_results_intermediate = False, ext_txt = '.txt',  format_raster = 'GTiff')
+      
+      img_tiles_repertory = config["repertory_img_assembly"] 
+
+      assemblyImages(repertory, img_tiles_repertory, img_ref, no_data_value, epsg, save_results_intermediate = False, ext_txt = '.txt',  format_raster = 'GTiff')
     
     # MNH CREATION  
-    if create_MNH == True:
+    if config["steps_to_run"]["create_DHM"] == True:
       if debug >= 1:
         print(cyan + "\nCréation du MNH" + endC)
    
-      #mnhCreation(img_mns, img_mnt, img_mnh, shp_zone , img_ref,  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_results = True)
+      mnhCreation(img_mns, img_mnt, img_mnh, shp_zone , img_ref,  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_results = True)
   
     # CALCUL DES NEOCANAUX
-    if debug >= 1:
-      print(cyan + "\nCalcul des néocanaux" + endC)
+    if config["steps_to_run"]["neochannels_computation"] == True:
+      if debug >= 1:
+        print(cyan + "\nCalcul des néocanaux" + endC)
 
-      #neochannelComputation(img_ref, img_ref_PAN, dic_neochannels, shp_zone, save_intermediate_results = False)
+      neochannelComputation(img_ref, img_ref_PAN, dic_neochannels, shp_zone, save_intermediate_results = False)
 
 
     dic_neochannels["mnh"] = img_mnh
      
     
     # CONCATENATION DES NEOCANAUX
-    if debug >= 1:
-      print(cyan + "\nConcaténation des néocanaux" + endC)
+    if config["steps_to_run"]["data_concatenation"] == True:
+      if debug >= 1:
+        print(cyan + "\nConcaténation des néocanaux" + endC)
 
-  
-      #concatenateData(dic_neochannels, img_stack, img_ref, shp_zone)
+    
+      concatenateData(dic_neochannels, img_stack, img_ref, shp_zone)
 
    #ATTENTION : il se peut que, le mnh dusse subir un ré-échantillonnage et recalage par rapport à la donnée de base si il a a été fournit directement par l'opérateur 
    # nous avons donc créé un nouveau fichier mnh superimposé par rapport à l'image de référence (normalement situé dans le dossier temporaire des néochannels) 
  
   #   #1# EXTRACTION DE LA VEGETATION PAR CLASSIFICATION SUPERVISEE #1# 
-    if create_OCS == False :
+    if config["steps_to_run"]["vegetation_extraction"] == False :
       img_classification_filtered = img_ocs
       if debug >= 1:
         print(bold + cyan + "\n*1* EXTRACTION DE LA VÉGÉTATION : le fichier image classifié est fournit et disponible via " + img_classification_filtered + endC)
@@ -556,7 +580,7 @@ if __name__ == "__main__":
      
 
       #1.Création des échantillons d'apprentissage
-      if samplescreation == True:
+      if create_samples == True:
         if debug >= 1:
           print(cyan + "\nCréation des échantillons d'apprentissage" + endC)
 
@@ -613,68 +637,72 @@ if __name__ == "__main__":
 
     #2# DISTINCTION DES STRATES VERTICALES VEGETALES #2#  
 
-    if debug >= 1:
-      print(bold + cyan + "\nDistinction des strates verticales de végétation " + endC)
+    if config["steps_to_run"]["vertical_stratum_detection"]  == True :
+      if debug >= 1:
+        print(bold + cyan + "\nDistinction des strates verticales de végétation " + endC)
+      
+      if debug >= 1:
+        print(bold + "\nParamètres : " + endC)
+        print("Nom de la base de données : %s" %(connexion_ini_dic["dbname"]))
+        print("Nom d'utilisateur : %s" %(connexion_ini_dic["user_db"]))
+        print("Mot de passe : %s" %(connexion_ini_dic["password_db"]))
+        print("Serveur: %s" %(connexion_ini_dic["server_db"]))
+        print("Num port : %s" %(connexion_ini_dic["port_number"]))
+        print("Schéma strates végétales : %s" %(connexion_stratev_dic["schema"]))
+        print("Schéma données finales dont fv: %s" %(connexion_datafinal_dic["schema"]))
+        print("Extensions : postgis, postgis_sfcgal")
+
+      #1.Segmentation de l'image
+      if debug >= 1:
+        print(cyan + "\nSegmentation de l'image de végétation " + endC)
     
-    if debug >= 1:
-      print(bold + "\nParamètres : " + endC)
-      print("Nom de la base de données : %s" %(connexion_ini_dic["dbname"]))
-      print("Nom d'utilisateur : %s" %(connexion_ini_dic["user_db"]))
-      print("Mot de passe : %s" %(connexion_ini_dic["password_db"]))
-      print("Serveur: %s" %(connexion_ini_dic["server_db"]))
-      print("Num port : %s" %(connexion_ini_dic["port_number"]))
-      print("Schéma strates végétales : %s" %(connexion_stratev_dic["schema"]))
-      print("Schéma données finales dont fv: %s" %(connexion_datafinal_dic["schema"]))
-      print("Extensions : postgis, postgis_sfcgal")
+      #segmentationImageVegetetation(img_ref, img_classif_filtered, sgts_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = False, overwrite = False)
 
-    #1.Segmentation de l'image
-    if debug >= 1:
-      print(cyan + "\nSegmentation de l'image de végétation " + endC)
-   
-    #segmentationImageVegetetation(img_ref, img_classif_filtered, sgts_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = False, overwrite = False)
+      #2.Classification en strates verticales
+      if debug >= 1:
+        print(cyan + "\nClassification des segments végétation en strates verticales " + endC)
 
-    #2.Classification en strates verticales
-    if debug >= 1:
-      print(cyan + "\nClassification des segments végétation en strates verticales " + endC)
+      #Ouverture connexion 
+      connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
+      raster_dic = {
+        "MNH" : dic_neochannels["mnh"],
+        "TXT" : dic_neochannels["sfs"]
+      }
 
-    #Ouverture connexion 
-    connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
-    raster_dic = {
-      "MNH" : dic_neochannels["mnh"],
-      "TXT" : dic_neochannels["sfs"]
-    }
-
-    #Nom attribué à la table de référence des segments végétation classés en strates verticales 
-    tab_ref_stratesv = 'segments_vegetation'
-    schem_tab_ref_stratesv = 'classification_stratesv.segments_vegetation'
+      #Nom attribué à la table de référence des segments végétation classés en strates verticales 
+      tab_ref_stratesv = 'segments_vegetation'
+      schem_tab_ref_stratesv = 'classification_stratesv.segments_vegetation'
     
-    output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
-    
-    closeConnection(connexion)
+      output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
+      
+      closeConnection(connexion)
 
     #3# DETECTION DES FORMES VEGETALES HORIZONTALES #3# 
-    if debug >= 1:
-      print(cyan + "\nClassification des segments végétation en formes végétales" + endC)
+    if config["steps_to_run"]["vegetation_form_stratum_detection"] == True :
+      if debug >= 1:
+        print(cyan + "\nClassification des segments végétation en formes végétales" + endC)
 
-    #Ouverture connexion 
-    #connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
-  
-    #tab_veg = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, save_intermediate_results = False, overwrite = False,  debug = debug)
+      #Ouverture connexion 
+      #connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
+    
+      #tab_veg = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, save_intermediate_results = False, overwrite = False,  debug = debug)
 
-    #closeConnection(connexion)
+      #closeConnection(connexion)
 
     tab_ref = "vegetation"
 
     #4# Calcul des indicateurs de végétation
-    if debug >= 1:
-      print(cyan + "\nCalcul des attributs descriptifs des formes végétales" + endC)
+
+    if config["steps_to_run"]["indicators_computation"] == True :
+      if debug >= 1:
+        print(cyan + "\nCalcul des attributs descriptifs des formes végétales" + endC)
+      
+      #Ouverture connexion 
+      #connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
     
-    #Ouverture connexion 
-    #connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
-  
-    #createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = False)
+      #createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = False)
 
-    if debug >= 1:
-      print(bold + green + "\nCartographie détaillée de la végétation disponible via le chemin :" + path_datafinal + endC)
+      if debug >= 1:
+        print(bold + green + "\nCartographie détaillée de la végétation disponible via le chemin :" + path_datafinal + endC)
 
-    closeConnection(connexion)
+      closeConnection(connexion)
