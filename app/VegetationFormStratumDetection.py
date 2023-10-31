@@ -1653,6 +1653,71 @@ def formStratumCleaning(connexion, tab_ref):
         print(query)
     executeQuery(connexion, query)
 
+    #Comme certaines classes de FV ont été ré-attribuée --> risque que deux fvs similaires soient disposées dans deux polygones séparés
+    query = """
+    DROP TABLE IF EXISTS fveg_h;
+    CREATE TABLE fveg_h AS
+        SELECT 'H' AS strate, 'Pr' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+        FROM %s
+        WHERE fv = 'Pr'
+        UNION
+        SELECT 'H' AS strate, 'C' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+        FROM %s
+        WHERE fv = 'C';
+    
+    DROP TABLE IF EXISTS fveg_a;
+    CREATE TABLE fveg_a AS
+        SELECT 'A' AS strate, 'AI' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+        FROM %s
+        WHERE fv = 'AI'
+        UNION
+        SELECT 'A' AS strate, 'AA' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+        FROM %s
+        WHERE fv = 'AA'
+        UNION
+        SELECT 'A' AS strate, 'BOA' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+        FROM %s
+        WHERE fv = 'BOA';
+    
+    DROP TABLE IF EXISTS fveg_au;
+    CREATE TABLE fveg_au AS
+        SELECT 'Au' AS strate, 'AuI' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+        FROM %s
+        WHERE fv = 'AuI'
+        UNION
+        SELECT 'Au' AS strate, 'AAu' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+        FROM %s
+        WHERE fv = 'AAu'
+        UNION
+        SELECT 'Au' AS strate, 'BOAu' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+        FROM %s
+        WHERE fv = 'BOAu';
+    """ %(tab_ref,tab_ref,tab_ref,tab_ref,tab_ref, tab_ref, tab_ref, tab_ref)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    query = """
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS
+        SELECT strate, fv, geom
+        FROM fveg_h
+        UNION
+        SELECT strate, fv, geom
+        FROM fveg_a
+        UNION
+        SELECT strate, fv, geom
+        FROM fveg_au;
+    """%(tab_ref,tab_ref)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    addUniqId(connexion, tab_ref)
+
+
     dropTable(connexion, 'fv_arbu_touch_arbo')
     dropTable(connexion, 'fv_arbu_touch_herba')
     dropTable(connexion, 'fv_arbo_touch_herba')
