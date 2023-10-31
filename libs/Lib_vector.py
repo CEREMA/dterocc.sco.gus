@@ -271,18 +271,22 @@ def getGeometryType(vector_input, format_vector='ESRI Shapefile'):
         if layer_input.GetFeatureCount() > 0 :
 
             try :
-                feature_input = layer_input
+                feature_input = layer_input.GetFeature(0)
                 print(feature_input)
             except:
                 print(cyan + "getGeometryType() : " + endC + bold + yellow + "Could not open  feature : " + str(layer_input.GetFeature(0)) + "  du fichier %s : " %(vector_input) + endC)
                 geom_type_input = layer_input.GetGeomType()
                 geometry_type = ogr.GeometryTypeToName(geom_type_input).upper().split()[-1]
+
                 if debug >=2:
                     print(cyan + "getGeometryType() : %s " %(str(geometry_type)) + bold + green + "Recuperation du type de géométrie du fichier %s : " %(vector_input) + endC)
                 return geometry_type
-
+            geom_type_input2 = layer_input.GetGeomType()
+            geometry_type2 = ogr.GeometryTypeToName(geom_type_input2).upper().split()[-1]
+            
             # Get polygon geometry
             geometry = feature_input.GetGeometryRef()
+            print(geometry)
             if geometry != None :
                 geometry_type = geometry.GetGeometryName()
             elif layer_input.GetFeatureCount() > 1 :

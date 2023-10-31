@@ -622,7 +622,7 @@ def topologyCorrections(connection, table_name, geometry_column='geom'):
     """
 
     try:
-        query = "UPDATE %s SET %s = ST_CollectionExtract(ST_ForceCollection(ST_MakeValid(%s)),3) WHERE NOT ST_IsValid(%s);" % (table_name, geometry_column, geometry_column, geometry_column)
+        query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (table_name, geometry_column, geometry_column, geometry_column)
         executeQuery(connection, query)
     except psycopg2.DatabaseError as err:
         if connection:
