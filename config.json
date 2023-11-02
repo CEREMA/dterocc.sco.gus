@@ -6,8 +6,8 @@
         "neochannels_computation" : false,
         "data_concatenation" : false,
         "vegetation_extraction" : false,
-        "vertical_stratum_detection" : true,
-        "vegetation_form_stratum_detection" : false,
+        "vertical_stratum_detection" : false,
+        "vegetation_form_stratum_detection" : true,
         "indicators_computation" : false
     }, 
     "data_entry": {
@@ -20,7 +20,8 @@
         "entry_options" : {
             "repertory_img_assembly" : null,
             "img_dhm": null,
-            "img_ocs": null,
+            "img_data_concatenation" : null,
+            "img_ocs": "",
             "data_classes": {
                 "createsamples" : true,
                 "build": null,
@@ -214,6 +215,7 @@
         "minsize" : 10
     }, 
     "vertical_stratum_detection": {
+        "db_table" : "schema.patate",
         "height_treeshrub_thr": 3,
         "height_shrubgrass_thr": 1,
         "texture_thr": 11,
@@ -224,6 +226,8 @@
         "surface_rate": 0.25
     },
     "vegetation_form_stratum_detection": {
+        "db_table" : "",
+        "clean" : true,
         "tree" :{
             "isolatedtree_max_surface": 100,
             "isolatedtree_min_surface": 12,

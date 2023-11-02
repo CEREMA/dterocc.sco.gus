@@ -20,6 +20,7 @@
         "entry_options" : {
             "repertory_img_assembly" : "repertoire contenant les imagettes Pléaides à assembler",
             "img_dhm": "image du MNH (raster .tif)",
+            "img_data_concatenation" : "image de concaténation des données",
             "img_ocs": "image de classification en 5 classes (raster .tif)",
             "data_classes": {
                 "build": "vecteur des polygones de bâti (vecteur .shp)",
@@ -42,9 +43,9 @@
         "samples_creation": {
             "build": {
                 "data1": {
-                "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'bati'",
-                "buffer": "valeur du buffer appliqué sur le polygone",
-                "exp": "expression sql avec les conditions de récupération des polygones dans la db"
+                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'bati'",
+                    "buffer": "valeur du buffer appliqué sur le polygone",
+                    "exp": "expression sql avec les conditions de récupération des polygones dans la db"
                 }
             },
             "road": {
@@ -52,28 +53,28 @@
                     "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'route'",
                     "buffer": "valeur du buffer appliqué sur le polygone",
                     "exp": "expression sql avec les conditions de récupération des polygones dans la db"
-                    }
+                }
             },
             "baresoil": {
                 "data1": {
                     "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'sol nu'",
                     "buffer": "valeur du buffer appliqué sur le polygone",
                     "exp": "expression sql avec les conditions de récupération des polygones dans la db"
-                    }
+                }
             },
             "water": {
                 "data1": {
                     "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'eau'",
                     "buffer": "valeur du buffer appliqué sur le polygone",
                     "exp": "expression sql avec les conditions de récupération des polygones dans la db"
-                    }
+                }
             },
             "vegetation": {
                 "data1": {
                     "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'vegetation'",
                     "buffer": "valeur du buffer appliqué sur le polygone",
                     "exp": "expression sql avec les conditions de récupération des polygones dans la db"
-                    }
+                }
             }
         },
         "samples_cleaning": {
@@ -146,6 +147,7 @@
         "minsize" : "Paramètre de l'algorithme Meanshift de segmentation : taille minimale des segments"
     }, 
     "vertical_stratum_detection": {
+        "db_table" : "nom_schema.table de la donnée (dans la db) à fournir si vous ne voulez pas faire tourner cette étape",
         "height_treeshrub_thr": "seuil de hauteur de distinction entre arboré et arbustif",
         "height_shrubgrass_thr":  "seuil de hauteur de distinction entre arbustif et herbacé",
         "texture_thr":  "seuil de texture de distinction entre végétation haute et basse",
@@ -156,6 +158,8 @@
         "surface_rate": "Surface maximale de considération d’un regroupement arbustif comme « non représentatif "
     },
     "vegetation_form_stratum_detection": {
+        "db_table" : "nom_schema.table de la donnée (dans la db) à fournir si vous ne voulez pas faire tourner cette étape",
+        "clean" : "choix de nettoyage ou non des formes végétales",
         "tree" :{
             "isolatedtree_max_surface": "Valeur maximale de la surface d’un arbre isolé",
             "isolatedtree_min_surface": "Valeur minimale de la surface d’un arbre isolé",

@@ -144,7 +144,9 @@ if __name__ == "__main__":
     #Seuils pour la distinction des strates verticales
     dic_seuils_stratesV = config["vertical_stratum_detection"] 
     
-    #Seuils pour la détection des formes végétales horizontales
+    #Seuils pour la détection des formes végétales horizontales 
+    cleanfv = config["vegetation_form_stratum_detection"]["clean"]  
+
     treethresholds = config["vegetation_form_stratum_detection"]["tree"] 
     
     shrubthresholds = config["vegetation_form_stratum_detection"]["shrub"] 
@@ -344,13 +346,13 @@ if __name__ == "__main__":
           "vegetation" : li_data_vegetation
         }  
 
-    vectors_samples_output ={
+    vectors_samples_output = {
         "bati" : bati,
         "route" : route,
         "solnu" : solnu,
         "eau" : eau,
         "vegetation" : vegetation
-      }
+    }
     
     #Chemins d'accès vers le pré-nettoyage des couches d'échantillons d'apprentissage
     bati_prepare = path_tmp_preparesamples + os.sep + 'bati_vector_prepare.tif'
@@ -563,13 +565,18 @@ if __name__ == "__main__":
 
     
       concatenateData(dic_neochannels, img_stack, img_ref, shp_zone)
+    
+    else : 
+      if config["data_entry"]["entry_options"]["img_data_concatenation"] != None or config["data_entry"]["entry_options"]["img_data_concatenation"] != "":
+        img_stack = config["data_entry"]["entry_options"]["img_data_concatenation"]
 
    #ATTENTION : il se peut que, le mnh dusse subir un ré-échantillonnage et recalage par rapport à la donnée de base si il a a été fournit directement par l'opérateur 
    # nous avons donc créé un nouveau fichier mnh superimposé par rapport à l'image de référence (normalement situé dans le dossier temporaire des néochannels) 
  
   #   #1# EXTRACTION DE LA VEGETATION PAR CLASSIFICATION SUPERVISEE #1# 
     if config["steps_to_run"]["vegetation_extraction"] == False :
-      img_classification_filtered = img_ocs
+      if config["data_entry"]["entry_options"]["img_ocs"] != None or config["data_entry"]["entry_options"]["img_ocs"] != "":
+        img_classification_filtered = config["data_entry"]["entry_options"]["img_ocs"]
       if debug >= 1:
         print(bold + cyan + "\n*1* EXTRACTION DE LA VÉGÉTATION : le fichier image classifié est fournit et disponible via " + img_classification_filtered + endC)
 
@@ -663,19 +670,27 @@ if __name__ == "__main__":
         print(cyan + "\nClassification des segments végétation en strates verticales " + endC)
 
       #Ouverture connexion 
-      connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
+      #connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
       raster_dic = {
         "MNH" : dic_neochannels["mnh"],
         "TXT" : dic_neochannels["sfs"]
       }
+      print("connexion schema stratev", connexion_stratev_dic)
 
       #Nom attribué à la table de référence des segments végétation classés en strates verticales 
       tab_ref_stratesv = 'segments_vegetation'
-      schem_tab_ref_stratesv = 'classification_stratesv.segments_vegetation'
+      schem_tab_ref_stratesv = 'data_final.segments_vegetation'
     
-      output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
+      #output_tab_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = debug)
       
-      closeConnection(connexion)
+      #closeConnection(connexion)
+    else :  
+      if config["vegetation_form_stratum_detection"]["db_table"] != None or config["vegetation_form_stratum_detection"]["db_table"] != "":
+        schem_tab_ref_stratesv = config["vertical_stratum_detection"]["db_table"]  
+        tab_ref_stratesv = schem_tab_ref_stratesv.split('.')[1]
+      else : 
+        schem_tab_ref_stratesv = connexion_stratev_dic["schema"] + '.' + 'segments_vegetation' 
+        tab_ref_stratesv = 'segments_vegetation'
 
     #3# DETECTION DES FORMES VEGETALES HORIZONTALES #3# 
     if config["steps_to_run"]["vegetation_form_stratum_detection"] == True :
@@ -683,13 +698,20 @@ if __name__ == "__main__":
         print(cyan + "\nClassification des segments végétation en formes végétales" + endC)
 
       #Ouverture connexion 
-      #connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
+      connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
     
-      #tab_veg = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, save_intermediate_results = False, overwrite = False,  debug = debug)
+      tab_veg = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, cleanfv, save_intermediate_results = False, overwrite = False,  debug = debug)
 
-      #closeConnection(connexion)
+      closeConnection(connexion)
 
-    tab_ref = "vegetation"
+    else :   
+      if config["vegetation_form_stratum_detection"]["db_table"] != None or config["vegetation_form_stratum_detection"]["db_table"] != "":
+        schem_tab_ref_fv = config["vegetation_form_stratum_detection"]["db_table"]  
+        tab_ref_fv = schem_tab_ref_fv.split('.')[1]
+      else : 
+        schem_tab_ref_fv = connexion_datafinal_dic["schema"] + '.' + 'vegetation' 
+        tab_ref_fv = 'vegetation'
+
 
     #4# Calcul des indicateurs de végétation
 
@@ -698,9 +720,9 @@ if __name__ == "__main__":
         print(cyan + "\nCalcul des attributs descriptifs des formes végétales" + endC)
       
       #Ouverture connexion 
-      #connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
+      #connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
     
-      #createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = False)
+      #createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = False)
 
       if debug >= 1:
         print(bold + green + "\nCartographie détaillée de la végétation disponible via le chemin :" + path_datafinal + endC)

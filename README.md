@@ -159,11 +159,18 @@ Nous mettons à disposition un fichier de configuration `config.json` qui permet
 | *vegetation_form_stratum_detection* | Paramètres de détection des formes végétales horizontales |
 | *indicators_computation* | Paramètres de calcul des attributs descriptifs |
 
-Via la balise *steps_to_run*, l'opérateur choisit quelles étapes il veut faire tourner. Attention, chaque étape nécessite l'apport de données qui sont à fournir dans les balises suivantes.
+Via la balise `steps_to_run`, l'opérateur choisit quelles étapes il veut faire tourner. Attention, chaque étape nécessite l'apport de données qui sont à fournir dans les balises suivantes.
 
 Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'opérateur peut très bien apporter lui-même certaines données via la balise `data_entry > entry_options`.
 
 De plus, il existe une particularité pour le renseignement des informations en balise `vegetation_extraction > samples_cleaning` : si les indices radiométriques servants à nettoyer et filtrer les échantillons d'apprentissage ont été produits dans une étape précédente au script, nous retrouverons l'information `source` via l'arborescence du dossier de projet créé (à condition de bien respecter les noms des indices attribués dans le code : ndvi, msavi, ndwi, hue, mnh, etc.). Cette balise permet à l'opérateur d'ajouter une autre donnée de filtrage qui n'est pas produite via les scripts.
+
+### Attention
+Attention, si vous ne voulez pas faire tourner toutes les étapes (`steps_to_run`), des informations sont à fournir si vous n'avez pas utilisé les scripts dédiés pour les produire : 
+- `steps_to_run > data_concatenation` = False -> fournir l'image concaténée via la balise `data_entry > entry_options > img_data_concatenation`
+- `steps_to_run > vegetation_extraction` = False -> fournir l'image classifiée via la balise `data_entry > entry_options > img_ocs`
+- `steps_to_run > vertical_stratum_detection` = False -> fournir le schema et le table de la donnée via la balise `vertical_stratum_detection > db_table`
+- `steps_to_run > vegetation_form_stratum_detection` = False -> fournir le schema et le table de la donnée via la balise `vegetation_form_stratum_detection > db_table`
 
 ## Dossier configuration chaîne iota2
 
