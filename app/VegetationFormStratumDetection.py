@@ -13,7 +13,7 @@ from libs.Lib_file import removeFile
 ## une unique cartographie                     ##  
 #################################################
 
-def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False, overwrite = False, debug = 0):
+def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, cleanfv = False, save_intermediate_results = False, overwrite = False, debug = 0):
     """
     Rôle : concatène les trois tables arboré, arbustive et herbacée en un unique 
            correspondant à la carotgraphie de la végétation
@@ -24,6 +24,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         schem_tab_ref : schema et nom de la table de référence des segments végétation classés en strates verticales
         dic_thresholds : dictionnaire des seuils à attribuer en fonction de la strate verticale
         output_layers : dictionnaire des noms de fichier de sauvegarde
+        cleanfv : paramètre de nettoyage des formes végétales. Par défaut : False
         save_intermediate_results : sauvegarde ou non des fichiers/tables intermédiaires. Par défaut : False
         overwrite : paramètre de ré-écriture des tables. Par défaut False
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
@@ -94,7 +95,8 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     addUniqId(connexion, tab_name)
 
     #5# Nettoyage des formes végétales 
-   # formStratumCleaning(connexion, tab_name) 
+    if cleanfv:
+        formStratumCleaning(connexion, tab_name) 
 
     if output_layers["output_fv"] == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
@@ -754,13 +756,13 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, threshold
     addIndex(connexion, tab_herb_ini, 'fid', 'idx_fid_herbeini')
 
     #2# Regroupement et lissage des segments herbacés
-    tab_out = 'herbace'
+    tab_in = 'herbace'
 
     query = """
     CREATE TABLE %s AS
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
         FROM %s AS t;
-    """ %(tab_out, tab_herb_ini)
+    """ %(tab_oin, tab_herb_ini)
 
     #Exécution de la requête SQL
     if debug >= 3:
@@ -768,36 +770,53 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, threshold
     executeQuery(connexion, query)
 
     #Création d'un identifiant unique
-    addUniqId(connexion, tab_out)
+    addUniqId(connexion, tab_in)
 
     #Création d'un index spatial
-    addSpatialIndex(connexion, tab_out)
+    addSpatialIndex(connexion, tab_in)
 
     #Création de la colonne strate qui correspond à 'A' pour tous les polygones et complétion
-    addColumn(connexion, tab_out, 'strate', 'varchar(100)')
+    addColumn(connexion, tab_in, 'strate', 'varchar(100)')
 
     query = """
     UPDATE %s SET strate = 'H' WHERE fid = fid;
-    """ %(tab_out)
+    """ %(tab_in)
 
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
     #Création de la colonne fv
-    addColumn(connexion, tab_out, 'fv', 'varchar(100)')
+    addColumn(connexion, tab_in, 'fv', 'varchar(100)')
     #Pas de complétion de cet attribut pour l'instant
     tab_herbace = ''
 
     #Complétion de l'attribut fv
-    tab_herbace = classificationGrassOrCrop(connexion, connexion_dic, tab_out, thresholds, save_intermediate_results = save_intermediate_results, debug = debug) 
-
-    if tab_herbace == '':
+    if thresholds["img_grasscrops"] != "" or thresholds["img_grasscrops"] != None:
+        tab_herbace = classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save_intermediate_results = save_intermediate_results, debug = debug) 
+    else :
         tab_herbace = 'strate_herbace'
+        query = """
+        DROP TABLE IF EXISTS %s;
+        CREATE TABLE %s AS 
+            SELECT * 
+            FROM %s;
+        
+        UPDATE %s SET fv = 'H';
+        """ %(tab_herbace, tab_herbace, tab_herbace, tab_herbace)
+
+        if debug >= 3:
+            print(query)
+        executeQuery(connexion, query)
+
+        addIndex(connexion, tab_herbace, 'fid', 'fid_veg_idx')
+        addSpatialIndex(connexion, tab_herbace)
+    
 
     # SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
     if not save_intermediate_results :
         dropTable(connexion, tab_herb_ini)
+        dropTable(connexion, tab_in)
 
     ## SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
     if output_layer == '' :
@@ -812,7 +831,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, threshold
 ########################################################################
 def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save_intermediate_results = False, debug = 0) :
     """
-    Rôle : produire les formes végétales herbacée 'Pr' (prairie) ou 'C' (culture)
+    Rôle : produire les formes végétales herbacée 'Pr' (prairie) ou 'C' (culture) 
 
     Paramètres :
         connexion :
@@ -824,7 +843,7 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
     """
     #Crossing vector raster + majority
 
-    repertory = os.path.dirname(thresholds["img_ocs"])
+    repertory = os.path.dirname(thresholds["img_grasscrops"])
     layer_sgts_veg_h = repertory + os.sep + 'sgts_vegetation_herbace.gpkg'
     vector_output = repertory + os.sep + 'sgts_vegetation_hebace_plus_maj.gpkg'
 
@@ -836,7 +855,7 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
     col_to_add_list = ["majority"]
     col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range", "median", "minority" ]
     class_label_dico = {} 
-    statisticsVectorRaster(thresholds["img_ocs"], layer_sgts_veg_h, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    statisticsVectorRaster(thresholds["img_grasscrops"], layer_sgts_veg_h, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
     
     #Import en base de la ocuche vecteur
     tab_cross = 'tab_cross_h_classif'
@@ -1725,6 +1744,9 @@ def formStratumCleaning(connexion, tab_ref):
     dropTable(connexion, 'fv_arbu_touch_more_2_arbo')
     dropTable(connexion, 'fv_arbo_touch_only_1_arbu')
     dropTable(connexion, 'fv_arbo_touch_more_2_arbu')
+    dropTable(connexion, 'fveg_h')
+    dropTable(connexion, 'fveg_a')
+    dropTable(connexion, 'fveg_au')
 
     return
 
