@@ -2,7 +2,7 @@
 import math,os
 
 #Import des librairies de /libs
-from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection
+from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
 from libs.Lib_display import endC, bold, yellow, cyan, red
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_file import removeFile
@@ -45,36 +45,45 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         print(cyan + "cartographyVegetation : " + endC + "debug : " + str(debug) + endC)
 
     #Nettoyage en base si ré-écriture
-    if overwrite == True:
-        print(bold + "Choix de remise à zéro du schéma " + str(shem_tab_ref))
-        query ="""
-        SELECT format('DROP TABLE %s.%s', table_schema, table_name)
-        FROM information_schema.tables
-        WHERE table_schema = '%s'; 
-        """ %('%I', '%I',connexion_stratev_dic["schema"])
-        cursor = connexion.cursor()
-        cursor.execute(query)
-        tables_schema = cursor.fetchall()
-        for el in tables_schema:
-            executeQuery(connexion, el[0])
+    # if overwrite == True:
+    #     print(bold + "Choix de remise à zéro du schéma " + str(shem_tab_ref))
+    #     query ="""
+    #     SELECT format('DROP TABLE %s.%s', table_schema, table_name)
+    #     FROM information_schema.tables
+    #     WHERE table_schema = '%s'; 
+    #     """ %('%I', '%I',connexion_stratev_dic["schema"])
+    #     cursor = connexion.cursor()
+    #     cursor.execute(query)
+    #     tables_schema = cursor.fetchall()
+    #     for el in tables_schema:
+    #         executeQuery(connexion, el[0])
 
-    #1# Formes végétales arborées
-    if debug >= 2:
-        print(bold + "Détection des formes végétales au sein de la strate arborée" + endC)
-    tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["tree"], output_layers["tree"], save_intermediate_results = save_intermediate_results, debug = debug)
+    # #1# Formes végétales arborées
+    tab_arbore = ''
+    # if debug >= 2:
+    #     print(bold + "Détection des formes végétales au sein de la strate arborée" + endC)
+    # tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["tree"], output_layers["tree"], save_intermediate_results = save_intermediate_results, debug = debug)
 
-    #2# Formes végétales arbustives
-    if debug >= 2:
-        print(bold + "Détection des formes végétales au sein de la strate arbustive" + endC)
-    tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["shrub"], save_intermediate_results = save_intermediate_results, debug = debug)
+    # #2# Formes végétales arbustives
+    tab_arbustive = ''
+    # if debug >= 2:
+    #     print(bold + "Détection des formes végétales au sein de la strate arbustive" + endC)
+    # tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["shrub"], save_intermediate_results = save_intermediate_results, debug = debug)
     
     #3# Formes végétales herbacées
+    tab_herbace = ''
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate herbacée" + endC)
-    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref,  dic_thresholds["herbaceous"], output_layers["herbaceous"], save_intermediate_results = save_intermediate_results, debug = debug)
+    #tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref,  dic_thresholds["herbaceous"], output_layers["herbaceous"], save_intermediate_results = save_intermediate_results, debug = debug)
 
     #4# Concaténation des données en une seule table 'végétation'
     tab_name = 'vegetation'
+    if tab_arbore == '':
+        tab_arbore = 'strate_arboree'
+    if tab_arbustive == '':
+        tab_arbustive = 'strate_arbustive'
+    if tab_herbace == '':
+        tab_herbace = 'strate_herbace'
     if debug >= 2:
         print(bold + "Concaténation des données en une seule table " + tab_name + endC)
 
@@ -82,26 +91,51 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     CREATE TABLE %s AS
     SELECT geom, strate, fv FROM %s
     UNION
-    SELECT fid, geom, strate, fv FROM %s
+    SELECT geom, strate, fv FROM %s
     UNION 
-    SELECT fid, geom, strate, fv FROM %s;
+    SELECT geom, strate, fv FROM %s;
     """ %(tab_name, tab_arbore, tab_arbustive, tab_herbace)
     
     if debug >= 3:
         print(query)
-    executeQuery(connexion, query)
+    #executeQuery(connexion, query)
 
-    addSpatialIndex(connexion, tab_name)
-    addUniqId(connexion, tab_name)
+    #addUniqId(connexion, tab_name)
+    #addSpatialIndex(connexion, tab_name)
 
     #5# Nettoyage des formes végétales 
     if cleanfv:
-        formStratumCleaning(connexion, tab_name) 
+        tab_name = formStratumCleaning(connexion, tab_name, debug) 
+
+    #Ajout de la colonne pour la sauvegarde au format raster
+    addColumn(connexion, tab_name, 'fv_r', 'int')
+
+    query = """
+    UPDATE %s SET fv_r = 11 WHERE fv = 'AI';
+    UPDATE %s SET fv_r = 12 WHERE fv = 'AA';
+    UPDATE %s SET fv_r = 13 WHERE fv = 'BOA';
+    UPDATE %s SET fv_r = 21 WHERE fv = 'AuI';
+    UPDATE %s SET fv_r = 22 WHERE fv = 'AAu';
+    UPDATE %s SET fv_r = 23 WHERE fv = 'BOAu';
+    UPDATE %s SET fv_r = 31 WHERE fv = 'PR';
+    UPDATE %s SET fv_r = 32 WHERE fv = 'C';
+    UPDATE %s SET fv_r = 33 WHERE fv = 'H';
+    """ %(tab_name, tab_name, tab_name, tab_name, tab_name, tab_name, tab_name, tab_name, tab_name)
 
     if output_layers["output_fv"] == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
+        #export au format vecteur 
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["output_fv"], tab_name, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+        #export au format raster 
+        #creation du chemin de sauvegarde de la donnée raster 
+        repertory_output = os.path.dirname(output_layers["output_fv"])
+        filename =  os.path.splitext(os.path.basename(output_layers["output_fv"]))[0]
+        raster_output = repertory_output + os.sep + filename  + '.tif'
+        rasterizeVector(output_layers["output_fv"], raster_output,  output_layers["img_ref"], 'fv_r', codage="uint8", ram_otb=0)
+        
+        #suppression de la colonne non utile "strate_r"
+        dropColumn(connexion, tab_name, 'strate_r') 
 
     return tab_name
 
@@ -739,55 +773,55 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, threshold
 
     #1# Récupération de la table composée uniquement des segments herbaces
     tab_herb_ini = 'herbace_ini'
-    query = """
-    CREATE TABLE %s AS
-        SELECT *
-        FROM %s
-        WHERE strate = 'H';
-    """ %(tab_herb_ini, schem_tab_ref)
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT *
+    #     FROM %s
+    #     WHERE strate = 'H';
+    # """ %(tab_herb_ini, schem_tab_ref)
 
-    #Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    #Création des indexes 
-    addSpatialIndex(connexion, tab_herb_ini)
-    addIndex(connexion, tab_herb_ini, 'fid', 'idx_fid_herbeini')
+    # #Création des indexes 
+    # addSpatialIndex(connexion, tab_herb_ini)
+    # addIndex(connexion, tab_herb_ini, 'fid', 'idx_fid_herbeini')
 
-    #2# Regroupement et lissage des segments herbacés
+    # #2# Regroupement et lissage des segments herbacés
     tab_in = 'herbace'
 
-    query = """
-    CREATE TABLE %s AS
-        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
-        FROM %s AS t;
-    """ %(tab_oin, tab_herb_ini)
+    # query = """
+    # CREATE TABLE %s AS
+    #     SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
+    #     FROM %s AS t;
+    # """ %(tab_in, tab_herb_ini)
 
-    #Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # #Exécution de la requête SQL
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    #Création d'un identifiant unique
-    addUniqId(connexion, tab_in)
+    # #Création d'un identifiant unique
+    # addUniqId(connexion, tab_in)
 
-    #Création d'un index spatial
-    addSpatialIndex(connexion, tab_in)
+    # #Création d'un index spatial
+    # addSpatialIndex(connexion, tab_in)
 
-    #Création de la colonne strate qui correspond à 'A' pour tous les polygones et complétion
-    addColumn(connexion, tab_in, 'strate', 'varchar(100)')
+    # #Création de la colonne strate qui correspond à 'A' pour tous les polygones et complétion
+    # addColumn(connexion, tab_in, 'strate', 'varchar(100)')
 
-    query = """
-    UPDATE %s SET strate = 'H' WHERE fid = fid;
-    """ %(tab_in)
+    # query = """
+    # UPDATE %s SET strate = 'H' WHERE fid = fid;
+    # """ %(tab_in)
 
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    #Création de la colonne fv
-    addColumn(connexion, tab_in, 'fv', 'varchar(100)')
+    # #Création de la colonne fv
+    # addColumn(connexion, tab_in, 'fv', 'varchar(100)')
     #Pas de complétion de cet attribut pour l'instant
     tab_herbace = ''
 
@@ -848,68 +882,72 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
     vector_output = repertory + os.sep + 'sgts_vegetation_hebace_plus_maj.gpkg'
 
     #Export des le donnée vecteur des segments herbacés en couche GPKG
-    exportVectorByOgr2ogr(connexion_dic["dbname"], layer_sgts_veg_h, tab_in, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-
-
-    #Calcul de la classe majoritaire par segments herbacé 
-    col_to_add_list = ["majority"]
-    col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range", "median", "minority" ]
-    class_label_dico = {} 
-    statisticsVectorRaster(thresholds["img_grasscrops"], layer_sgts_veg_h, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    # exportVectorByOgr2ogr(connexion_dic["dbname"], layer_sgts_veg_h, tab_in, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+        
+    # #Calcul de la classe majoritaire par segments herbacé 
+    # col_to_add_list = ["majority"]
+    # col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range", "median", "minority" ]
+    # class_label_dico = {} 
+    # statisticsVectorRaster(thresholds["img_grasscrops"], layer_sgts_veg_h, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
     
-    #Import en base de la ocuche vecteur
+    # #Import en base de la ocuche vecteur
     tab_cross = 'tab_cross_h_classif'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
+    # importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
-    #Suppression des fichiers créés
-    removeFile(layer_sgts_veg_h)
-    removeFile(vector_output)
+    # #Suppression des fichiers créés
+    # #removeFile(layer_sgts_veg_h)
+    # #removeFile(vector_output)
 
-    # Attribution du label 'PR' (prairie) ou 'C' (culture)
-    query = """
-    UPDATE %s AS t1 SET fv = 'PR' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
-    UPDATE %s AS t1 SET fv = 'C' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
-    """  %(tab_in, tab_cross, thresholds["label_prairie"],tab_in,tab_cross, thresholds["label_culture"])
+    
+    # # Attribution du label 'PR' (prairie) ou 'C' (culture)
+    # query = """
+    # UPDATE %s AS t1 SET fv = 'PR' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    # UPDATE %s AS t1 SET fv = 'C' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    # """  %(tab_in, tab_cross, thresholds["label_prairie"],tab_in,tab_cross, thresholds["label_culture"])
 
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
 
-    #Regroupe par localisation et par label (fv) les semgents de végétation herbacés 
+    # #Regroupe par localisation et par label (fv) les semgents de végétation herbacés 
     tab_crop = 'tab_crops'
     tab_grass = 'tab_grass'
 
-    query = """
-    DROP TABLE IF EXISTS %s;
-    CREATE TABLE %s AS
-        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom 
-        FROM (SELECT geom FROM %s WHERE fv = 'PR') AS t1;
-    """ %(tab_grass, tab_grass, tab_in)
+    # # Correction topologique 
+    # topologyCorrections(connexion, tab_in)
 
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    # dropColumn(connexion, tab_in, 'ogc_fid')
 
-    
+    # query = """
+    # DROP TABLE IF EXISTS %s;
+    # CREATE TABLE %s AS
+    #     SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom 
+    #     FROM (SELECT geom FROM %s WHERE fv = 'PR') AS t1;
+    # """ %(tab_grass, tab_grass, tab_in)
 
-    query = """
-    DROP TABLE IF EXISTS %s;
-    CREATE TABLE %s AS
-        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom 
-        FROM (SELECT geom FROM %s WHERE fv = 'C') AS t1;
-    """ %(tab_crop, tab_crop, tab_in)
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+
+    # query = """
+    # DROP TABLE IF EXISTS %s;
+    # CREATE TABLE %s AS
+    #     SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom 
+    #     FROM (SELECT geom FROM %s WHERE fv = 'C') AS t1;
+    # """ %(tab_crop, tab_crop, tab_in)
+
+    # if debug >= 3:
+    #     print(query)
+    # executeQuery(connexion, query)
 
     tab_out = 'strate_herbace'
 
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS 
-        SELECT 'Pr' AS fv, 'H' AS strate, geom AS geom
+        SELECT 'PR' AS fv, 'H' AS strate, geom AS geom
         FROM %s
         UNION
         SELECT 'C' AS fv, 'H' AS strate, geom AS geom
@@ -920,7 +958,7 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
         print(query)
     executeQuery(connexion, query)
 
-    addIndex(connexion, tab_out, 'fid', 'fid_veg_idx')
+    addUniqId(connexion, tab_out)
     addSpatialIndex(connexion, tab_out)
 
     dropTable(connexion, tab_cross)
@@ -1322,22 +1360,37 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
 ########################################################################
 # FONCTION formStratumCleaning()                                       #
 ########################################################################
-def formStratumCleaning(connexion, tab_ref):
+def formStratumCleaning(connexion, tab_ref, debug = 1):
     """
     Rôle : nettoyer les formes végétales horizontales parfois mal classées
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
         tab_ref : nom de la table contenant les formes végétales à nettoyer
+        debug : paramètre de debugage. Par défaut : 1
     """
 
     #pour l'instant tab_ref = 'vegetation' 
+    
+    query = """
+    DROP TABLE IF EXISTS vegetation_to_clean;
+    CREATE TABLE vegetation_to_clean AS (SELECT * FROM %s)
+    """ %(tab_ref)
+
+    if debug >= 3 :
+        print(query)
+    #executeQuery(connexion, query)
+
+    tab_ref = 'vegetation_to_clean'
+
+    #addSpatialIndex(connexion, tab_ref)
+    #addIndex(connexion, tab_ref, 'fid', 'fid_veg_to_clean')
 
     #1# Suppression des FV dont la surface est strictement inférieure à 1m² 
-    QUERY = """
+    query = """
     DROP TABLE IF EXISTS fv_arbo_delete;
     CREATE TABLE fv_arbo_delete AS
-	    SELECT t.ogc_fid
+	    SELECT t.fid
 	    FROM (
             SELECT * FROM %s WHERE strate = 'A'
             ) AS t
@@ -1345,7 +1398,7 @@ def formStratumCleaning(connexion, tab_ref):
 
     DROP TABLE IF EXISTS fv_arbu_delete;
     CREATE TABLE fv_arbu_delete AS
-	    SELECT t.ogc_fid
+	    SELECT t.fid
 	    FROM (
             SELECT * FROM %s WHERE strate = 'Au'
             ) AS t
@@ -1353,32 +1406,32 @@ def formStratumCleaning(connexion, tab_ref):
 
     DROP TABLE IF EXISTS fv_herba_delete;
     CREATE TABLE fv_herba_delete AS
-	    SELECT t.ogc_fid
+	    SELECT t.fid
 	    FROM (
             SELECT * FROM %s WHERE strate = 'H'
             ) AS t
 	    WHERE public.ST_AREA(t.geom) < 1;
     """ %(tab_ref, tab_ref, tab_ref)
 
-    if debug > 3 :
+    if debug >= 3 :
         print(query)
-    executeQuery(connexion, query)
+    #executeQuery(connexion, query)
 
     query = """
-    DELETE FROM %s AS t1 USING fv_arbo_delete AS t2 WHERE t1.ogc_fid = t2.ogc_fid;
+    DELETE FROM %s AS t1 USING fv_arbo_delete AS t2 WHERE t1.fid = t2.fid;
 
-    DELETE FROM %s AS t1 USING fv_arbu_delete AS t2 WHERE t1.ogc_fid = t2.ogc_fid;
+    DELETE FROM %s AS t1 USING fv_arbu_delete AS t2 WHERE t1.fid = t2.fid;
 
-    DELETE FROM %s AS t1 USING fv_herba_delete AS t2 WHERE t1.ogc_fid = t2.ogc_fid;
+    DELETE FROM %s AS t1 USING fv_herba_delete AS t2 WHERE t1.fid = t2.fid;
     """ %(tab_ref, tab_ref, tab_ref)
 
     if debug > 3 :
         print(query)
-    executeQuery(connexion, query)
+    #executeQuery(connexion, query)
 
-    dropTable(connexion, 'fv_arbo_delete')
-    dropTable(connexion, 'fv_arbu_delete')
-    dropTable(connexion, 'fv_herba_delete')
+    # dropTable(connexion, 'fv_arbo_delete')
+    # dropTable(connexion, 'fv_arbu_delete')
+    # dropTable(connexion, 'fv_herba_delete')
 
     #2# Reclassification des taches arborées et arbustives ('TA' et 'TAu') en boisements arborés et arbustifs ('BOA' et 'BOAu')
 
@@ -1387,101 +1440,112 @@ def formStratumCleaning(connexion, tab_ref):
     UPDATE %s SET fv = 'BOAu' WHERE fv = 'TAu';
     """ %(tab_ref, tab_ref)
 
-    if debug > 3 :
+    if debug >= 3 :
         print(query)
-    executeQuery(connexion, query)
+    #executeQuery(connexion, query)
 
     #3# Reclassification des formes végétales arborées et arbustives touchant uniquement de l'arboré et de l'arbustif
     query = """
     DROP TABLE IF EXISTS fv_arbu_touch_arbo;
     CREATE TABLE fv_arbu_touch_arbo AS
-        SELECT t1.ogc_fid AS fid_arbu, t1.strate AS strate_arbu, t1.fv AS fv_arbu, t1.geom AS geom_arbu,
-                t2.ogc_fid AS fid_arbo, t2.strate AS strate_arbo, t2.fv AS fv_arbo, t2.geom AS geom_arbo
+        SELECT t1.fid AS fid_arbu, t1.strate AS strate_arbu, t1.fv AS fv_arbu, t1.geom AS geom_arbu,
+                t2.fid AS fid_arbo, t2.strate AS strate_arbo, t2.fv AS fv_arbo, t2.geom AS geom_arbo
         FROM (SELECT * FROM %s WHERE strate = 'Au') as t1, (SELECT * FROM %s WHERE strate = 'A') AS t2
         WHERE public.ST_INTERSECTS(t1.geom, t2.geom);
 
     DROP TABLE IF EXISTS fv_arbu_touch_herba;
     CREATE TABLE fv_arbu_touch_herba AS
-        SELECT t1.ogc_fid AS fid_arbu, t1.strate AS strate_arbu, t1.fv AS fv_arbu, t1.geom AS geom_arbu,
-                t2.ogc_fid AS fid_herba, t2.strate AS strate_herba, t2.fv AS fv_herba, t2.geom AS geom_herba
+        SELECT t1.fid AS fid_arbu, t1.strate AS strate_arbu, t1.fv AS fv_arbu, t1.geom AS geom_arbu,
+                t2.fid AS fid_herba, t2.strate AS strate_herba, t2.fv AS fv_herba, t2.geom AS geom_herba
         FROM (SELECT * FROM %s WHERE strate = 'Au') as t1, (SELECT * FROM %s WHERE strate = 'H') AS t2
         WHERE public.ST_INTERSECTS(t1.geom, t2.geom);
 
     DROP TABLE IF EXISTS fv_arbo_touch_herba;
     CREATE TABLE fv_arbo_touch_herba AS
-        SELECT t1.ogc_fid AS fid_arbo, t1.strate AS strate_arbo, t1.fv AS fv_arbo, t1.geom AS geom_arbo,
-                t2.ogc_fid AS fid_herba, t2.strate AS strate_herba, t2.fv AS fv_herba, t2.geom AS geom_herba
+        SELECT t1.fid AS fid_arbo, t1.strate AS strate_arbo, t1.fv AS fv_arbo, t1.geom AS geom_arbo,
+                t2.fid AS fid_herba, t2.strate AS strate_herba, t2.fv AS fv_herba, t2.geom AS geom_herba
         FROM (SELECT * FROM %s WHERE strate = 'A') as t1, (SELECT * FROM %s WHERE strate = 'H') AS t2
         WHERE public.ST_INTERSECTS(t1.geom, t2.geom);
     """ %(tab_ref, tab_ref, tab_ref, tab_ref, tab_ref, tab_ref)
 
     if debug >= 3 :
         print(query)
-    executeQuery(connexion, query)
+    #executeQuery(connexion, query)
 
-    #3.1# Les FV arbustives 
-    # Les fvs arbustives ne touchant qu'une fv arborée
-    query = """
-    DROP TABLE IF EXISTS fv_arbu_touch_only_1_arbo;
-    CREATE TABLE fv_arbu_touch_only_1_arbo AS
-	    SELECT t1.* 
-	    FROM (
-            SELECT * 
-            FROM fv_arbu_touch_arbo 
-            WHERE fid_arbu NOT IN (SELECT fid_arbu FROM fv_arbu_touch_herba)
-            ) AS t1, 
-	        (
-            SELECT fid_arbu, count(fid_arbo) AS c 
-            FROM fv_arbu_touch_arbo 
-            GROUP BY fid_arbu
-            ) AS t2
-	    WHERE t1.fid_arbu = t2.fid_arbu AND c = 1 ;
-    """
+    # addSpatialIndex(connexion, 'fv_arbu_touch_arbo', 'geom_arbu', 'idx_gist_fv1_arbu')
+    # addSpatialIndex(connexion, 'fv_arbu_touch_arbo', 'geom_arbo', 'idx_gist_fv1_arbo')
+    # addSpatialIndex(connexion, 'fv_arbu_touch_herba', 'geom_arbu', 'idx_gist_fv2_arbu')
+    # addSpatialIndex(connexion, 'fv_arbu_touch_herba', 'geom_herba', 'idx_gist_fv2_herba')
+    # addSpatialIndex(connexion, 'fv_arbo_touch_herba', 'geom_arbo', 'idx_gist_fv3_arbo')
+    # addSpatialIndex(connexion, 'fv_arbo_touch_herba', 'geom_herba', 'idx_gist_fv3_herba')
 
-    if debug >= 3 :
-        print(query)
-    executeQuery(connexion, query)
+    # #3.1# Les FV arbustives 
+    # # Les fvs arbustives ne touchant qu'une fv arborée
+    # query = """
+    # DROP TABLE IF EXISTS fv_arbu_touch_only_1_arbo;
+    # CREATE TABLE fv_arbu_touch_only_1_arbo AS
+	#     SELECT t1.* 
+	#     FROM (
+    #         SELECT * 
+    #         FROM fv_arbu_touch_arbo 
+    #         WHERE fid_arbu NOT IN (SELECT fid_arbu FROM fv_arbu_touch_herba)
+    #         ) AS t1, 
+	#         (
+    #         SELECT fid_arbu, count(fid_arbo) AS c 
+    #         FROM fv_arbu_touch_arbo 
+    #         GROUP BY fid_arbu
+    #         ) AS t2
+	#     WHERE t1.fid_arbu = t2.fid_arbu AND c = 1 ;
+    # """
 
-    #Ré-attribution de la strate 'A' pour les fvs arbustifs concernés 
-    query = """
-    UPDATE %s AS t1 SET strate = 'A' 
-        FROM (
-            SELECT t1.fid_arbu
-            FROM (
-                SELECT fid_arbu, fid_arbo, fv_arbu, fv_arbo, public.ST_AREA(geom_arbu)/public.ST_AREA(geom_arbo) AS ratio_surface
-	            FROM fv_arbu_touch_only_1_arbo
-                ) AS t1 
-            WHERE t1.ratio_surface < 0.5
-            ) AS t2
-        WHERE t1.ogc_fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
-    """ %(tab_ref)
+    # if debug >= 3 :
+    #     print(query)
+    # executeQuery(connexion, query)
 
-    if debug >= 3 :
-        print(query)
-    executeQuery(connexion, query)
+    #addSpatialIndex(connexion, 'fv_arbu_touch_only_1_arbo', 'geom_arbu', 'idx_gist_arbu_touch_on_arbu')
+    #addSpatialIndex(connexion, 'fv_arbu_touch_only_1_arbo', 'geom_arbo', 'idx_gist_arbu_touch_on_arbo')
 
-    #Ré-attribution de la fv avec laquelle la fv arbustive est en contact
-    query = """
-    UPDATE %s AS t1 SET fv = t2.fv_arbo 
-        FROM (
-            SELECT t1.fid_arbu, t1.fv_arbo 
-            FROM (
-                SELECT fid_arbu, fid_arbo, fv_arbu, fv_arbo, public.ST_AREA(geom_arbu)/public.ST_AREA(geom_arbo) AS ratio_surface
-	            FROM fv_arbu_touch_only_1_arbo
-                ) AS t1 
-            WHERE t1.ratio_surface < 0.5
-            ) as t2
-        WHERE t1.ogc_fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
-    """ %(tab_ref)
+    # #Ré-attribution de la strate 'A' pour les fvs arbustifs concernés 
+    # query = """
+    # UPDATE %s AS t1 SET strate = 'A' 
+    #     FROM (
+    #         SELECT t1.fid_arbu
+    #         FROM (
+    #             SELECT fid_arbu, fid_arbo, fv_arbu, fv_arbo, public.ST_AREA(geom_arbu)/public.ST_AREA(geom_arbo) AS ratio_surface
+	#             FROM fv_arbu_touch_only_1_arbo
+    #             ) AS t1 
+    #         WHERE t1.ratio_surface < 0.5
+    #         ) AS t2
+    #     WHERE t1.fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
+    # """ %(tab_ref)
+
+    # if debug >= 3 :
+    #     print(query)
+    # executeQuery(connexion, query)
+
+
+    # #Ré-attribution de la fv avec laquelle la fv arbustive est en contact
+    # query = """
+    # UPDATE %s AS t1 SET fv = t2.fv_arbo 
+    #     FROM (
+    #         SELECT t1.fid_arbu, t1.fv_arbo 
+    #         FROM (
+    #             SELECT fid_arbu, fid_arbo, fv_arbu, fv_arbo, public.ST_AREA(geom_arbu)/public.ST_AREA(geom_arbo) AS ratio_surface
+	#             FROM fv_arbu_touch_only_1_arbo
+    #             ) AS t1 
+    #         WHERE t1.ratio_surface < 0.5
+    #         ) as t2
+    #     WHERE t1.fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
+    # """ %(tab_ref)
     
-    if debug >= 3 :
-        print(query)
-    executeQuery(connexion, query)
+    # if debug >= 3 :
+    #     print(query)
+    # executeQuery(connexion, query)
 
     # Les fvs arbustives touchant plus d'une fv arborée
 
     query = """
-    DROP TABLE IF EXISTS fv_arbu_touch_more_2_arbo
+    DROP TABLE IF EXISTS fv_arbu_touch_more_2_arbo;
     CREATE TABLE fv_arbu_touch_more_2_arbo AS
 	    SELECT t1.* 
 	    FROM (
@@ -1489,7 +1553,7 @@ def formStratumCleaning(connexion, tab_ref):
             FROM fv_arbu_touch_arbo 
             WHERE fid_arbu NOT IN (SELECT fid_arbu FROM fv_arbu_touch_herba)
             ) AS t1, 
-	    (SELECT fid_arbu, count(fid_arbo) AS c 
+	        (SELECT fid_arbu, count(fid_arbo) AS c 
             FROM fv_arbu_touch_arbo 
             GROUP BY fid_arbu
             ) AS t2
@@ -1498,11 +1562,15 @@ def formStratumCleaning(connexion, tab_ref):
 
     if debug >= 3 :
         print(query)
-    executeQuery(connexion, query)
+    #executeQuery(connexion, query)
+
+    # addSpatialIndex(connexion, 'fv_arbu_touch_more_2_arbo', 'geom_arbu', 'idx_gist_arbu_touch_m_2_arbu')
+    # addSpatialIndex(connexion, 'fv_arbu_touch_more_2_arbo', 'geom_arbo', 'idx_gist_arbu_touch_m_2_arbo')
+
 
     #Ré-attribution de la strate 'A' pour les fvs arbustifs concernés 
     query = """
-    UPDATE fv_arbu_reclass AS t1 SET strate = 'A' 
+    UPDATE %s AS t1 SET strate = 'A' 
     FROM (
         SELECT t1.fid_arbu 
         FROM (
@@ -1511,8 +1579,8 @@ def formStratumCleaning(connexion, tab_ref):
             ) AS t1 
         WHERE t1.ratio_surface < 0.5
         ) AS t2
-    WHERE t1.ogc_fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
-    """
+    WHERE t1.fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
+    """ %(tab_ref)
 
     if debug >= 3 :
         print(query)
@@ -1520,7 +1588,7 @@ def formStratumCleaning(connexion, tab_ref):
 
     #Ré-attribution de la fv avec laquelle la fv arbustive est en contact avec règle de longueur de frontière partagée
     query = """
-    UPDATE fv_arbu_reclass AS t1 SET fv = t2.fv_arbo
+    UPDATE %s AS t1 SET fv = t2.fv_arbo
         FROM (
             SELECT t1.fid_arbu, t1.fv_arbo 
             FROM (
@@ -1538,8 +1606,8 @@ def formStratumCleaning(connexion, tab_ref):
                 ) as t1 
             WHERE t1.ratio_surface < 0.5
             ) as t2
-        WHERE t1.ogc_fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
-    """
+        WHERE t1.fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
+    """ %(tab_ref)
 
     if debug >= 3:
         print(query)
@@ -1568,6 +1636,9 @@ def formStratumCleaning(connexion, tab_ref):
         print(query)
     executeQuery(connexion, query)
 
+    addSpatialIndex(connexion, 'fv_arbo_touch_only_1_arbu', 'geom_arbu', 'idx_gist_arbo_touch_on_arbu')
+    addSpatialIndex(connexion, 'fv_arbo_touch_only_1_arbu', 'geom_arbo', 'idx_gist_arbuo_touch_on_arbo')
+
     #Ré-attribution de la strate 'Au' pour les fvs arbustifs concernées
     query = """
     UPDATE %s AS t1 SET strate = 'Au' 
@@ -1579,7 +1650,7 @@ def formStratumCleaning(connexion, tab_ref):
                 ) AS t1 
             WHERE t1.ratio_surface > 2
             ) AS t2 
-        WHERE t1.ogc_fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
+        WHERE t1.fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
     """ %(tab_ref)
 
     if debug >= 3:
@@ -1597,7 +1668,7 @@ def formStratumCleaning(connexion, tab_ref):
                 ) AS t1 
             WHERE t1.ratio_surface > 2
             ) AS t2
-        WHERE t1.ogc_fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
+        WHERE t1.fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
     """ %(tab_ref)
 
     if debug >= 3:
@@ -1626,6 +1697,9 @@ def formStratumCleaning(connexion, tab_ref):
         print(query)
     executeQuery(connexion, query)
 
+    addSpatialIndex(connexion, 'fv_arbo_touch_more_2_arbu', 'geom_arbu', 'idx_gist_arbo_touch_m_2_arbu')
+    addSpatialIndex(connexion, 'fv_arbu_touch_more_2_arbo', 'geom_arbo', 'idx_gist_arbo_touch_m_2_arbo')
+
     #Ré-attribution de la strate 'Au' pour les fvs arborées concernées
     query = """
     UPDATE %s AS t1 SET strate = 'Au' 
@@ -1637,7 +1711,7 @@ def formStratumCleaning(connexion, tab_ref):
                 ) AS t1 
             WHERE t1.ratio_surface > 2
             ) as t2
-        WHERE t1.ogc_fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
+        WHERE t1.fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
     """ %(tab_ref)
 
     if debug >= 3:
@@ -1665,7 +1739,7 @@ def formStratumCleaning(connexion, tab_ref):
                 ) AS t1 
             WHERE t1.ratio_surface > 2
         ) AS t2
-        WHERE t1.ogc_fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
+        WHERE t1.fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
     """ %(tab_ref)
 
     if debug >= 3:
@@ -1676,9 +1750,9 @@ def formStratumCleaning(connexion, tab_ref):
     query = """
     DROP TABLE IF EXISTS fveg_h;
     CREATE TABLE fveg_h AS
-        SELECT 'H' AS strate, 'Pr' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+        SELECT 'H' AS strate, 'PR' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
         FROM %s
-        WHERE fv = 'Pr'
+        WHERE fv = 'PR'
         UNION
         SELECT 'H' AS strate, 'C' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
         FROM %s
@@ -1728,7 +1802,7 @@ def formStratumCleaning(connexion, tab_ref):
         UNION
         SELECT strate, fv, geom
         FROM fveg_au;
-    """%(tab_ref,tab_ref)
+    """ %(tab_ref,tab_ref)
 
     if debug >= 3:
         print(query)
@@ -1748,5 +1822,5 @@ def formStratumCleaning(connexion, tab_ref):
     dropTable(connexion, 'fveg_a')
     dropTable(connexion, 'fveg_au')
 
-    return
+    return tab_ref
 
