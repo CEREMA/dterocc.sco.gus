@@ -194,7 +194,7 @@ NB : en France, nous disposons d'images Sentinel-2 L3 correspondant aux synthès
 
 4. Lancer la chaîne
 
-Attention : nous préconisons la vérification du référentiel de projection de l'image classifiée finale. Si elle n'est pas dans le même référentiel que le projet, il faudra reprojeter l'image via, par exemple, l'application d'un gdalwarp.
+Attention : nous préconisons la vérification du référentiel de projection de l'image classifiée finale. Si elle n'est pas dans le même référentiel que le projet, il faudra reprojeter l'image via, par exemple, l'application d'un gdalwarp. 
 
 ## Auteur
 
