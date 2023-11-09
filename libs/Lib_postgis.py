@@ -485,7 +485,7 @@ def addUniqId(connexion, tablename):
 ########################################################################
 # FONCTION addSpatialIndex()                                           #
 ########################################################################
-def addSpatialIndex(connexion, tablename, geomcolumn = 'geom'):
+def addSpatialIndex(connexion, tablename, geomcolumn = 'geom', nameindex = ''):
     """
     Rôle : créé un index spatial associé à la colonne géometrie
 
@@ -493,9 +493,10 @@ def addSpatialIndex(connexion, tablename, geomcolumn = 'geom'):
         connexion : connexion à la base donnée et au schéma correspondant
         tablename : nom de la table correspondant aux segments de végétation
         geomcolumn : nom de la colonne géometrie, par défaut : 'geom'
+        nameindex : nom de l'index dans le cas où on souhaite lui en donné un spécifiquement. Par défaut : ''
     """
-
-    nameindex = 'idx_gist_' + tablename
+    if nameindex == '':
+        nameindex = 'idx_gist_' + tablename
     query = """
     DROP INDEX IF EXISTS %s;
     CREATE INDEX %s ON %s USING gist(%s);
