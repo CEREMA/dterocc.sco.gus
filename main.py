@@ -378,7 +378,7 @@ if __name__ == "__main__":
     vegetation_clean = path_tmp_cleansamples + os.sep + 'vegetation_vector_clean.tif'
 
     dic_img_cleansamples = {
-        "bâti" : [bati_prepare, bati_clean],
+        "bati" : [bati_prepare, bati_clean],
         "route" : [route_prepare, route_clean],
         "solnu" : [solnu_prepare, solnu_clean],
         "eau" : [eau_prepare, eau_clean],
@@ -476,7 +476,8 @@ if __name__ == "__main__":
       "tree" : fv_st_arbore,
       "shrub" : fv_st_arbustif,
       "herbaceous" : fv_st_herbace,
-      "output_fv" : path_fv_vegetation
+      "output_fv" : path_fv_vegetation,
+      "img_ref" : img_ref
     } 
 
 
@@ -598,7 +599,7 @@ if __name__ == "__main__":
       if debug >= 1:
         print(cyan + "\nPréparation des échantillons d'apprentissage" + endC) 
 
-      #prepareAllSamples(img_ref, dic_preparesamples, shp_zone, format_vector = 'ESRI Shapefile')
+      #prepareAllSamples(img_ref, dic_img_preparesamples, shp_zone, format_vector = 'ESRI Shapefile')
   
       #3.Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
       if debug >= 1:
@@ -685,12 +686,14 @@ if __name__ == "__main__":
       
       #closeConnection(connexion)
     else :  
-      if config["vegetation_form_stratum_detection"]["db_table"] != None or config["vegetation_form_stratum_detection"]["db_table"] != "":
-        schem_tab_ref_stratesv = config["vertical_stratum_detection"]["db_table"]  
-        tab_ref_stratesv = schem_tab_ref_stratesv.split('.')[1]
-      else : 
+      print(str(config["vegetation_form_stratum_detection"]["db_table"]))
+      if not config["vegetation_form_stratum_detection"]["db_table"]:
         schem_tab_ref_stratesv = connexion_stratev_dic["schema"] + '.' + 'segments_vegetation' 
         tab_ref_stratesv = 'segments_vegetation'
+      else :
+        schem_tab_ref_stratesv = config["vertical_stratum_detection"]["db_table"]  
+        tab_ref_stratesv = schem_tab_ref_stratesv.split('.')[1]
+            
 
     #3# DETECTION DES FORMES VEGETALES HORIZONTALES #3# 
     if config["steps_to_run"]["vegetation_form_stratum_detection"] == True :
@@ -705,12 +708,13 @@ if __name__ == "__main__":
       closeConnection(connexion)
 
     else :   
-      if config["vegetation_form_stratum_detection"]["db_table"] != None or config["vegetation_form_stratum_detection"]["db_table"] != "":
-        schem_tab_ref_fv = config["vegetation_form_stratum_detection"]["db_table"]  
-        tab_ref_fv = schem_tab_ref_fv.split('.')[1]
-      else : 
+      if not config["vegetation_form_stratum_detection"]["db_table"] : 
         schem_tab_ref_fv = connexion_datafinal_dic["schema"] + '.' + 'vegetation' 
         tab_ref_fv = 'vegetation'
+      else:
+        schem_tab_ref_fv = config["vegetation_form_stratum_detection"]["db_table"]  
+        tab_ref_fv = schem_tab_ref_fv.split('.')[1]
+      
 
 
     #4# Calcul des indicateurs de végétation
@@ -720,9 +724,9 @@ if __name__ == "__main__":
         print(cyan + "\nCalcul des attributs descriptifs des formes végétales" + endC)
       
       #Ouverture connexion 
-      #connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
+      connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
     
-      #createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = False)
+      createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = False)
 
       if debug >= 1:
         print(bold + green + "\nCartographie détaillée de la végétation disponible via le chemin :" + path_datafinal + endC)
