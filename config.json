@@ -8,7 +8,7 @@
         "vegetation_extraction" : false,
         "vertical_stratum_detection" : false,
         "vegetation_form_stratum_detection" : true,
-        "indicators_computation" : false
+        "indicators_computation" : true
     }, 
     "data_entry": {
         "img_RVBPIR_ref": "/mnt/RAM_disk/ProjetGUS/ORT_20220614_NADIR_16B_MGN_V2.tif",
@@ -215,7 +215,7 @@
         "minsize" : 10
     }, 
     "vertical_stratum_detection": {
-        "db_table" : "schema.patate",
+        "db_table" : "",
         "height_treeshrub_thr": 3,
         "height_shrubgrass_thr": 1,
         "texture_thr": 11,
