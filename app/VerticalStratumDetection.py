@@ -376,6 +376,20 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
         dropTable(connexion, tab_rgpt_arbu)
         dropTable(connexion, tab_arbu_de_rgpt)
         dropTable(connexion, tab_arbu_uniq)
+
+    #Ajout de la colonne pour la sauvegarde au format raster
+    addColumn(connexion, tab_ref, 'strate_r', 'int')
+
+    query = """
+    UPDATE %s SET strate_r = 1 WHERE strate = 'A';
+    UPDATE %s SET strate_r = 2 WHERE strate = 'Au';
+    UPDATE %s SET strate_r = 3 WHERE strate = 'H';
+    """ %(tab_ref, tab_ref, tab_ref)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
     
     #############################################################
     ## Sauvegarde des résultats en tant que couche vectorielle ##  
@@ -420,7 +434,14 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
         
     if output_layers["output_stratesv"] != '' :
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["output_stratesv"], tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-
+        #export au format raster 
+        #creation du chemin de sauvegarde de la donnée raster 
+        repertory_output = os.path.dirname(output_layers["output_stratesv"])
+        filename =  os.path.splitext(os.path.basename(output_layers["output_stratesv"]))[0]
+        raster_output = repertory_output + os.sep + filename  + '.tif'
+        rasterizeVector(output_layers["output_stratesv"], raster_output,  output_layers["img_ref"], 'fv_r', codage="uint8", ram_otb=0)
+        #suppression de la colonne non utile "strate_r"
+        dropColumn(connexion, tab_name, 'strate_r') 
     return tab_ref
 
 ###########################################################################################################################################
