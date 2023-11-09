@@ -4,7 +4,7 @@ import os,sys,glob,shutil
 #Import des librairies /libs
 from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_file import cleanTempData, deleteDir, removeFile, removeVectorFile, copyVectorFile
-from libs.Lib_raster import createBinaryMaskThreshold, applyMaskAnd, rasterizeBinaryVector
+from libs.Lib_raster import createBinaryMaskThreshold, applyMaskAnd, rasterizeBinaryVector, cutImageByVector
 from libs.Lib_vector import simplifyVector, cutoutVectors, bufferVector, fusionVectors, filterSelectDataVector, getAttributeNameList, getNumberFeature, getGeometryType
 
 
@@ -432,10 +432,13 @@ def cleanAllSamples(images_in_output, correction_images_dic, extension_raster = 
 
     for key in images_in_output.keys():
         image_input = images_in_output[key][0]
-        image_output = images_in_output[key][0]
+        image_output = images_in_output[key][1]
         #Création du dictionnaire des corrections
+        dic_correct_treat = {} 
         for treatment in correction_images_dic[key]:
-            dic_correct_treat[treatment[0]] =[treatment[1], treatment[2], treatment[3]] 
+            print(treatment[0])
+            dic_correct_treat[treatment[0]] =[treatment[1], treatment[2], treatment[3]]
+            print(dic_correct_treat) 
 
         cleanSamples(image_input, image_output, dic_correct_treat, extension_raster, save_results_intermediate, overwrite)
 
@@ -501,7 +504,8 @@ def cleanSamples(image_input, image_output, correction_images_input_dic, extensi
             cpt_treat = 0
             sample_raster_file_output = image_output
             # Parcourt le dictionnaire des traitements à effectuer
-            for idx_treatment in correction_images_input_dic:
+            print(correction_images_input_dic.keys())
+            for idx_treatment in correction_images_input_dic.keys():
                 print(cyan + "cleanSamples() : " + endC + "Début du traitement de la couche %s avec un filtrage sur le %s." %(image_input, idx_treatment))
                 # Récupération de la liste des paramètres pour ce traitement
                 treatment_info_list = correction_images_input_dic[idx_treatment]
@@ -572,7 +576,11 @@ def processingSample(sample_raster_file_input, sample_raster_file_output, file_m
     print(cyan + "processingSample() : " + bold + green + "Traitement en cours..." + endC)
 
     # Traitement préparation
+
+
+  
     file_mask_output_temp = repertory_temp + os.sep + os.path.splitext(os.path.basename(file_mask_input))[0] + "_mask_tmp" + os.path.splitext(file_mask_input)[1]
+     
     if os.path.isfile(file_mask_output_temp) :
         removeFile(file_mask_output_temp)
 
