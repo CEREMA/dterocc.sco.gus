@@ -7,7 +7,7 @@
         "data_concatenation" : false,
         "vegetation_extraction" : false,
         "vertical_stratum_detection" : false,
-        "vegetation_form_stratum_detection" : true,
+        "vegetation_form_stratum_detection" : false,
         "indicators_computation" : true
     }, 
     "data_entry": {
@@ -305,6 +305,7 @@
           "ndvi_difference_thr": 0.3,
           "trust_groundtype_feature": "idc_typesol",
           "trust_groundtype_type": "float"
-        }
+        },
+        "landscape" : null
       }   
 }

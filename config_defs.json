@@ -237,6 +237,7 @@
             "ndvi_difference_thr": "Valeur seuil de NDVI hiver à partir de laquelle on considère que le pixel représente un couvert avec sol support de surface végétalisée",
             "trust_groundtype_feature": "idc_typesol",
             "trust_groundtype_type": "float"
-        }
+        },
+        "landscape": "chemin d'accès à la couche vectorielle des paysages"
     }   
 }
