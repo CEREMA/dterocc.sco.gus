@@ -6,6 +6,7 @@ from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dr
 from libs.Lib_display import endC, bold, yellow, cyan, red
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_file import removeFile
+from libs.Lib_raster import rasterizeVector
 
 
 #################################################
