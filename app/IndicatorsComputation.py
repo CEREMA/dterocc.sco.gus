@@ -73,6 +73,12 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     #Implémentation du type de sol support des FV 
     typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["ndvi_difference_groundtype_thr"], column_indic_name = dic_columname["typeofground_indicator"][0], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
 
+    #Implémentation du paysage
+    if dic_params["vect_landscape"] == "": 
+        print("Vous n'avez pas spécifié de couche vectorielle paysage. L'attribut 'paysage' ne sera donc pas implémenté pour l'ensemble des formes végétales.") 
+    else:
+        landscapeIndicator(connexion, connexion_dic, dic_params["vect_landscape"], tab_ref)
+
     closeConnection(connexion)
 
     #Export résultat au format GPKG
@@ -574,3 +580,64 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
 
     return
 
+
+###########################################################################################################################################
+# FONCTION landscapeIndicator()                                                                                                           #
+###########################################################################################################################################
+def landscapeIndicator(connexion, connexion_dic, vect_landscape, tab_fv):
+    """
+    Rôle : attribut la classe du paysage dans lequel s'inscrit la forme végétale
+
+    Paramètres :
+        connexion : 
+        connexion_dic :
+        vect_landscape : couche vecteur des paysages composée de trois attributs : id, geom et class1
+        tab_fv : nom de la table contenant les formes végétalisées
+    """
+
+    #Import de la couche des paysages dans la bd
+    tab_land = 'tab_land'
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_landscape, tab_land, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+
+    #Corriger les géométries de la table paysagère
+    topologyCorrections(connexion, tab_land, geometry_column='geom')
+
+    #Suppression des anciens identifiants uniques
+    dropColumn(connexion, tab_land, '')  
+
+    #Ajout des indexes spatiaux et de l'identifiant clé FID
+    addSpatialIndex(connexion, tab_land)
+    addUniqId(connexion, tab_land)
+
+    #Croisement des formes végétales avec les formes paysagères
+    query = """
+    DELETE TABLE IF EXISTS tab_cross_fv_land;
+
+    CREATE TABLE tab_cross_fv_land AS
+        SELECT t_fv.fid AS fid_fv, t_land.fid AS fid_land, t_land.class1 AS class_land, public.ST_AREA(public.ST_INTERSECTION(t_fv.geom, t_land.geom)) AS surf_cross
+        FROM %s AS t_fv, %s AS t_land
+    """ %(tab_fv, tab_land)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    query = """
+    UPDATE %s AS t1 SET paysage = t2.class_land 
+            FROM (
+                SELECT fid_fv, class_land, MAX(surf_cross) AS max_cross
+                FROM tab_cross_fv_land
+                GROUP BY fid_fv, class_land
+                ) AS t2
+            WHERE t1.fid = t2.fid_fv
+    """ %(tab_fv)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Suppression des tables temporaires
+    dropTable(connexion, tab_land)
+    dropTable(connexion, 'tab_cross_fv_land') 
+
+    return
