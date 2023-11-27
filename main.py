@@ -90,6 +90,12 @@ if __name__ == "__main__":
     else :
       create_samples = True
 
+    #data paysages
+    if config["data_entry"]["entry_options"]["vect_landscape"] != None :
+      vect_landscape = config["data_entry"]["entry_options"]["vect_landscape"]
+    else :
+      vect_landscape = r''
+
 
     ########################################
     #   RENSEIGNEMENT DES PARAMETRES ET    # 
@@ -175,6 +181,7 @@ if __name__ == "__main__":
       "img_ref" : img_ref,
       "img_mnh" : img_mnh,
       "img_wtr" : img_winter,
+      "vect_landscape" : config["indicators_computation"]["landscape"],
       "ndvi_difference_everdecid_thr" : config["indicators_computation"]["evergreen_deciduous"]["ndvi_difference_thr"],
       "superimpose_choice" : True,
       "pir_difference_thr" : config["indicators_computation"]["coniferous_deciduous"]["pir_difference_thr"],
