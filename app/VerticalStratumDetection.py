@@ -128,194 +128,193 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
     ## Création et export en base de la couche des segments végétation ##
     #####################################################################   
     #Nettoyage en base si ré-écriture
-    # if overwrite == True:
-    #     query ="""
-    #     SELECT format('DROP TABLE %s.%s', table_schema, table_name)
-    #     FROM information_schema.tables
-    #     WHERE table_schema = '%s'; 
-    #     """ %('%I', '%I',connexion_stratev_dic["schema"])
-    #     cursor = connexion.cursor()
-    #     cursor.execute(query)
-    #     tables_schema = cursor.fetchall()
-    #     for el in tables_schema:
-    #         executeQuery(connexion, el[0])
+    if overwrite == True:
+        query ="""
+        SELECT format('DROP TABLE %s.%s', table_schema, table_name)
+        FROM information_schema.tables
+        WHERE table_schema = '%s'; 
+        """ %('%I', '%I',connexion_stratev_dic["schema"])
+        cursor = connexion.cursor()
+        cursor.execute(query)
+        tables_schema = cursor.fetchall()
+        for el in tables_schema:
+            executeQuery(connexion, el[0])
     
-    # #Fichiers intermédiaires
-    # repertory_output = os.path.dirname(output_layers["output_stratesv"])
-    # file_name = os.path.splitext(os.path.basename(sgts_input))[0]
-    # extension_vecteur = os.path.splitext(output_layers["output_stratesv"])[1]
+    #Fichiers intermédiaires
+    repertory_output = os.path.dirname(output_layers["output_stratesv"])
+    file_name = os.path.splitext(os.path.basename(sgts_input))[0]
+    extension_vecteur = os.path.splitext(output_layers["output_stratesv"])[1]
 
-    # ##################################################################### 
-    # ##    Collect des statistiques de hauteur et texture pour chaque   ##
-    # ##                             segment                             ## 
-    # #####################################################################
+    ##################################################################### 
+    ##    Collect des statistiques de hauteur et texture pour chaque   ##
+    ##                             segment                             ## 
+    #####################################################################
 
-    # if debug >= 1:
-    #     print(bold + "Collecte des valeurs médianes de hauteur et de texture pour chaque segment." + endC)
+    if debug >= 1:
+        print(bold + "Collecte des valeurs médianes de hauteur et de texture pour chaque segment." + endC)
 
-    # ## Collecte données de hauteur pour chaque segment  
-    # file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
+    ## Collecte données de hauteur pour chaque segment  
+    file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
 
-    # if os.path.exists(file_mnh_out) and overwrite == True:
-    #     os.remove(file_mnh_out)
+    if os.path.exists(file_mnh_out) and overwrite == True:
+        os.remove(file_mnh_out)
 
-    # #Calcul de la valeur médiane de hauteur pour chaque segment de végétation 
-    # calc_statMedian(sgts_input, raster_dic["MNH"], file_mnh_out)
+    #Calcul de la valeur médiane de hauteur pour chaque segment de végétation 
+    calc_statMedian(sgts_input, raster_dic["MNH"], file_mnh_out)
 
-    # #Export du fichier vecteur des segments végétation avec une valeur médiane de hauteur dans la BD
-    # tablename_mnh = "table_sgts_mnh"
-    # importVectorByOgr2ogr(connexion_dic["dbname"], file_mnh_out, tablename_mnh, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
+    #Export du fichier vecteur des segments végétation avec une valeur médiane de hauteur dans la BD
+    tablename_mnh = "table_sgts_mnh"
+    importVectorByOgr2ogr(connexion_dic["dbname"], file_mnh_out, tablename_mnh, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
-    # ## Collecte données de texture pour chaque segment
-    # file_txt_out = repertory_output + os.sep + file_name + "TXT" + extension_vecteur
+    ## Collecte données de texture pour chaque segment
+    file_txt_out = repertory_output + os.sep + file_name + "TXT" + extension_vecteur
 
-    # if os.path.exists(file_txt_out) and overwrite == True:
-    #     os.remove(file_txt_out)
+    if os.path.exists(file_txt_out) and overwrite == True:
+        os.remove(file_txt_out)
     
-    # #Calcul de la valeur médiane de texture pour chaque segment de végétation 
-    # calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
+    #Calcul de la valeur médiane de texture pour chaque segment de végétation 
+    calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
 
-    # #Export du fichier vecteur des segments végétation avec une valeur médiane de texture dans la BD
-    # tablename_txt = "table_sgts_txt"
-    # importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
-
-
-    # #Supprimer le fichier si on ne veut pas les sauvegarder
-    # if not save_intermediate_result :
-    #     os.remove(file_mnh_out)
-    #     os.remove(file_txt_out)
+    #Export du fichier vecteur des segments végétation avec une valeur médiane de texture dans la BD
+    tablename_txt = "table_sgts_txt"
+    importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
 
 
-    # #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
-    # tab_sgt_ini = 'segments_vegetation_ini_t0'
-    # query = """
-    # CREATE TABLE %s AS
-    #     SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
-    #     FROM %s AS t1, %s AS t2
-    #     WHERE t1.dn = t2.dn;
-    # """ %(tab_sgt_ini, tablename_txt, tablename_mnh)
-
-    # #Exécution de la requête SQL
-    # if debug >= 1:
-    #     print(query)
-    # executeQuery(connexion, query)
-
-    # #Traitement des artefacts au reflet blanc
-    # tab_sgt_txt_val0 = 'segments_txt_val0'
-    # query = """
-    # CREATE TABLE %s AS
-    #     SELECT * 
-    #     FROM %s
-    #     WHERE txt = 0;
-
-    # DELETE FROM %s WHERE txt = 0;
-    # """ %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
-
-    # #Exécution de la requête SQL
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
-
-    # #Suppression des deux tables txt et mnh
-    # if tablename_txt != '' :
-    #     dropTable(connexion, tablename_txt) 
-    # if tablename_mnh != '':
-    #     dropTable(connexion, tablename_mnh) 
+    #Supprimer le fichier si on ne veut pas les sauvegarder
+    if not save_intermediate_result :
+        os.remove(file_mnh_out)
+        os.remove(file_txt_out)
 
 
-    # ###################################################################### 
-    # ## Prétraitements : transformation de l'ensemble des multipolygones ##
-    # ##                  en simples polygones ET suppression des         ## 
-    # ##                  artefacts au reflet blanc                       ##  
-    # ######################################################################
+    #Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
+    tab_sgt_ini = 'segments_vegetation_ini_t0'
+    query = """
+    CREATE TABLE %s AS
+        SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
+        FROM %s AS t1, %s AS t2
+        WHERE t1.dn = t2.dn;
+    """ %(tab_sgt_ini, tablename_txt, tablename_mnh)
 
-    # if debug >= 2:
-    #     print(bold + "Prétraitements : transformation de l'ensemble des multipolygones en simples polygones ET suppression des artefacts au reflet blanc" + endC)
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
 
-    # #Conversion en simples polygones 
-    # query = """
-    # CREATE TABLE %s AS
-    #     SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
-    #     FROM %s as t
-    # """ %(tab_ref, tab_sgt_ini)
+    #Traitement des artefacts au reflet blanc
+    tab_sgt_txt_val0 = 'segments_txt_val0'
+    query = """
+    CREATE TABLE %s AS
+        SELECT * 
+        FROM %s
+        WHERE txt = 0;
 
-    # #Exécution de la requête SQL
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    DELETE FROM %s WHERE txt = 0;
+    """ %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
 
-    # #Ajout d'un identifiant unique
-    # addUniqId(connexion, tab_ref)
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-    # #Ajout d'un index spatial 
-    # addSpatialIndex(connexion, tab_ref)
-
-    # addIndex(connexion, tab_ref, 'fid', 'idx_fid_'+tab_ref)
-
-    # #Ajout de l'attribut "strate"
-    # addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
+    #Suppression des deux tables txt et mnh
+    if tablename_txt != '' :
+        dropTable(connexion, tablename_txt) 
+    if tablename_mnh != '':
+        dropTable(connexion, tablename_mnh) 
 
 
-    # if not save_intermediate_result:
-    #     dropTable(connexion, tab_sgt_txt_val0)
+    ###################################################################### 
+    ## Prétraitements : transformation de l'ensemble des multipolygones ##
+    ##                  en simples polygones ET suppression des         ## 
+    ##                  artefacts au reflet blanc                       ##  
+    ######################################################################
 
-    # # ##################################################################### 
-    # # ## Première étape : classification générale, à partir de règles de ##
-    # # ##                  hauteur et de texture                          ##  
-    # # #####################################################################
+    if debug >= 2:
+        print(bold + "Prétraitements : transformation de l'ensemble des multipolygones en simples polygones ET suppression des artefacts au reflet blanc" + endC)
 
-    # if debug >= 2:
-    #     print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
+    #Conversion en simples polygones 
+    query = """
+    CREATE TABLE %s AS
+        SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
+        FROM %s as t
+    """ %(tab_ref, tab_sgt_ini)
 
-    # query = """
-    # UPDATE %s as t SET strate = 'A' WHERE t.txt < %s AND t.mnh  > %s;
-    # """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Ajout d'un identifiant unique
+    addUniqId(connexion, tab_ref)
+
+    #Ajout d'un index spatial 
+    addSpatialIndex(connexion, tab_ref)
+
+    addIndex(connexion, tab_ref, 'fid', 'idx_fid_'+tab_ref)
+
+    #Ajout de l'attribut "strate"
+    addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
+
+    if not save_intermediate_result:
+        dropTable(connexion, tab_sgt_txt_val0)
+
+    ##################################################################### 
+    ## Première étape : classification générale, à partir de règles de ##
+    ##                  hauteur et de texture                          ##  
+    #####################################################################
+
+    if debug >= 2:
+        print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
+
+    query = """
+    UPDATE %s as t SET strate = 'A' WHERE t.txt < %s AND t.mnh  > %s;
+    """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
+
+    query += """
+    UPDATE %s as t SET strate = 'Au' WHERE t.txt < %s AND  t.mnh  <= %s;
+    """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
+
+    query += """
+    UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s;
+    """ %(tab_ref, dic_seuil["texture_thr"])
 
     # query += """
-    # UPDATE %s as t SET strate = 'Au' WHERE t.txt < %s AND  t.mnh  <= %s;
-    # """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
+    # UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
+    # """ %(tab_ref, dic_seuil["texture_thr"], dic_seuil["height_shrubgrass_thr"])
 
-    # query += """
-    # UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s;
-    # """ %(tab_ref, dic_seuil["texture_thr"])
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-    # # query += """
-    # # UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
-    # # """ %(tab_ref, dic_seuil["texture_thr"], dic_seuil["height_shrubgrass_thr"])
+    ##################################################################### 
+    ## Deuxième étape : reclassification des segments arbustifs        ##
+    #####################################################################
+    if debug >= 2:
+        print(bold + "Deuxième étape : reclassification des segments arbustifs" + endC)
 
-    # #Exécution de la requête SQL
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    ### 
+    #0# Extraction de deux catégories de segments arbustifs : 
+    ### 
+      # - les segments "isolés" (ne touchant pas d'autres segments arbustifs)
+      # - les segments  de "regroupement" (en contact avec d'autres segments arbustifs)
 
-    # ##################################################################### 
-    # ## Deuxième étape : reclassification des segments arbustifs        ##
-    # #####################################################################
-    # if debug >= 2:
-    #     print(bold + "Deuxième étape : reclassification des segments arbustifs" + endC)
+    if debug >= 2:
+        print(bold + "Deuxième étape :\n0-Extraction des segments 'isolés' et des segments de 'regroupement'" + endC)
 
-    # ### 
-    # #0# Extraction de deux catégories de segments arbustifs : 
-    # ### 
-    #   # - les segments "isolés" (ne touchant pas d'autres segments arbustifs)
-    #   # - les segments  de "regroupement" (en contact avec d'autres segments arbustifs)
-
-    # if debug >= 2:
-    #     print(bold + "Deuxième étape :\n0-Extraction des segments 'isolés' et des segments de 'regroupement'" + endC)
-
-    # #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
-    # tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, debug)
+    #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
+    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, debug)
 
 
-    # ###
-    # #1# Première phase de reclassification
-    # ###   
+    ###
+    #1# Première phase de reclassification
+    ###   
     
-    # #1.0# Reclassification des arbustes isolés selon leur hauteur
-    # if debug >= 2:
-    #     print(bold + "Deuxième étape :\n1.0-Reclassification des arbustes isolés selon leur hauteur" + endC)
+    #1.0# Reclassification des arbustes isolés selon leur hauteur
+    if debug >= 2:
+        print(bold + "Deuxième étape :\n1.0-Reclassification des arbustes isolés selon leur hauteur" + endC)
 
-    # tab_ref = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate_result, debug) 
+    tab_ref = reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate_result, debug) 
 
     tab_arbu_de_rgpt = 'arbu_de_rgpt'
     tab_arbu_uniq = 'arbu_uniq'
@@ -1366,149 +1365,149 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     #0# Pour diminuer le temps de calcul, nous créons deux tables intermédiaires de regroupements des segments herbacés et arborés
     ###   
     
-#     query = """ 
-#     CREATE TABLE herbace AS
-#         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
-#         FROM (SELECT geom FROM %s WHERE strate='H') AS t1;
-#     """ %(tab_ref)
+    query = """ 
+    CREATE TABLE herbace AS
+        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
+        FROM (SELECT geom FROM %s WHERE strate='H') AS t1;
+    """ %(tab_ref)
 
-#     query += """ 
-#     CREATE TABLE arbore AS
-#         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
-#         FROM (SELECT geom FROM %s WHERE strate='A') AS t1;
-#     """ %(tab_ref)
+    query += """ 
+    CREATE TABLE arbore AS
+        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
+        FROM (SELECT geom FROM %s WHERE strate='A') AS t1;
+    """ %(tab_ref)
 
-#     # Exécution de la requête SQL
-#     if debug >= 3:
-#         print(query)
-#     executeQuery(connexion, query)
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-#     # Index spatiaux 
-#     addSpatialIndex(connexion, 'herbace')
-#     addSpatialIndex(connexion, 'arbore')
+    # Index spatiaux 
+    addSpatialIndex(connexion, 'herbace')
+    addSpatialIndex(connexion, 'arbore')
 
       
-#    ###
-#    #1# Trois grands types de segments arbustifs appartennant à des regroupements :
-#    ### 
-#      # - regroupements intersectant que des arbres --> traitement itératif
-#      # - regroupements intersectant que de l'herbe --> non traités 
-#      # - regroupements intersectant de l'herbe et des arbres --> pré-traitement puis traitement itératif  
+   ###
+   #1# Trois grands types de segments arbustifs appartennant à des regroupements :
+   ### 
+     # - regroupements intersectant que des arbres --> traitement itératif
+     # - regroupements intersectant que de l'herbe --> non traités 
+     # - regroupements intersectant de l'herbe et des arbres --> pré-traitement puis traitement itératif  
 
-#     # Création d'une table intermédiaire contenant les rgpt_arbustifs qui intersectent des segments arborés
-#     query = """
-#     CREATE TABLE tab_interm_rgptarbu_touch_arbo AS
-#         SELECT DISTINCT t.fid, t.geom
-#         FROM %s AS t, arbore
-#         WHERE public.ST_INTERSECTS(arbore.geom, t.geom) and t.nb_sgt > 1;
-#     """ %(rgpt_arbu)
+    # Création d'une table intermédiaire contenant les rgpt_arbustifs qui intersectent des segments arborés
+    query = """
+    CREATE TABLE tab_interm_rgptarbu_touch_arbo AS
+        SELECT DISTINCT t.fid, t.geom
+        FROM %s AS t, arbore
+        WHERE public.ST_INTERSECTS(arbore.geom, t.geom) and t.nb_sgt > 1;
+    """ %(rgpt_arbu)
 
-#     # Exécution de la requête SQL
-#     if debug >= 3:
-#         print(query)
-#     executeQuery(connexion, query)
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-#     #Création des indexes
-#     addIndex(connexion, 'tab_interm_rgptarbu_touch_arbo', 'fid', 'indx_fid_1') 
-#     addSpatialIndex(connexion, 'tab_interm_rgptarbu_touch_arbo')
+    #Création des indexes
+    addIndex(connexion, 'tab_interm_rgptarbu_touch_arbo', 'fid', 'indx_fid_1') 
+    addSpatialIndex(connexion, 'tab_interm_rgptarbu_touch_arbo')
 
 
-#     # Création d'une table intermédiaire contenant les rgpt_arbustifs qui intersectent des segments herbacés
-#     query = """
-#     CREATE TABLE tab_interm_rgptarbu_touch_herbo AS
-#         SELECT DISTINCT t.fid, t.geom
-#         FROM %s AS t, herbace
-#         WHERE public.ST_INTERSECTS(herbace.geom, t.geom) and t.nb_sgt > 1;
-#     """  %(rgpt_arbu)
+    # Création d'une table intermédiaire contenant les rgpt_arbustifs qui intersectent des segments herbacés
+    query = """
+    CREATE TABLE tab_interm_rgptarbu_touch_herbo AS
+        SELECT DISTINCT t.fid, t.geom
+        FROM %s AS t, herbace
+        WHERE public.ST_INTERSECTS(herbace.geom, t.geom) and t.nb_sgt > 1;
+    """  %(rgpt_arbu)
     
-#     # Exécution de la requête SQL
-#     if debug >= 3:
-#         print(query)
-#     executeQuery(connexion, query)
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-#     #Création des indexes
-#     addIndex(connexion, 'tab_interm_rgptarbu_touch_herbo', 'fid', 'indx_fid_3') 
-#     addSpatialIndex(connexion, 'tab_interm_rgptarbu_touch_herbo')
-
-
-#     # Création d'une table intermédiaire contenant les regroupements n'intersectant QUE des segments arborés 
-#     query = """     
-#     CREATE TABLE tab_interm_rgptarbu_touchonlyarbo AS
-#         SELECT t2.fid, t2.geom
-#         FROM tab_interm_rgptarbu_touch_arbo AS t2
-#         WHERE t2.fid not in (select fid from tab_interm_rgptarbu_touch_herbo);                                                          
-#     """
-
-#     # Exécution de la requête SQL
-#     if debug >= 3:
-#         print(query)
-#     executeQuery(connexion, query)
-
-#     #Création des indexes
-#     addIndex(connexion, 'tab_interm_rgptarbu_touchonlyarbo', 'fid', 'indx_fid_4') 
-#     addSpatialIndex(connexion, 'tab_interm_rgptarbu_touchonlyarbo')
-
-#     # Création d'une table intermédiaire contenant les rgpt intersectants des segments arborés ET herbacés
-#     query = """     
-#     CREATE TABLE tab_interm_rgptarbu_toucharboetherbo AS
-#         SELECT t2.fid, t2.geom
-#         FROM tab_interm_rgptarbu_touch_arbo AS t2
-#         WHERE t2.fid in (select fid from tab_interm_rgptarbu_touch_herbo);                                                          
-#     """
-
-#     # Exécution de la requête SQL
-#     if debug >= 3:
-#         print(query)
-#     executeQuery(connexion, query)
+    #Création des indexes
+    addIndex(connexion, 'tab_interm_rgptarbu_touch_herbo', 'fid', 'indx_fid_3') 
+    addSpatialIndex(connexion, 'tab_interm_rgptarbu_touch_herbo')
 
 
-#     #Création des indexes
-#     addIndex(connexion, 'tab_interm_rgptarbu_toucharboetherbo', 'fid', 'indx_fid_5') 
-#     addSpatialIndex(connexion, 'tab_interm_rgptarbu_toucharboetherbo')
+    # Création d'une table intermédiaire contenant les regroupements n'intersectant QUE des segments arborés 
+    query = """     
+    CREATE TABLE tab_interm_rgptarbu_touchonlyarbo AS
+        SELECT t2.fid, t2.geom
+        FROM tab_interm_rgptarbu_touch_arbo AS t2
+        WHERE t2.fid not in (select fid from tab_interm_rgptarbu_touch_herbo);                                                          
+    """
+
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Création des indexes
+    addIndex(connexion, 'tab_interm_rgptarbu_touchonlyarbo', 'fid', 'indx_fid_4') 
+    addSpatialIndex(connexion, 'tab_interm_rgptarbu_touchonlyarbo')
+
+    # Création d'une table intermédiaire contenant les rgpt intersectants des segments arborés ET herbacés
+    query = """     
+    CREATE TABLE tab_interm_rgptarbu_toucharboetherbo AS
+        SELECT t2.fid, t2.geom
+        FROM tab_interm_rgptarbu_touch_arbo AS t2
+        WHERE t2.fid in (select fid from tab_interm_rgptarbu_touch_herbo);                                                          
+    """
+
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+
+    #Création des indexes
+    addIndex(connexion, 'tab_interm_rgptarbu_toucharboetherbo', 'fid', 'indx_fid_5') 
+    addSpatialIndex(connexion, 'tab_interm_rgptarbu_toucharboetherbo')
 
     ###
     #2# Pré-traitements : regroupements arbustifs touchant en majorité de l'herbacé
     ###   
-    # query = """
-    # DELETE FROM tab_interm_rgptarbu_toucharboetherbo WHERE public.ST_AREA(geom) <  1;
-    # DELETE FROM herbace WHERE public.ST_AREA(geom) <  1;
-    # DELETE FROM arbore WHERE public.ST_AREA(geom) <  1;
-    # """
-    # executeQuery(connexion, query)
+    query = """
+    DELETE FROM tab_interm_rgptarbu_toucharboetherbo WHERE public.ST_AREA(geom) <  1;
+    DELETE FROM herbace WHERE public.ST_AREA(geom) <  1;
+    DELETE FROM arbore WHERE public.ST_AREA(geom) <  1;
+    """
+    executeQuery(connexion, query)
 
-    # topologyCorrections(connexion, 'tab_interm_rgptarbu_toucharboetherbo', geometry_column='geom')
-    # topologyCorrections(connexion, 'herbace', geometry_column='geom')
-    # topologyCorrections(connexion, 'arbore', geometry_column='geom')
+    topologyCorrections(connexion, 'tab_interm_rgptarbu_toucharboetherbo', geometry_column='geom')
+    topologyCorrections(connexion, 'herbace', geometry_column='geom')
+    topologyCorrections(connexion, 'arbore', geometry_column='geom')
 
 
-    # # Création d'une table intermédiaire qui contient les regroupements et la longueur de leur frontière en contact avec des arbres et de l'herbe
-    # query = """
-    # CREATE TABLE rgpt_herbarbotouch_longbound AS 
-	#     SELECT t1.fid, t1.geom, public.ST_PERIMETER(t1.geom) AS long_bound_arbu, t3.long_bound_inters_herbe AS long_bound_inters_herbe, t4.long_bound_inters_arbo AS long_bound_inters_arbo
-	#     FROM (
-    #             SELECT t2.fid, SUM(public.ST_LENGTH(t2.geom_bound_inters_herbe)) AS long_bound_inters_herbe
-	# 		    FROM (SELECT t1.fid, t1.geom, 'H' AS strate, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, herbe.geom)) AS geom_bound_inters_herbe
- 	# 				    FROM  tab_interm_rgptarbu_toucharboetherbo AS t1, herbace as herbe
- 	# 				    WHERE public.ST_INTERSECTS(t1.geom,herbe.geom) 
-    #                  ) AS t2  
- 	# 		    GROUP BY t2.fid
-    #           ) AS t3, 
-    #           (
-    #             SELECT t2.fid,SUM(public.ST_LENGTH(t2.geom_bound_inters_arbo)) AS long_bound_inters_arbo
-	# 		    FROM (SELECT t1.fid, t1.geom, 'A' AS strate, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, arbore.geom)) AS geom_bound_inters_arbo
- 	# 				    FROM  tab_interm_rgptarbu_toucharboetherbo AS t1, arbore
- 	# 				    WHERE public.ST_INTERSECTS(t1.geom,arbore.geom) 
-    #                  ) AS t2
- 	# 		    GROUP BY t2.fid
-    #           ) AS t4,     
-    #           tab_interm_rgptarbu_toucharboetherbo AS t1
- 	#     WHERE t1.fid = t3.fid and t1.fid = t4.fid;
-    # """  
+    # Création d'une table intermédiaire qui contient les regroupements et la longueur de leur frontière en contact avec des arbres et de l'herbe
+    query = """
+    CREATE TABLE rgpt_herbarbotouch_longbound AS 
+	    SELECT t1.fid, t1.geom, public.ST_PERIMETER(t1.geom) AS long_bound_arbu, t3.long_bound_inters_herbe AS long_bound_inters_herbe, t4.long_bound_inters_arbo AS long_bound_inters_arbo
+	    FROM (
+                SELECT t2.fid, SUM(public.ST_LENGTH(t2.geom_bound_inters_herbe)) AS long_bound_inters_herbe
+			    FROM (SELECT t1.fid, t1.geom, 'H' AS strate, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, herbe.geom)) AS geom_bound_inters_herbe
+ 					    FROM  tab_interm_rgptarbu_toucharboetherbo AS t1, herbace as herbe
+ 					    WHERE public.ST_INTERSECTS(t1.geom,herbe.geom) 
+                     ) AS t2  
+ 			    GROUP BY t2.fid
+              ) AS t3, 
+              (
+                SELECT t2.fid,SUM(public.ST_LENGTH(t2.geom_bound_inters_arbo)) AS long_bound_inters_arbo
+			    FROM (SELECT t1.fid, t1.geom, 'A' AS strate, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, arbore.geom)) AS geom_bound_inters_arbo
+ 					    FROM  tab_interm_rgptarbu_toucharboetherbo AS t1, arbore
+ 					    WHERE public.ST_INTERSECTS(t1.geom,arbore.geom) 
+                     ) AS t2
+ 			    GROUP BY t2.fid
+              ) AS t4,     
+              tab_interm_rgptarbu_toucharboetherbo AS t1
+ 	    WHERE t1.fid = t3.fid and t1.fid = t4.fid;
+    """  
 
-    # # Exécution de la requête SQL
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
     # Mise à jour du statut des segments arbustifs appartennant à un regroupement touchant peu d'arboré et bcp d'herbacé
     query = """
