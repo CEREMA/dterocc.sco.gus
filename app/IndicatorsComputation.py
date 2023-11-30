@@ -59,10 +59,10 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
 
     # #Implémentation de la surface de la FV 
-    # areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
+    areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
 
     # #Implémentation des attributs de hauteur des FV 
-    # heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+    heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
     
     #Implémentation du type "persistant" ou "caduc" des FV 
     evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["ndvi_difference_everdecid_thr"], columns_indics_name = dic_columname["evergreendeciduous_indicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
@@ -597,7 +597,7 @@ def landscapeIndicator(connexion, connexion_dic, vect_landscape, tab_fv):
 
     #Import de la couche des paysages dans la bd
     tab_land = 'tab_land'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_landscape, tab_land, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    #importVectorByOgr2ogr(connexion_dic["dbname"], vect_landscape, tab_land, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     #Corriger les géométries de la table paysagère
     topologyCorrections(connexion, tab_land, geometry_column='geom')
