@@ -266,17 +266,33 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
     if debug >= 2:
         print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
 
-    query = """
-    UPDATE %s as t SET strate = 'A' WHERE t.txt < %s AND t.mnh  > %s;
-    """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
+    if dic_seuil["height_or_texture"] == "height":
+        if dic_seuil["texture_option"] == False :
+            query = """
+            UPDATE %s as t SET strate = 'A' WHERE t.mnh  > %s;
+            """ %(tab_ref, dic_seuil["height_treeshrub_thr"])
 
-    query += """
-    UPDATE %s as t SET strate = 'Au' WHERE t.txt < %s AND  t.mnh  <= %s;
-    """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
+            query += """
+            UPDATE %s as t SET strate = 'Au' WHERE t.mnh  <= %s AND t.mnh > %s;
+            """ %(tab_ref, dic_seuil["height_treeshrub_thr"], dic_seuil["height_shrubgrass_thr"])
 
-    query += """
-    UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s;
-    """ %(tab_ref, dic_seuil["texture_thr"])
+            query += """
+            UPDATE %s as t SET strate = 'H' WHERE t.mnh <= %s;
+            """ %(tab_ref, dic_seuil["height_shrubgrass_thr"])
+
+          
+    else :
+        query = """
+        UPDATE %s as t SET strate = 'A' WHERE t.txt < %s AND t.mnh  > %s;
+        """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
+
+        query += """
+        UPDATE %s as t SET strate = 'Au' WHERE t.txt < %s AND  t.mnh  <= %s;
+        """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
+
+        query += """
+        UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s;
+        """ %(tab_ref, dic_seuil["texture_thr"])
 
     # query += """
     # UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
