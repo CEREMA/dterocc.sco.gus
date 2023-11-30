@@ -216,6 +216,7 @@
     }, 
     "vertical_stratum_detection": {
         "db_table" : "",
+        "height_or_texture" : "texture",
         "height_treeshrub_thr": 3,
         "height_shrubgrass_thr": 1,
         "texture_thr": 11,
