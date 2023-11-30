@@ -148,6 +148,7 @@
     }, 
     "vertical_stratum_detection": {
         "db_table" : "nom_schema.table de la donnée (dans la db) à fournir si vous ne voulez pas faire tourner cette étape",
+        "height_or_texture" : "Deux valeurs possibles : 'texture' ou 'height' qui favorise la hauteur uniquement ou plus la texture",
         "height_treeshrub_thr": "seuil de hauteur de distinction entre arboré et arbustif",
         "height_shrubgrass_thr":  "seuil de hauteur de distinction entre arbustif et herbacé",
         "texture_thr":  "seuil de texture de distinction entre végétation haute et basse",
@@ -155,7 +156,7 @@
         "shrub_touch_treevsgrass_perc": "Pourcentage maximal de la frontière d’un regroupement arbustif avec de l’arboré pour considérer les segments comme réellement arbustifs",
         "shrub_touch_grassvsshrub_perc": "Pourcentage minimal de la frontière d’un regroupement arbustif avec de l’herbacé pour considérer les segments comme réellement arbustifs",
         "shrub_sign": "Ratio maximal du rapport  pour le segment arbustif isolé ou le regroupement arbustif  pour considérer le regroupement arbustif comme « non représentatif »",
-        "surface_rate": "Surface maximale de considération d’un regroupement arbustif comme « non représentatif "
+        "surface_rate": "Surface maximale de considération d’un regroupement arbustif comme « non représentatif >>"
     },
     "vegetation_form_stratum_detection": {
         "db_table" : "nom_schema.table de la donnée (dans la db) à fournir si vous ne voulez pas faire tourner cette étape",
