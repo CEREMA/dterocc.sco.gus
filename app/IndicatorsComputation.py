@@ -5,7 +5,7 @@ import os,sys
 from libs.Lib_display import green,endC
 from libs.Lib_file import removeFile
 from libs.CrossingVectorRaster import statisticsVectorRaster
-from libs.Lib_postgis import addColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection
+from libs.Lib_postgis import addColumn, dropColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, addSpatialIndex, addUniqId
 
 ###########################################################################################################################################
 # FONCTION createFeatures()                                                                                                             #
@@ -597,7 +597,7 @@ def landscapeIndicator(connexion, connexion_dic, vect_landscape, tab_fv):
 
     #Import de la couche des paysages dans la bd
     tab_land = 'tab_land'
-    #importVectorByOgr2ogr(connexion_dic["dbname"], vect_landscape, tab_land, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_landscape, tab_land, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     #Corriger les géométries de la table paysagère
     topologyCorrections(connexion, tab_land, geometry_column='geom')
