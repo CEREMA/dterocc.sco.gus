@@ -1129,12 +1129,12 @@ def createExtension(connexion, extension_name):
     Rôle : créer un extension dans la BD
 
     Paramètres :
-      connexion : nom de la base de données
+      connexion : paramètre unique de connexion à la base de données pgsql
       extension_name : nom d'utilisateur du serveur PostgreSQL (par défaut : 'postgres')
 
     """
     query = """
-    CREATE EXTENSION IF NOT EXISTS %s;
+    CREATE EXTENSION IF NOT EXISTS %s WITH SCHEMA public;
     """ %(extension_name)
     if debug >= 3:
         print(query)
