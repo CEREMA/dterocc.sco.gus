@@ -161,9 +161,15 @@ Nous mettons à disposition un fichier de configuration `config.json` qui permet
 
 Via la balise `steps_to_run`, l'opérateur choisit quelles étapes il veut faire tourner. Attention, chaque étape nécessite l'apport de données qui sont à fournir dans les balises suivantes.
 
-Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'opérateur peut très bien apporter lui-même certaines données via la balise `data_entry > entry_options`.
+Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'opérateur peut très bien apporter lui-même certaines données via la balise `data_entry > entry_options`. En gardant bien les mêmes formats que la donnée produite (nom des champs, extension, etc.)
 
 De plus, il existe une particularité pour le renseignement des informations en balise `vegetation_extraction > samples_cleaning` : si les indices radiométriques servants à nettoyer et filtrer les échantillons d'apprentissage ont été produits dans une étape précédente au script, nous retrouverons l'information `source` via l'arborescence du dossier de projet créé (à condition de bien respecter les noms des indices attribués dans le code : ndvi, msavi, ndwi, hue, mnh, etc.). Cette balise permet à l'opérateur d'ajouter une autre donnée de filtrage qui n'est pas produite via les scripts.
+
+Enfin, il existe la balise `vertical_stratum_detection > height_or_texture` qui permet à l'opérateur de prioriser la hauteur ou la texture dans la classification des segments en strates verticales. Deux possibilités s'offrent donc : 
+- priorisation de la hauteur (valeur "height") où seule la donnée de hauteur est utilisée pour la première étape de la classification en strates verticales. NB : nous privilégions ce choix lorsque la donnée d'élévation est précise (ex : LiDAR).
+- priorisation de la texture (valeur "texture") où une sueil appliqué sur la texture assure la distinction végétation herbacée vs végétation arborée et arbustive. La distinction de l'arboré et de l'arbustif se réalisant classiquement avec la donnée de hauteur. NB : nous privilégions ce choix lorsque la donnée d'élévation est peu précise (ex : MNH dérivé de la donnée satellitaire).
+
+Ensuite, une seconde étape de classification de la strate arbustive permet de nettoyer cette strate qui a tendance à la surestimation.
 
 ### Attention
 Attention, si vous ne voulez pas faire tourner toutes les étapes (`steps_to_run`), des informations sont à fournir si vous n'avez pas utilisé les scripts dédiés pour les produire : 
