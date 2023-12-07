@@ -28,8 +28,17 @@
                 "baresoil": "vecteur des polygones de sol nu (vecteur .shp)",
                 "water": "vecteur des polygones d'eau (vecteur .shp)",
                 "vegetation": "vecteur des polygones de végétation (vecteur .shp)"
-                }
-            }
+                },
+            "lcz_information" : {
+                "lcz_data" : "fichier vecteur de lcz sur la zone d'étude",
+                "field" : "champ avec lequel on va trier les polygones",
+                "1" : "liste des champs associés au milieu urbanisé. Par défaut :['1','2','3','4','5','6','7','8','9']",
+                "2" : "liste des champs associés aux voiries et infrastructures. Par défaut :['E']",
+                "3" : "liste des champs associés aux étendues et cours d'eau. Par défaut :['G']",
+                "4" : "liste des champs associés au milieu agricole et forestier. Par défaut :['A', 'B', 'C', 'D', 'F']"  
+            } 
+        } 
+            
     },
     "database_params": {
         "dbname": "gus",
@@ -239,6 +248,17 @@
             "trust_groundtype_feature": "idc_typesol",
             "trust_groundtype_type": "float"
         },
-        "landscape": "chemin d'accès à la couche vectorielle des paysages"
-    }   
-}
+        "landscape" :{
+            "landscape_feature" : "paysage",
+            "landscape_type" : "varchar(100)",
+            "landscape_data" : "Image paysage qui aura été produite ou que l'opérateur aura fournit. Si vide --> elle sera produite à partir de la donnée satellitaire OU dérivé de la donnée LCZ fournit en option (cf balise entry_options)",
+            "landscape_dic_classes" : {
+                "milieu_urbanise" : "Code attribué aux pixels de ce paysage. Par défaut : 1", 
+                "voirie_et_infrastructure" : "Code attribué aux pixels de ce paysage. Par défaut : 2", 
+                "etendue_et_cours_eau" : "Code attribué aux pixels de ce paysage. Par défaut : 3", 
+                "milieu_agricole_et_forestier" : "Code attribué aux pixels de ce paysage. Par défaut : 4"
+                } 
+        } 
+    }
+    }
+
