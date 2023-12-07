@@ -91,8 +91,8 @@ if __name__ == "__main__":
       create_samples = True
 
     #data paysages
-    if config["data_entry"]["entry_options"]["vect_landscape"] != None :
-      vect_landscape = config["data_entry"]["entry_options"]["vect_landscape"]
+    if config["indicators_computation"]["landscape"] != None :
+      vect_landscape = config["indicators_computation"]["landscape"]
     else :
       vect_landscape = r''
 
@@ -181,7 +181,8 @@ if __name__ == "__main__":
       "img_ref" : img_ref,
       "img_mnh" : img_mnh,
       "img_wtr" : img_winter,
-      "vect_landscape" : config["indicators_computation"]["landscape"],
+      "img_landscape" : config["indicators_computation"]["landscape"]["landscape_data"],
+      "dic_ldsc_class" : config["indicators_computation"]["landscape"]["landscape_dic_classes"],
       "ndvi_difference_everdecid_thr" : config["indicators_computation"]["evergreen_deciduous"]["ndvi_difference_thr"],
       "superimpose_choice" : True,
       "pir_difference_thr" : config["indicators_computation"]["coniferous_deciduous"]["pir_difference_thr"],
