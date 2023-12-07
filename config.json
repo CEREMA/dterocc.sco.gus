@@ -29,7 +29,8 @@
                 "baresoil": null,
                 "water":null,
                 "vegetation": null
-            }
+            },
+            "lcz_data" : ""
         }
     },
     "database_params": {
@@ -307,6 +308,16 @@
           "trust_groundtype_feature": "idc_typesol",
           "trust_groundtype_type": "float"
         },
-        "landscape" : null
+        "landscape" :{
+            "landscape_feature" : "paysage",
+            "landscape_type" : "varchar(100)",
+            "landscape_data" : "/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/paysages2.tif",
+            "landscape_dic_classes" : {
+                "milieu_urbanise" : 1, 
+                "voirie_et_infrastructure" : 2, 
+                "etendue_et_cours_eau" : 3, 
+                "milieu_agricole_et_forestier" : 4
+                } 
+        } 
       }   
 }
