@@ -23,7 +23,7 @@ def createFeatures(connexion, connexion_dic, tab_ref, dic_attributs):
     for attr in dic_attributs.keys():
         col = [] 
         for i in range(len(dic_attributs[attr])):
-            addColumn(connexion, tab_ref, dic_attributs[attr][i][0], dic_attributs[attr][i][1])
+            #addColumn(connexion, tab_ref, dic_attributs[attr][i][0], dic_attributs[attr][i][1])
             col.append(dic_attributs[attr][i][0])
         dic_columname[attr] = col
 
@@ -53,41 +53,48 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
             os.makedirs(repertory_tmp)
     
     #Calcul des images temporaires de NDVI
-    dic_params["img_ndvi_spg"],dic_params["img_ndvi_wtr"] = calculateSpringAndWinterNdviImage(dic_params["img_ref"], dic_params["img_wtr"], repertory = repertory_tmp)
+    #dic_params["img_ndvi_spg"],dic_params["img_ndvi_wtr"] = calculateSpringAndWinterNdviImage(dic_params["img_ref"], dic_params["img_wtr"], repertory = repertory_tmp)
 
     #Ajout des attributs descriptifs à la table principale + création d'un dictionnaire de nom des colonnes par indicateur 
     dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
-
     # #Implémentation de la surface de la FV 
-    areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
+    #areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
 
     # #Implémentation des attributs de hauteur des FV 
-    heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+    #heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
     
     #Implémentation du type "persistant" ou "caduc" des FV 
-    evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["ndvi_difference_everdecid_thr"], columns_indics_name = dic_columname["evergreendeciduous_indicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+    #evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["ndvi_difference_everdecid_thr"], columns_indics_name = dic_columname["evergreendeciduous_indicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
     
     #Implémentation du type "conifère" ou "feuillu" des FV 
-    coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["pir_difference_thr"], columns_indics_name = dic_columname["coniferousdeciduous_indicators"], repertory = repertory_tmp,save_intermediate_result = save_intermediate_result, debug = debug)
+    #coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["pir_difference_thr"], columns_indics_name = dic_columname["coniferousdeciduous_indicators"], repertory = repertory_tmp,save_intermediate_result = save_intermediate_result, debug = debug)
     
     #Implémentation du type de sol support des FV 
-    typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["ndvi_difference_groundtype_thr"], column_indic_name = dic_columname["typeofground_indicator"][0], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+    #typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["ndvi_difference_groundtype_thr"], column_indic_name = dic_columname["typeofground_indicator"][0], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
 
     #Implémentation du paysage
-    if dic_params["vect_landscape"] == "": 
-        print("Vous n'avez pas spécifié de couche vectorielle paysage. L'attribut 'paysage' ne sera donc pas implémenté pour l'ensemble des formes végétales.") 
+    if dic_params["img_landscape"] == "": 
+        print("Vous n'avez pas spécifié de couche paysage. L'attribut 'paysage' ne sera donc pas implémenté pour l'ensemble des formes végétales.") 
     else:
-        landscapeIndicator(connexion, connexion_dic, dic_params["vect_landscape"], tab_ref)
+        landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"], debug = debug)
 
     closeConnection(connexion)
 
     #Export résultat au format GPKG
-    if output_layer != '':
-        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-    else :
+    if output_layer == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur de la cartographie finale de la végétation (détaillée). Vous n'avez pas fournit de chemin de sauvegarde." + endC) 
-    
+    else :
+        #export au format vecteur 
+        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer["output_fv"], tab_name, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+        # #export au format raster 
+        # #creation du chemin de sauvegarde de la donnée raster 
+        # repertory_output = os.path.dirname(output_layer["output_fv"])
+        # filename =  os.path.splitext(os.path.basename(output_layer["output_fv"]))[0]
+        # raster_output = repertory_output + os.sep + filename  + '.tif'
+        # rasterizeVector(output_layer["output_fv"], raster_output,  output_layer["img_ref"], 'fv_r', codage="uint8", ram_otb=0)
         
+        # #suppression de la colonne non utile "strate_r"
+        # dropColumn(connexion, tab_name, 'strate_r') 
 
     return 
 
@@ -584,60 +591,73 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
 ###########################################################################################################################################
 # FONCTION landscapeIndicator()                                                                                                           #
 ###########################################################################################################################################
-def landscapeIndicator(connexion, connexion_dic, vect_landscape, tab_fv):
+def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, dic_ldsc_class = {"milieu_urbanise" : 1, "voirie_et_infrastructure" : 2, "etendue_et_cours_eau" : 3, "milieu_agricole_et_forestier" : 4}, repertory = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : attribut la classe du paysage dans lequel s'inscrit la forme végétale
 
     Paramètres :
-        connexion : 
-        connexion_dic :
-        vect_landscape : couche vecteur des paysages composée de trois attributs : id, geom et class1
+        connexion : connexion à la base donnée et au schéma correspondant
+        connexion_dic : dictionnaire des paramètres de connexion à la base de données et au schéma correspondant
+        img_landscape : couche raster des paysages
         tab_fv : nom de la table contenant les formes végétalisées
+        dic_ldsc_class : dictionnaire des codes attribués aux quatres classes de premier niveau des paysages. Par défaut : {"milieu_urbanise" : 1, "voirie_et_infrastructure" : 2, "etendue_et_cours_eau" : 3, "milieu_agricole_et_forestier" : 4}
+        repertory : repertoire de sauvegarde des fichiers intermédiaires. Par défaut : ''
+        save_intermediate_result : choix de sauvegarde des données intermédiaires. Par défaut : False
+        debug : niveau de débug pour afficher les message. Par défaut : 0
+
     """
 
-    #Import de la couche des paysages dans la bd
-    tab_land = 'tab_land'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_landscape, tab_land, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    #Création du dossier temporaire et des fichiers temporaires
+    if repertory == '':
+        repertory = os.path.dirname(img_landscape) + os.sep + 'TMP_CALC_CALC_PAYSAGES'
+        if not os.path.isdir(repertory):
+            os.makedirs(repertory)
+    extension = os.path.splitext(img_landscape)[1]
 
-    #Corriger les géométries de la table paysagère
-    topologyCorrections(connexion, tab_land, geometry_column='geom')
+    #Export de la table vegetation en couche vecteur gpkg
 
-    #Suppression des anciens identifiants uniques
-    dropColumn(connexion, tab_land, '')  
+    filetablevegin = repertory + os.sep + 'couche_vegetation_bis.gpkg'
+ 
+    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_fv, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
+    
+    vector_output = repertory + os.sep + 'sgts_vegetation_cross_landscape.gpkg'
 
-    #Ajout des indexes spatiaux et de l'identifiant clé FID
-    addSpatialIndex(connexion, tab_land)
-    addUniqId(connexion, tab_land)
+    #Calcul de la classe majoritaire par segments herbacé 
+    col_to_add_list = ["majority"]
+    col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range", "median", "minority" ]
+    class_label_dico = {} 
+    statisticsVectorRaster(img_landscape, filetablevegin, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    
+    #Import en base de la ocuche vecteur
+    tab_cross = 'tab_cross_land'
+    importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
-    #Croisement des formes végétales avec les formes paysagères
+    # Attribution du label 'PR' (prairie) ou 'C' (culture)
     query = """
-    DELETE TABLE IF EXISTS tab_cross_fv_land;
+    UPDATE %s AS t1 SET paysage = 1 FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    """  %(tab_fv, tab_cross, dic_ldsc_class["milieu_urbanise"])
 
-    CREATE TABLE tab_cross_fv_land AS
-        SELECT t_fv.fid AS fid_fv, t_land.fid AS fid_land, t_land.class1 AS class_land, public.ST_AREA(public.ST_INTERSECTION(t_fv.geom, t_land.geom)) AS surf_cross
-        FROM %s AS t_fv, %s AS t_land
-    """ %(tab_fv, tab_land)
+    query += """
+    UPDATE %s AS t1 SET paysage = 2 FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    """  %(tab_fv, tab_cross, dic_ldsc_class["voirie_et_infrastructure"])
+
+    query += """
+    UPDATE %s AS t1 SET paysage = 3 FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    """  %(tab_fv, tab_cross, dic_ldsc_class["etendue_et_cours_eau"])
+
+    query += """
+    UPDATE %s AS t1 SET paysage = 4 FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    """  %(tab_fv, tab_cross, dic_ldsc_class["milieu_agricole_et_forestier"])
 
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
-    query = """
-    UPDATE %s AS t1 SET paysage = t2.class_land 
-            FROM (
-                SELECT fid_fv, class_land, MAX(surf_cross) AS max_cross
-                FROM tab_cross_fv_land
-                GROUP BY fid_fv, class_land
-                ) AS t2
-            WHERE t1.fid = t2.fid_fv
-    """ %(tab_fv)
+    #Suppression du dossier temporaire
+    if not save_intermediate_result:
+        if os.path.exists(repertory):
+            os.rmdir(repertory)
 
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
-
-    #Suppression des tables temporaires
-    dropTable(connexion, tab_land)
-    dropTable(connexion, 'tab_cross_fv_land') 
+    dropTable(connexion, tab_cross) 
 
     return
