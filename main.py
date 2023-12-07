@@ -71,13 +71,7 @@ if __name__ == "__main__":
 
     #mnh
     if config["data_entry"]["entry_options"]["img_dhm"] != None :
-      img_mnh = config["data_entry"]["entry_options"]["img_dhm"]
-    
-
-    #ocs
-    if config["data_entry"]["entry_options"]["img_ocs"] != None :
-      img_ocs = config["data_entry"]["entry_options"]["img_ocs"]
-    
+      img_mnh = config["data_entry"]["entry_options"]["img_dhm"]    
 
     #polygones d'échantillons d'apprentissage  
     if config["data_entry"]["entry_options"]["data_classes"]["createsamples"] == 'False' : 
@@ -110,6 +104,9 @@ if __name__ == "__main__":
 
     #Fournir les paramètres de connexion à la base de donnée 
     connexion_ini_dic = config["database_params"]
+    connexion_0 = connexion_ini_dic
+
+
     connexion_ini_dic ={
         "dbname": "gus",
         "user_db": "postgres",
@@ -167,7 +164,7 @@ if __name__ == "__main__":
 
     #Paramètres de calcul des attributs
     #On n'a pas forcément besoin d'aller chercher dans le fichier config. 
-    dic_attributs ={
+    dic_attributs = {
       "paysage" : [['paysage', 'varchar(100)']], 
       "area_indicator" : [['surface', 'float']],
       "height_indicators" : [['h_moy', 'float'], ['h_med', 'float'], ['h_et', 'float'], ['h_min', 'float'], ['h_max', 'float']],
@@ -177,12 +174,18 @@ if __name__ == "__main__":
       "confidence_indices" :[['idc_surface', 'float'], ['idc_h', 'float'], ['idc_prescadu', 'float'], ['idc_coniffeuil', 'float'], ['idc_typesol', 'float']]  
     } 
      
-    dic_params ={
+    dic_params = {
       "img_ref" : img_ref,
       "img_mnh" : img_mnh,
       "img_wtr" : img_winter,
-      "img_landscape" : config["indicators_computation"]["landscape"]["landscape_data"],
-      "dic_ldsc_class" : config["indicators_computation"]["landscape"]["landscape_dic_classes"],
+      "shp_zone" : shp_zone,
+      "ldsc_information" :{
+        "img_landscape" : config["indicators_computation"]["landscape"]["landscape_data"],
+        "lcz_information" : config["data_entry"]["entry_options"]["lcz_information"]   ,
+        "img_ocs" : "",
+        "ocs_classes" : config["vegetation_extraction"]["classes_numbers"], 
+        "ldsc_class" : config["indicators_computation"]["landscape"]["landscape_dic_classes"]
+        }, 
       "ndvi_difference_everdecid_thr" : config["indicators_computation"]["evergreen_deciduous"]["ndvi_difference_thr"],
       "superimpose_choice" : True,
       "pir_difference_thr" : config["indicators_computation"]["coniferous_deciduous"]["pir_difference_thr"],
@@ -222,8 +225,9 @@ if __name__ == "__main__":
     path_fv = path_prj + os.sep + '3-DistinctionFormesVegetales'  
 
     #Dossier de sauvegarde des résultats de calcul des attributs descriptifs de la végétation
-    path_datafinal = path_prj + os.sep + '4-Calcul_attributs_descriptifs'  
-    
+    path_datafinal = path_prj + os.sep + '4-Calcul_attributs_descriptifs' 
+
+      
     ##Création des répertoires s'ils n'existent pas
     if  not os.path.exists(path_prj):
       os.makedirs(path_prj)
@@ -504,12 +508,14 @@ if __name__ == "__main__":
     #Dictionnaire des paramètres BD des données finales (cartographie) dont les formes végétales horizontales
     connexion_datafinal_dic = connexion_ini_dic
     connexion_datafinal_dic["schema"] = 'data_final'
-    connexion = openConnection(connexion_0["dbname"], user_name=connexion_0["user_db"], password=connexion_0["password_db"], ip_host=connexion_0["server_db"], num_port=connexion_0["port_number"], schema_name=connexion_0["schema"])
-
-    #Création de la base de données 
-    if dataBaseExist(connexion, connexion_ini_dic["dbname"]) == False:
-      createDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
-      closeConnection(connexion)
+    
+    #Création de la DB si elle n'est pas encore créée 
+    try :
+        connexion = openConnection(connexion_0["dbname"], user_name=connexion_0["user_db"], password=connexion_0["password_db"], ip_host=connexion_0["server_db"], num_port=connexion_0["port_number"], schema_name=connexion_0["schema"])
+    except:
+        print("La BD " + connexion_0["dbname"]  +" n'existe pas, nous la créons.")
+        createDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
+        closeConnection(connexion_ini_dic)
     #Connexion à la base de données
     connexion = openConnection(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
 
@@ -733,7 +739,9 @@ if __name__ == "__main__":
       
       #Ouverture connexion 
       connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
-    
+      
+      dic_params["ldsc_information"]["img_ocs"] = img_classif_filtered 
+
       createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = False)
 
       if debug >= 1:
