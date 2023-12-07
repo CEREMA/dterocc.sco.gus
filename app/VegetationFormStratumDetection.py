@@ -895,8 +895,8 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
     importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
     #Suppression des fichiers créés
-    #removeFile(layer_sgts_veg_h)
-    #removeFile(vector_output)
+    removeFile(layer_sgts_veg_h)
+    removeFile(vector_output)
 
     
     # Attribution du label 'PR' (prairie) ou 'C' (culture)
