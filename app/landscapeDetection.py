@@ -8,44 +8,190 @@ from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_file import removeFile
 from libs.Lib_raster import rasterizeVector
 
-def landscapeDetection(connexion, connexion_dic, lds_repertory, shp_etude, img_ocs, num_class = ["bati" : 1, "route" : 2, "solnu" : 3, "eau" : 4, "vegetation" : 5]):
+def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, debug = 0):
     """
-    Rôle : création d'une couche vecteur "paysage"
+    Rôle : 
 
     Paramètres :
         connexion :
         connexion_dic :
-        lds_repertory : répertoire de travail pour la détection des paysages
-        shp_etude : couche vecteur de l'emprise de la zone d'étude
-        img_ocs : image raster ocs
-        num_class : dictionnaire des classes attribuées. Par défaut :["bati" : 1, "route" : 2, "solnu" : 3, "eau" : 4, "vegetation" : 5] 
+        dic_params : dictionnaire des paramètres pour calculer les attributs descriptifs des formes végétales
+        repertory : repertoire pour sauvegarder les fichiers temporaires produits
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
+    result = False
+    if ldsc_information[0][0] != "":
+        ldsc_data = landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory, debug = debug)
+        dic_params["img_landscape"] = ldsc_data
+        result = True
 
+    elif ldsc_information[1] == "" or os.path.exists(ldsc_information[1]):
+        ldsc_data = landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, repertory, debug = debug)
+        dic_params["img_landscape"] = ldsc_data
+        result = True
+
+    else :
+        print("Aucune donnée exploitable pour créer une couche paysage.")
+
+    return result
+
+def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory, debug = 0):
+    """
+    Rôle : création d'une couche vecteur et raster "paysage" à partir des données LCZ
+
+    Paramètres :
+        connexion :
+        connexion_dic :
+        dic_params : 
+        repertory : repertoire pour sauvegarder les fichiers temporaires produits
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
+ 
+    """  
+  
+    #Préparation des noms de fichiers intermédiaires
+    lcz_data = dic_params["ldsc_information"]["lcz_information"]["lcz_data"]  
+    extension = os.path.splitext(lcz_data)[1]
+    lcz_cut = repertory + os.sep + "lcz_cut_etude" + extension 
+    if extension == '.shp':
+        format_vector = 'ESRI Shapefile'
+    else:
+        format_vector = 'GPKG'
+ 
+    #1#Découper la couche vecteur LCZ selon l'emprise de la zone d'étude
+    cutoutVectors(shp_etude, [lcz_data], [lcz_cut] , overwrite=True, format_vector=format_vector)
+
+    #2#Import du fichier vecteur LCZ en base
+    tab_lcz = 'tab_lcz'
+    importVectorByOgr2ogr(connexion_dic["dbname"], lcz_cut, tab_lcz, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+
+    #3#Création de la table paysage
+    tab_pay = "paysages_lev1"
+
+    query = """
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS
+    """  %(tab_pay, tab_pay)
+
+    #3.1#Regroupement de tous les LCZ appartennant au milieu urbanisé
+    query += """
+        SELECT public.ST_UNION(geom) AS geom, 1 AS dn
+        FROM %s 
+        WHERE %s in %s
+    """ %(tab_lcz, dic_params["ldsc_information"]["field"], tuple(dic_params["ldsc_information"]["1"]))
+
+    #3.1#Regroupement de tous les LCZ appartennant aux voiries et infrastructures
+    query += """
+        UNION
+        SELECT public.ST_UNION(geom) AS geom, 2 AS dn
+        FROM %s 
+        WHERE %s in %s
+    """ %(tab_lcz, dic_params["ldsc_information"]["field"], tuple(dic_params["ldsc_information"]["2"]))
+
+    #3.2#Regroupement de tous les LCZ appartennant aux étendues et cours d'eau
+    query += """
+        UNION
+        SELECT public.ST_UNION(geom) AS geom, 3 AS dn
+        FROM %s 
+        WHERE %s in %s
+    """ %(tab_lcz, dic_params["ldsc_information"]["field"], tuple(dic_params["ldsc_information"]["3"]))
+
+    #3.3#Regroupement de tous les LCZ appartennant aux milieux agricoles et forestiers
+    query += """
+        UNION
+        SELECT public.ST_UNION(geom) AS geom, 4 AS dn
+        FROM %s 
+        WHERE %s in %s;
+    """ %(tab_lcz, dic_params["ldsc_information"]["field"], tuple(dic_params["ldsc_information"]["4"]))
+
+    
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Création du chemin d'accès pour la sauvegarde de la couche paysage  
+    landscape_gpkg_file = repertory + os.sep + 'paysages.gpkg'
+    landscape_tif_file = repertory + os.sep + 'paysages.tif'
+
+    #6#Export du résultat au format GPKG
+    exportVectorByOgr2ogr(connexion_dic["dbname"], landscape_gpkg_file, tab_pay, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+   
+    #7#Conversion au format raster
+    rasterizeVector(landscape_gpkg_file, landscape_tif_file, dic_params["ldsc_information"]["img_ocs"], 'dn', codage="uint8", ram_otb=10000)
+
+    #Suppression des fichiers et tables inutiles
+    removeFile(lcz_cut)
+    dropTable(connexion, tab_lcz)
+    dropTable(connexion, tab_pay) 
+
+
+    return
+
+def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, repertory, num_class = {"bati" : 1, "route" : 2, "solnu" : 3, "eau" : 4, "vegetation" : 5}, debug = 0):
+    """
+    Rôle : création d'une couche vecteur et raster "paysage" à partir des données satellitaires
+
+    Paramètres :
+        connexion :
+        connexion_dic :
+        shp_etude : couche vecteur de l'emprise de la zone d'étude
+        img_ocs : image raster d'occupation des sols
+        repertory : repertoire pour sauvegarder les fichiers temporaires produits
+        num_class : dictionnaire des codes associés aux classes de l'ocs. Par défaut : {"bati" : 1, "route" : 2, "solnu" : 3, "eau" : 4, "vegetation" : 5}
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
+ 
+    """
+    #Paramètres initiaux 
+    #   expansion = dilatation de x mètres
+    #   erosion = erosion de x mètres 
+    #   surf_min = surface minimale des polygones à traiter  
+    build_expansion = 40
+    build_erosion = -25
+    road_expansion = 4
+    water_expansion = 4
+    build_surf_min = 25
+    road_surf_min = 100
+    water_surf_min = 100
+
+    #Création du chemin d'accès pour la sauvegarde de la couche paysage  
+    landscape_gpkg_file = repertory + os.sep + 'paysages.gpkg'
+    landscape_tif_file = repertory + os.sep + 'paysages.tif'
+
+    #Création du dossier temporaire où on stocke les fichiers intermédiaires 
+    repertory_tmp = repertory + os.sep + 'LANDSCAPE_TMP'
     #Decoupe sur la zone étude l'image OCS
-    filename = os.path.splitext(os.path.basename(img_ocs))[0]
-    img_ocs_cut = lds_repertory + os.sep + filename + '_cut.tif'
+    filename = os.path.splitext(os.path.basename(dic_params["ldsc_information"]["img_ocs"]))[0]
+    img_ocs_cut = repertory_tmp + os.sep + filename + '_cut.tif'
 
-    command_cut = "gdalwarp -cutline %s -crop_to_cutline %s %s" %(shp_etude, img_ocs, img_ocs_cut) 
-    os.system(command_cut)
+    command_cut = "gdalwarp -cutline %s -crop_to_cutline %s %s" %(dic_params["shp_etude"] , dic_params["ldsc_information"]["img_ocs"], img_ocs_cut) 
+    exitcode = os.system(command_cut)
+    if exitcode == 0:
+        print("message d'erreur")
+    
 
     #Extraction des 3 masques bâti, route et eau de l'ocs
-    img_mask_bati = lds_repertory + os.sep + 'mask_bati.tif'
-    img_mask_route = lds_repertory + os.sep + 'mask_route.tif'
-    img_mask_eau = lds_repertory + os.sep + 'mask_eau.tif'
+    img_mask_bati = repertory_tmp + os.sep + 'mask_bati.tif'
+    img_mask_route = repertory_tmp + os.sep + 'mask_route.tif'
+    img_mask_eau = repertory_tmp + os.sep + 'mask_eau.tif'
 
-    command_maskbati = "otbcli_BandMath -il %s -out %s -exp '(im1b1==1)?1:0'" %(img_ocs_cut, img_mask_bati) 
-    os.system(command_maskbati)
+    command_maskbati = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_bati, dic_params["ldsc_information"]["ocs_classes"]["build"]) 
+    exitcode = os.system(command_maskbati)
+    if exitcode == 0:
+        print("message")
 
-    command_maskroute = "otbcli_BandMath -il %s -out %s -exp '(im1b1==1)?1:0'" %(img_ocs_cut, img_mask_route) 
-    os.system(command_maskroute)
+    command_maskroute = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_route, dic_params["ldsc_information"]["ocs_classes"]["road"]) 
+    exitcode = os.system(command_maskroute)
+    if exitcode == 0:
+        print("message")
 
-    command_maskeau = "otbcli_BandMath -il %s -out %s -exp '(im1b1==1)?1:0'" %(img_ocs_cut, img_mask_eau) 
-    os.system(command_maskeau)
+    command_maskeau = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_eau, dic_params["ldsc_information"]["ocs_classes"]["water"]) 
+    exitcode = os.system(command_maskeau)
+    if exitcode == 0:
+        print("message")
 
     #Conversion des trois images masques en vecteur
-    vect_mask_bati = lds_repertory + os.sep + 'mask_bati.shp'
-    vect_mask_route = lds_repertory + os.sep + 'mask_route.shp'
-    vect_mask_eau = lds_repertory + os.sep + 'mask_eau.shp'
+    vect_mask_bati = repertory_tmp + os.sep + 'mask_bati.shp'
+    vect_mask_route = repertory_tmp + os.sep + 'mask_route.shp'
+    vect_mask_eau = repertory_tmp + os.sep + 'mask_eau.shp'
 
     polygonizeRaster(img_mask_bati, vect_mask_bati, 'mask_bati', field_name="id", vector_export_format="ESRI Shapefile")
     polygonizeRaster(img_mask_route, vect_mask_route, 'mask_route', field_name="id", vector_export_format="ESRI Shapefile")
@@ -80,29 +226,35 @@ def landscapeDetection(connexion, connexion_dic, lds_repertory, shp_etude, img_o
     query = """
     DROP TABLE IF EXISTS tab_etendueetcoursdeau;
     CREATE TABLE tab_etendueetcoursdeau AS
-        SELECT public.ST_UNION(public.ST_BUFFER(geom, 4)) AS geom, '3' AS dn
+        SELECT public.ST_UNION(public.ST_BUFFER(geom, %s)) AS geom, 3 AS dn
         FROM %s
-        WHERE public.ST_AREA(geom) > 100;
-    """ %(tab_eau)
+        WHERE public.ST_AREA(geom) > %s;
+    """ %(water_expansion, tab_eau, water_surf_min)
 
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
+    #Ajout des index
+    addSpatialIndex(connexion, 'tab_etendueetcoursdeau') 
+    
     ##Travaux sur la couche "route"##  
 
     query = """
     DROP TABLE IF EXISTS tab_voirieetinfrastructure;
     CREATE TABLE tab_voirieetinfrastructure AS
-        SELECT public.ST_UNION(public.ST_DIFFERENCE(route.geom, eau.geom)) AS geom
-        FROM (SELECT public.ST_UNION(public.ST_BUFFER(geom, 4)) AS geom, '2' AS dn
+        SELECT public.ST_UNION(public.ST_DIFFERENCE(route.geom, eau.geom)) AS geom, 2 AS dn
+        FROM (SELECT public.ST_UNION(public.ST_BUFFER(geom, %s)) AS geom
                 FROM %s
-                WHERE public.ST_AREA(geom) > 100) AS route, %s AS eau;
-    """ %(tab_route, tab_eau)
+                WHERE public.ST_AREA(geom) > %s) AS route, %s AS eau;
+    """ %(road_expansion, tab_route, road_surf_min, tab_eau)
 
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
+
+    #Ajout des index
+    addSpatialIndex(connexion, 'tab_voirieetinfrastructure') 
 
     ##Travaux sur la couche "bati"##  
 
@@ -110,23 +262,26 @@ def landscapeDetection(connexion, connexion_dic, lds_repertory, shp_etude, img_o
     query = """
     DROP TABLE IF EXISTS tab_milieuurbanise;
     CREATE TABLE tab_milieuurbanise AS
-        SELECT public.ST_UNION(public.ST_DIFFERENCE(bati_moins_eau.geom, route.geom)) AS geom, '1' AS dn
+        SELECT public.ST_UNION(public.ST_DIFFERENCE(bati_moins_eau.geom, route.geom)) AS geom, 1 AS dn
             FROM (SELECT public.ST_UNION(public.ST_DIFFERENCE(bati.geom, eau.geom)) AS geom
-                    FROM (SELECT public.ST_UNION(public.ST_BUFFER(public.ST_BUFFER(geom, 40), -25)) AS geom
+                    FROM (SELECT public.ST_UNION(public.ST_BUFFER(public.ST_BUFFER(geom, %s), %s)) AS geom
                             FROM %s 
-                            WHERE public.ST_AREA(geom) > 100) AS bati, %s AS eau
+                            WHERE public.ST_AREA(geom) > %s) AS bati, %s AS eau
                 ) AS bati_moins_eau, %s AS route;  
-    """ %(tab_bati, tab_eau, tab_route)
+    """ %(build_expansion, build_erosion, tab_bati, build_surf_min, tab_eau, tab_route)
 
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
+    #Ajout des index
+    addSpatialIndex(connexion, 'tab_milieuurbanise') 
+
     ##Travaux sur le milieu agricole et forestier##
     query = """
     DROP TABLE IF EXISTS tab_milieuagrifor;
     CREATE TABLE tab_milieuagrifor AS
-        SELECT public.ST_UNION(public.ST_DIFFERENCE(shp.geom, other.geom)) AS geom, '4' AS dn
+        SELECT public.ST_UNION(public.ST_DIFFERENCE(shp.geom, other.geom)) AS geom, 4 AS dn
         FROM (
             SELECT geom, dn
             FROM tab_milieuurbanise
@@ -142,6 +297,9 @@ def landscapeDetection(connexion, connexion_dic, lds_repertory, shp_etude, img_o
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
+
+    #Ajout des index
+    addSpatialIndex(connexion, 'tab_milieuagrifor') 
 
     #avant de faire la suite, vérifier qu'il n'y a pas de superposition des couches
 
@@ -166,6 +324,12 @@ def landscapeDetection(connexion, connexion_dic, lds_repertory, shp_etude, img_o
     executeQuery(connexion, query)
 
     #Export de la donnée au format vecteur et raster
+    exportVectorByOgr2ogr(connexion_dic["dbname"], landscape_gpkg_file, 'paysage_level1', user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+    
+    #Export au format raster 
+    #creation du chemin de sauvegarde de la donnée raster 
+    rasterizeVector(landscape_gpkg_file, landscape_tif_file, dic_params["ldsc_information"]["img_ocs"], 'dn', codage="uint8", ram_otb=10000)
+
 
     #Suppression des tables inutiles
     dropTable(connexion, tab_bati)
@@ -175,5 +339,6 @@ def landscapeDetection(connexion, connexion_dic, lds_repertory, shp_etude, img_o
     dropTable(connexion, 'tab_milieuurbanise')  
     dropTable(connexion, 'tab_voirieetinfrastructure')
     dropTable(connexion, 'tab_milieuagrifor')
+    dropTable(connexion, 'paysage_level1')
 
-    return
+    return landscape_tif_file
