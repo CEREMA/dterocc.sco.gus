@@ -2,7 +2,7 @@
 import math,os
 
 #Import des librairies de /libs
-from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
+from libs.Lib_postgis import topologyCorrections, addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
 from libs.Lib_display import endC, bold, yellow, cyan, red
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_file import removeFile
@@ -210,15 +210,19 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     tab_arb = 'arbore'
 
     query = """
+    DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom) AS geom
         FROM %s;
-    """ %(tab_arb, tab_arb_ini)
+    """ %(tab_arb,tab_arb, tab_arb_ini)
 
     #Exécution de la requête SQL
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
+
+    #Correction topologique
+    topologyCorrections(connexion, tab_arb)
 
     #Création d'un identifiant unique
     addUniqId(connexion, tab_arb)
@@ -615,16 +619,20 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0
     tab_arbu = 'arbustif'
 
     query = """
+    DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
         FROM %s AS t;
-    """ %(tab_arbu, tab_arbu_ini)
+    """ %(tab_arbu, tab_arbu, tab_arbu_ini)
 
     #Exécution de la requête SQL
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
+    #Correction topologique
+    topologyCorrections(connexion, tab_arbu)
+ 
     #Création d'un identifiant unique
     addUniqId(connexion, tab_arbu)
 
@@ -793,15 +801,19 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, threshold
     tab_in = 'herbace'
 
     query = """
+    DROP TABLE IF EXISTS %s ;
     CREATE TABLE %s AS
         SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
         FROM %s AS t;
-    """ %(tab_in, tab_herb_ini)
+    """ %(tab_in, tab_in, tab_herb_ini)
 
     #Exécution de la requête SQL
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
+
+    #Correction topologique
+    topologyCorrections(connexion, tab_in)
 
     #Création d'un identifiant unique
     addUniqId(connexion, tab_in)

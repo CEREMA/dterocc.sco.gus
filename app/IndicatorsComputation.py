@@ -6,6 +6,7 @@ from libs.Lib_display import green,endC
 from libs.Lib_file import removeFile
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_postgis import addColumn, dropColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, addSpatialIndex, addUniqId
+from app.landscapeDetection import *
 
 ###########################################################################################################################################
 # FONCTION createFeatures()                                                                                                             #
@@ -52,44 +53,46 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     if not os.path.isdir(repertory_tmp):
             os.makedirs(repertory_tmp)
     
-    #Calcul des images temporaires de NDVI
-    dic_params["img_ndvi_spg"],dic_params["img_ndvi_wtr"] = calculateSpringAndWinterNdviImage(dic_params["img_ref"], dic_params["img_wtr"], repertory = repertory_tmp)
+    # #Calcul des images temporaires de NDVI
+    # dic_params["img_ndvi_spg"],dic_params["img_ndvi_wtr"] = calculateSpringAndWinterNdviImage(dic_params["img_ref"], dic_params["img_wtr"], repertory = repertory_tmp)
 
-    #Ajout des attributs descriptifs à la table principale + création d'un dictionnaire de nom des colonnes par indicateur 
-    dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
-    #Implémentation de la surface de la FV 
-    areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
+    # #Ajout des attributs descriptifs à la table principale + création d'un dictionnaire de nom des colonnes par indicateur 
+    # dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
+    # #Implémentation de la surface de la FV 
+    # areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
 
-    #Implémentation des attributs de hauteur des FV 
-    heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+    # #Implémentation des attributs de hauteur des FV 
+    # heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
     
-    #Implémentation du type "persistant" ou "caduc" des FV 
-    evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["ndvi_difference_everdecid_thr"], columns_indics_name = dic_columname["evergreendeciduous_indicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+    # #Implémentation du type "persistant" ou "caduc" des FV 
+    # evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["ndvi_difference_everdecid_thr"], columns_indics_name = dic_columname["evergreendeciduous_indicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
     
-    #Implémentation du type "conifère" ou "feuillu" des FV 
-    coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["pir_difference_thr"], columns_indics_name = dic_columname["coniferousdeciduous_indicators"], repertory = repertory_tmp,save_intermediate_result = save_intermediate_result, debug = debug)
+    # #Implémentation du type "conifère" ou "feuillu" des FV 
+    # coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["pir_difference_thr"], columns_indics_name = dic_columname["coniferousdeciduous_indicators"], repertory = repertory_tmp,save_intermediate_result = save_intermediate_result, debug = debug)
     
-    #Implémentation du type de sol support des FV 
-    typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["ndvi_difference_groundtype_thr"], column_indic_name = dic_columname["typeofground_indicator"][0], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+    # #Implémentation du type de sol support des FV 
+    # typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["ndvi_difference_groundtype_thr"], column_indic_name = dic_columname["typeofground_indicator"][0], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
 
     #Implémentation du paysage
-    if dic_params["img_landscape"] == "": 
-        result = landscapeDetection(dic_params["ldsc_information"], dic_params, repertory = repertory_tmp)
+    if dic_params["ldsc_information"]["img_landscape"] == "": 
+        result = landscapeDetection(connexion, connexion_dic, dic_params, repertory = repertory_tmp, debug = debug)
         if result : 
-            landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"], debug = debug)
+            #landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"],repertory = repertory_tmp, debug = debug)
+            print("ca a fonctionné !")
         else :
             print("VL'attribut 'paysage' ne sera pas implémenté pour l'ensemble des formes végétales.") 
     else:
-        landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"], repertory = repertory_tmp, debug = debug)
-    CloseConnection(connexion)
+        #landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"], repertory = repertory_tmp, debug = debug)
+        print("sisi")
+    closeConnection(connexion)
 
     #Export résultat au format GPKG
-    if output_layer == '':
-        print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur de la cartographie finale de la végétation (détaillée). Vous n'avez pas fournit de chemin de sauvegarde." + endC) 
-    else :
-        #export au format vecteur 
-        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-        # #export au format raster 
+    # if output_layer == '':
+    #     print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur de la cartographie finale de la végétation (détaillée). Vous n'avez pas fournit de chemin de sauvegarde." + endC) 
+    # else :
+    #     #export au format vecteur 
+    #     exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+    #     # #export au format raster 
         # #creation du chemin de sauvegarde de la donnée raster 
         # repertory_output = os.path.dirname(output_layer["output_fv"])
         # filename =  os.path.splitext(os.path.basename(output_layer["output_fv"]))[0]

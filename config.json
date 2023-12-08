@@ -32,8 +32,7 @@
             },
             "lcz_information" : {
                 "lcz_data" : "",
-                "field" : "",
-                "field_type" : "string",
+                "field" : "lcz_UA_P",
                 "1" : ["1","2","3","4","5","6","7","8","9"],
                 "2" : ["E"],
                 "3" : ["G"],
@@ -319,7 +318,7 @@
         "landscape" :{
             "landscape_feature" : "paysage",
             "landscape_type" : "varchar(100)",
-            "landscape_data" : "/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/paysages2.tif",
+            "landscape_data" : "",
             "landscape_dic_classes" : {
                 "milieu_urbanise" : 1, 
                 "voirie_et_infrastructure" : 2, 

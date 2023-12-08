@@ -6,7 +6,8 @@ from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dr
 from libs.Lib_display import endC, bold, yellow, cyan, red
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_file import removeFile
-from libs.Lib_raster import rasterizeVector
+from libs.Lib_raster import rasterizeVector, polygonizeRaster
+from libs.Lib_vector import cutoutVectors
 
 def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, debug = 0):
     """
@@ -20,12 +21,12 @@ def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, debug = 
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
     result = False
-    if ldsc_information[0][0] != "":
+    if dic_params["ldsc_information"]["lcz_information"]["lcz_data"] != "":
         ldsc_data = landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory, debug = debug)
         dic_params["img_landscape"] = ldsc_data
         result = True
 
-    elif ldsc_information[1] == "" or os.path.exists(ldsc_information[1]):
+    elif dic_params["ldsc_information"]["img_ocs"] == "" or os.path.exists(dic_params["ldsc_information"]["img_ocs"]):
         ldsc_data = landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, repertory, debug = debug)
         dic_params["img_landscape"] = ldsc_data
         result = True
@@ -47,7 +48,7 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
  
     """  
-  
+    debug = 3
     #Préparation des noms de fichiers intermédiaires
     lcz_data = dic_params["ldsc_information"]["lcz_information"]["lcz_data"]  
     extension = os.path.splitext(lcz_data)[1]
@@ -58,11 +59,11 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
         format_vector = 'GPKG'
  
     #1#Découper la couche vecteur LCZ selon l'emprise de la zone d'étude
-    cutoutVectors(shp_etude, [lcz_data], [lcz_cut] , overwrite=True, format_vector=format_vector)
+    #cutoutVectors(dic_params["shp_zone"] , [lcz_data], [lcz_cut] , overwrite=True, format_vector=format_vector)
 
     #2#Import du fichier vecteur LCZ en base
     tab_lcz = 'tab_lcz'
-    importVectorByOgr2ogr(connexion_dic["dbname"], lcz_cut, tab_lcz, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    #importVectorByOgr2ogr(connexion_dic["dbname"], lcz_cut, tab_lcz, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     #3#Création de la table paysage
     tab_pay = "paysages_lev1"
@@ -73,36 +74,67 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
     """  %(tab_pay, tab_pay)
 
     #3.1#Regroupement de tous les LCZ appartennant au milieu urbanisé
-    query += """
+    if len(dic_params["ldsc_information"]["lcz_information"]["1"]) > 1:
+        query += """
         SELECT public.ST_UNION(geom) AS geom, 1 AS dn
         FROM %s 
         WHERE %s in %s
-    """ %(tab_lcz, dic_params["ldsc_information"]["field"], tuple(dic_params["ldsc_information"]["1"]))
+        """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], tuple(dic_params["ldsc_information"]["lcz_information"]["1"]))
+    else :
+        query += """
+        SELECT public.ST_UNION(geom) AS geom, 1 AS dn
+        FROM %s 
+        WHERE %s = '%s'
+        """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], dic_params["ldsc_information"]["lcz_information"]["1"][0])
 
-    #3.1#Regroupement de tous les LCZ appartennant aux voiries et infrastructures
-    query += """
+
+    #3.2#Regroupement de tous les LCZ appartennant aux voiries et infrastructures
+    if len(dic_params["ldsc_information"]["lcz_information"]["2"]) > 1:
+        query += """
         UNION
         SELECT public.ST_UNION(geom) AS geom, 2 AS dn
         FROM %s 
         WHERE %s in %s
-    """ %(tab_lcz, dic_params["ldsc_information"]["field"], tuple(dic_params["ldsc_information"]["2"]))
+        """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], tuple(dic_params["ldsc_information"]["lcz_information"]["2"]))
+    else :
+        query += """
+        UNION
+        SELECT public.ST_UNION(geom) AS geom, 2 AS dn
+        FROM %s 
+        WHERE %s = '%s'
+        """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], dic_params["ldsc_information"]["lcz_information"]["2"][0])
 
-    #3.2#Regroupement de tous les LCZ appartennant aux étendues et cours d'eau
-    query += """
+    #3.3#Regroupement de tous les LCZ appartennant aux étendues et cours d'eau
+    if len(dic_params["ldsc_information"]["lcz_information"]["3"]) > 1:
+        query += """
         UNION
         SELECT public.ST_UNION(geom) AS geom, 3 AS dn
         FROM %s 
         WHERE %s in %s
-    """ %(tab_lcz, dic_params["ldsc_information"]["field"], tuple(dic_params["ldsc_information"]["3"]))
+        """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], tuple(dic_params["ldsc_information"]["lcz_information"]["3"]))
+    else :
+        query += """
+        UNION
+        SELECT public.ST_UNION(geom) AS geom, 3 AS dn
+        FROM %s 
+        WHERE %s = '%s'
+        """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], dic_params["ldsc_information"]["lcz_information"]["3"][0])
 
-    #3.3#Regroupement de tous les LCZ appartennant aux milieux agricoles et forestiers
-    query += """
+    #3.4#Regroupement de tous les LCZ appartennant aux milieux agricoles et forestiers
+    if len(dic_params["ldsc_information"]["lcz_information"]["4"]) > 1:
+        query += """
         UNION
         SELECT public.ST_UNION(geom) AS geom, 4 AS dn
         FROM %s 
-        WHERE %s in %s;
-    """ %(tab_lcz, dic_params["ldsc_information"]["field"], tuple(dic_params["ldsc_information"]["4"]))
-
+        WHERE %s in %s
+        """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], tuple(dic_params["ldsc_information"]["lcz_information"]["4"]))
+    else :
+        query += """
+        UNION
+        SELECT public.ST_UNION(geom) AS geom, 4 AS dn
+        FROM %s 
+        WHERE %s = '%s'
+        """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], dic_params["ldsc_information"]["lcz_information"]["4"][0])
     
     if debug >= 3:
         print(query)
@@ -158,58 +190,60 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
 
     #Création du dossier temporaire où on stocke les fichiers intermédiaires 
     repertory_tmp = repertory + os.sep + 'LANDSCAPE_TMP'
+    if not os.path.exists(repertory_tmp):
+        os.makedirs(repertory_tmp)
     #Decoupe sur la zone étude l'image OCS
     filename = os.path.splitext(os.path.basename(dic_params["ldsc_information"]["img_ocs"]))[0]
     img_ocs_cut = repertory_tmp + os.sep + filename + '_cut.tif'
 
-    command_cut = "gdalwarp -cutline %s -crop_to_cutline %s %s" %(dic_params["shp_etude"] , dic_params["ldsc_information"]["img_ocs"], img_ocs_cut) 
-    exitcode = os.system(command_cut)
-    if exitcode == 0:
-        print("message d'erreur")
+    # command_cut = "gdalwarp -cutline %s -crop_to_cutline %s %s" %(dic_params["shp_zone"] , dic_params["ldsc_information"]["img_ocs"], img_ocs_cut) 
+    # exitcode = os.system(command_cut)
+    # if exitcode == 0:
+    #     print("message d'erreur")
     
 
-    #Extraction des 3 masques bâti, route et eau de l'ocs
-    img_mask_bati = repertory_tmp + os.sep + 'mask_bati.tif'
-    img_mask_route = repertory_tmp + os.sep + 'mask_route.tif'
-    img_mask_eau = repertory_tmp + os.sep + 'mask_eau.tif'
+    # #Extraction des 3 masques bâti, route et eau de l'ocs
+    # img_mask_bati = repertory_tmp + os.sep + 'mask_bati.tif'
+    # img_mask_route = repertory_tmp + os.sep + 'mask_route.tif'
+    # img_mask_eau = repertory_tmp + os.sep + 'mask_eau.tif'
 
-    command_maskbati = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_bati, dic_params["ldsc_information"]["ocs_classes"]["build"]) 
-    exitcode = os.system(command_maskbati)
-    if exitcode == 0:
-        print("message")
+    # command_maskbati = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_bati, dic_params["ldsc_information"]["ocs_classes"]["build"]) 
+    # exitcode = os.system(command_maskbati)
+    # if exitcode == 0:
+    #     print("message")
 
-    command_maskroute = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_route, dic_params["ldsc_information"]["ocs_classes"]["road"]) 
-    exitcode = os.system(command_maskroute)
-    if exitcode == 0:
-        print("message")
+    # command_maskroute = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_route, dic_params["ldsc_information"]["ocs_classes"]["road"]) 
+    # exitcode = os.system(command_maskroute)
+    # if exitcode == 0:
+    #     print("message")
 
-    command_maskeau = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_eau, dic_params["ldsc_information"]["ocs_classes"]["water"]) 
-    exitcode = os.system(command_maskeau)
-    if exitcode == 0:
-        print("message")
+    # command_maskeau = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_eau, dic_params["ldsc_information"]["ocs_classes"]["water"]) 
+    # exitcode = os.system(command_maskeau)
+    # if exitcode == 0:
+    #     print("message")
 
     #Conversion des trois images masques en vecteur
     vect_mask_bati = repertory_tmp + os.sep + 'mask_bati.shp'
     vect_mask_route = repertory_tmp + os.sep + 'mask_route.shp'
     vect_mask_eau = repertory_tmp + os.sep + 'mask_eau.shp'
 
-    polygonizeRaster(img_mask_bati, vect_mask_bati, 'mask_bati', field_name="id", vector_export_format="ESRI Shapefile")
-    polygonizeRaster(img_mask_route, vect_mask_route, 'mask_route', field_name="id", vector_export_format="ESRI Shapefile")
-    polygonizeRaster(img_mask_eau, vect_mask_eau, 'mask_eau', field_name="id", vector_export_format="ESRI Shapefile")
+    # polygonizeRaster(img_mask_bati, vect_mask_bati, 'mask_bati', field_name="id", vector_export_format="ESRI Shapefile")
+    # polygonizeRaster(img_mask_route, vect_mask_route, 'mask_route', field_name="id", vector_export_format="ESRI Shapefile")
+    # polygonizeRaster(img_mask_eau, vect_mask_eau, 'mask_eau', field_name="id", vector_export_format="ESRI Shapefile")
 
     #Import en base des trois données vecteurs sous la forme de trois tables
     tab_bati = 'tab_bati'
     tab_route = 'tab_route'
     tab_eau = 'tab_eau'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_bati, tab_bati, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_route, tab_route, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_eau, tab_eau, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    # importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_bati, tab_bati, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    # importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_route, tab_route, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    # importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_eau, tab_eau, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     #Suppression des polygones "non bati", "non route" et "non eau" 
     query = """
-        DELETE FROM %s WHERE dn = 0;
-        DELETE FROM %s WHERE dn = 0;
-        DELETE FROM %s WHERE dn = 0;
+        DELETE FROM %s WHERE id = 0;
+        DELETE FROM %s WHERE id = 0;
+        DELETE FROM %s WHERE id = 0;
     """ %(tab_bati, tab_route, tab_eau)
 
     if debug >= 3:
