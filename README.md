@@ -143,6 +143,11 @@ Certaines fonctions sont optionnelles lorsqu'il y a possibilité que l'opérateu
 | *createAndImplementFeatures()* | Création et calcul des attributs descriptifs des formes végétales produites précedemment | Non |
 | *closeConnection()* | Nécessaire pour fermer la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
 
+NB : particularités pour le calcul de l'image "paysages" qui n'est pas directement réalisé dans le fichier `main.py` mais dans la fonction *app/IndicatorsComputation/landscapeIndicator()*.
+
+En ne renseignant pas l'image des paysages détectés dans la balise `indicators_computation > landscape > landscape_data`. Le script va se lancer dans la production de cette même donnée via la fonction *landscapeDetection()* qui aura la possbilité d'utiliser deux méthodes en fonction des informations renseignés au niveau des balises :
+1. `data_entry > entry_options > lcz_information > lcz_data`  : si la donnée LCZ est renseignée, la donnée paysages sera dérivée de cette donnée LCZ.
+2. `data_entry > entry_options > img_ocs` ou s'il existe déjà un fichier img_ocs dans le dossier du projet : la donnée paysages sera dérivée de la donnée satellitaire.
 
 ## Fichier de configuration
 
@@ -175,12 +180,12 @@ Ensuite, une seconde étape de classification de la strate arbustive permet de n
 Attention, si vous ne voulez pas faire tourner toutes les étapes (`steps_to_run`), des informations sont à fournir si vous n'avez pas utilisé les scripts dédiés pour les produire : 
 - `steps_to_run > data_concatenation` = False -> fournir l'image concaténée via la balise `data_entry > entry_options > img_data_concatenation`
 - `steps_to_run > vegetation_extraction` = False -> fournir l'image classifiée via la balise `data_entry > entry_options > img_ocs`
-- `steps_to_run > vertical_stratum_detection` = False -> fournir le schema et le table de la donnée via la balise `vertical_stratum_detection > db_table`
-- `steps_to_run > vegetation_form_stratum_detection` = False -> fournir le schema et le table de la donnée via la balise `vegetation_form_stratum_detection > db_table`
+- `steps_to_run > vertical_stratum_detection` = False -> fournir le schema et la table de la donnée via la balise `vertical_stratum_detection > db_table`
+- `steps_to_run > vegetation_form_stratum_detection` = False -> fournir le schema et la table de la donnée via la balise `vegetation_form_stratum_detection > db_table`
 
 ## Dossier configuration chaîne iota2
 
-Pour la distinction des formes végétales "prairie" et "culture" au sein de la strate herbacée, nous nécessitons l'apport d'une image classifiée "prairie/culture" sur la zone d'étude. L'opérateur fournit cette donnée via la variable `vegetation_form_stratum_detection > herbaceous > img_grasscrops`.
+Pour la distinction des formes végétales "prairie" et "culture" au sein de la strate herbacée, nous avons besoins d'une image classifiée "prairie/culture" sur la zone d'étude. L'opérateur fournit cette donnée via la variable `vegetation_form_stratum_detection > herbaceous > img_grasscrops`.
 
 Nous mettons à disposition une méthode de production de cette classification à partir de la chaîne iota2 développée par le Cesbio et disponible en gratuitement via ce [lien](https://framagit.org/iota2-project/iota2).
 
