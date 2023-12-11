@@ -6,7 +6,7 @@ from libs.Lib_display import green,endC
 from libs.Lib_file import removeFile
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_postgis import addColumn, dropColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, addSpatialIndex, addUniqId
-from app.landscapeDetection import *
+from app.LandscapeDetection import landscapeDetection
 
 ###########################################################################################################################################
 # FONCTION createFeatures()                                                                                                             #
