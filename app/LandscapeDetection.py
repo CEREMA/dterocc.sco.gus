@@ -9,13 +9,16 @@ from libs.Lib_file import removeFile
 from libs.Lib_raster import rasterizeVector, polygonizeRaster
 from libs.Lib_vector import cutoutVectors
 
+###########################################################################################################################################
+# FONCTION landscapeDetection()                                                                                                           #
+###########################################################################################################################################
 def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, debug = 0):
     """
     Rôle : 
 
     Paramètres :
-        connexion :
-        connexion_dic :
+        connexion : correspond à la variable de connexion à la base de données
+        connexion_dic : ictionnaire des paramètres de connexion selon le modèle : {"dbname" : '', "user_db" : '', "password_db" : '', "server_db" : '', "port_number" : '', "schema" : ''}
         dic_params : dictionnaire des paramètres pour calculer les attributs descriptifs des formes végétales
         repertory : repertoire pour sauvegarder les fichiers temporaires produits
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
@@ -36,14 +39,17 @@ def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, debug = 
 
     return result
 
+###########################################################################################################################################
+# FONCTION landscapeDetectionLCZEdition()                                                                                                 #
+###########################################################################################################################################
 def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory, debug = 0):
     """
     Rôle : création d'une couche vecteur et raster "paysage" à partir des données LCZ
 
     Paramètres :
-        connexion :
-        connexion_dic :
-        dic_params : 
+        connexion : correspond à la variable de connexion à la base de données
+        connexion_dic : ictionnaire des paramètres de connexion selon le modèle : {"dbname" : '', "user_db" : '', "password_db" : '', "server_db" : '', "port_number" : '', "schema" : ''}
+        dic_params : dictionnaire des paramètres pour calculer les attributs descriptifs des formes végétales
         repertory : repertoire pour sauvegarder les fichiers temporaires produits
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
  
@@ -59,11 +65,11 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
         format_vector = 'GPKG'
  
     #1#Découper la couche vecteur LCZ selon l'emprise de la zone d'étude
-    #cutoutVectors(dic_params["shp_zone"] , [lcz_data], [lcz_cut] , overwrite=True, format_vector=format_vector)
+    cutoutVectors(dic_params["shp_zone"] , [lcz_data], [lcz_cut] , overwrite=True, format_vector=format_vector)
 
     #2#Import du fichier vecteur LCZ en base
     tab_lcz = 'tab_lcz'
-    #importVectorByOgr2ogr(connexion_dic["dbname"], lcz_cut, tab_lcz, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    importVectorByOgr2ogr(connexion_dic["dbname"], lcz_cut, tab_lcz, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     #3#Création de la table paysage
     tab_pay = "paysages_lev1"
@@ -158,15 +164,17 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
 
     return
 
+###########################################################################################################################################
+# FONCTION landscapeDetectionSatelliteEdition()                                                                                                 #
+###########################################################################################################################################
 def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, repertory, num_class = {"bati" : 1, "route" : 2, "solnu" : 3, "eau" : 4, "vegetation" : 5}, debug = 0):
     """
     Rôle : création d'une couche vecteur et raster "paysage" à partir des données satellitaires
 
     Paramètres :
-        connexion :
-        connexion_dic :
-        shp_etude : couche vecteur de l'emprise de la zone d'étude
-        img_ocs : image raster d'occupation des sols
+        connexion : correspond à la variable de connexion à la base de données
+        connexion_dic : ictionnaire des paramètres de connexion selon le modèle : {"dbname" : '', "user_db" : '', "password_db" : '', "server_db" : '', "port_number" : '', "schema" : ''}
+        dic_params : dictionnaire des paramètres pour calculer les attributs descriptifs des formes végétales
         repertory : repertoire pour sauvegarder les fichiers temporaires produits
         num_class : dictionnaire des codes associés aux classes de l'ocs. Par défaut : {"bati" : 1, "route" : 2, "solnu" : 3, "eau" : 4, "vegetation" : 5}
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
@@ -248,12 +256,17 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
 
     if debug >= 3:
         print(query)
-    executeQuery(connexion, query)
+    #executeQuery(connexion, query)
 
     #Ajout des index
-    addSpatialIndex(connexion, tab_bati) 
-    addSpatialIndex(connexion, tab_route) 
-    addSpatialIndex(connexion, tab_eau) 
+    #addSpatialIndex(connexion, tab_bati) 
+    #addSpatialIndex(connexion, tab_route) 
+    #addSpatialIndex(connexion, tab_eau) 
+
+    #Correction tologiques
+    # topologyCorrections(connexion, tab_eau)
+    # topologyCorrections(connexion, tab_route)
+    # topologyCorrections(connexion, tab_bati) 
 
     ##Travaux sur la couche "eau"##  
 
@@ -267,21 +280,25 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
 
     if debug >= 3:
         print(query)
-    executeQuery(connexion, query)
+    # executeQuery(connexion, query)
 
-    #Ajout des index
-    addSpatialIndex(connexion, 'tab_etendueetcoursdeau') 
+    # #Ajout des index
+    # addSpatialIndex(connexion, 'tab_etendueetcoursdeau') 
+
+
     
     ##Travaux sur la couche "route"##  
+
 
     query = """
     DROP TABLE IF EXISTS tab_voirieetinfrastructure;
     CREATE TABLE tab_voirieetinfrastructure AS
         SELECT public.ST_UNION(public.ST_DIFFERENCE(route.geom, eau.geom)) AS geom, 2 AS dn
-        FROM (SELECT public.ST_UNION(public.ST_BUFFER(geom, %s)) AS geom
+        FROM (SELECT public.ST_BUFFER(geom, %s) AS geom
                 FROM %s
-                WHERE public.ST_AREA(geom) > %s) AS route, %s AS eau;
-    """ %(road_expansion, tab_route, road_surf_min, tab_eau)
+                WHERE public.ST_AREA(geom) > %s) AS route, %s AS eau
+        WHERE public.ST_INTERSECTS(route.geom, eau.geom);
+    """ %(road_expansion, tab_route, road_surf_min, 'tab_etendueetcoursdeau')
 
     if debug >= 3:
         print(query)
@@ -298,11 +315,12 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
     CREATE TABLE tab_milieuurbanise AS
         SELECT public.ST_UNION(public.ST_DIFFERENCE(bati_moins_eau.geom, route.geom)) AS geom, 1 AS dn
             FROM (SELECT public.ST_UNION(public.ST_DIFFERENCE(bati.geom, eau.geom)) AS geom
-                    FROM (SELECT public.ST_UNION(public.ST_BUFFER(public.ST_BUFFER(geom, %s), %s)) AS geom
+                    FROM (SELECT public.ST_BUFFER(public.ST_BUFFER(geom, %s), %s) AS geom
                             FROM %s 
                             WHERE public.ST_AREA(geom) > %s) AS bati, %s AS eau
-                ) AS bati_moins_eau, %s AS route;  
-    """ %(build_expansion, build_erosion, tab_bati, build_surf_min, tab_eau, tab_route)
+                    WHERE public.ST_INTERSECTS(bati.geom, eau.geom)) AS bati_moins_eau, %s AS route
+            WHERE public.ST_INTERSECTS(bati_moins_eau.geom, route.geom);  
+    """ %(build_expansion, build_erosion, tab_bati, build_surf_min, 'tab_etendueetcoursdeau', 'tab_voirieetinfrastructure')
 
     if debug >= 3:
         print(query)
