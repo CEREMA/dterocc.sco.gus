@@ -512,7 +512,7 @@ def addSpatialIndex(connexion, tablename, geomcolumn = 'geom', nameindex = ''):
 ########################################################################
 # FONCTION addColumn()                                                 #
 ########################################################################
-def addColumn(connexion, tablename, columnname, columntype):
+def addColumn(connexion, tablename, columnname, columntype, debug = 0):
     """
     Rôle : créé un attribut d'une table dans la db
 
@@ -528,7 +528,7 @@ def addColumn(connexion, tablename, columnname, columntype):
     """ %(tablename, columnname, columntype)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -1124,7 +1124,7 @@ def versionPostGIS(database_name='template_postgis', user_name='postgres', passw
 ########################################################################
 # FONCTION versionPostGIS()                                            #
 ########################################################################
-def createExtension(connexion, extension_name):
+def createExtension(connexion, extension_name, debug = 0):
     """
     Rôle : créer un extension dans la BD
 
@@ -1140,7 +1140,6 @@ def createExtension(connexion, extension_name):
         print(query)
     executeQuery(connexion, query)
 
-    print(cyan + "createExtension(): création de l'extension " + extension_name + endC)
     return
 
 def dataBaseExist(connexion, dbname):
