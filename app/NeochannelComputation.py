@@ -16,7 +16,7 @@ PRECISION = 0.0000001
 #########################################################################
 # FONCTION neochannelComputation()                                      #
 #########################################################################
-def neochannelComputation(image_input, image_pan_input, dic_neochannels, empriseVector, imagechannel_order = ["Red","Green","Blue","NIR"], codage="float",save_intermediate_results = False):
+def neochannelComputation(image_input, image_pan_input, dic_neochannels, empriseVector, imagechannel_order = ["Red","Green","Blue","NIR"], codage="float",save_intermediate_result = False):
     """
     Rôle : Cette fonction permet de créer l'ensemble des indices radiométriques
 
@@ -27,7 +27,7 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
            empriseVector : fichier vecteur emprise de la zone d'étude
            channel_order : liste d'ordre des bandes de l'image. Par défaut : ["Red","Green","Blue","NIR"]
            codage : type de codage du fichier de sortie. Par défaut : float
-           save_intermediate_results : sauvegarde des résultats intermédiaire. Par défaut : False
+           save_intermediate_result : sauvegarde des résultats intermédiaire. Par défaut : False
 
     Sortie :
         liste des fichiers d'indices radiométriques
@@ -101,7 +101,7 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
     cutImageByVector(empriseVector ,sfs_file_tmp, dic_neochannels["img_sfs"])
 
     #Suppression des fichiers temporaires
-    if not save_intermediate_results:
+    if not save_intermediate_result:
         if os.path.exists(ndvi_file_tmp):
             removeFile(ndvi_file_tmp)
 
@@ -349,7 +349,6 @@ def createSFS(image_pan_input, image_SFS_output, li_choice = [4], codage="float"
     """
 
     print(cyan + "createSFS() : " + bold + green + "Début du calcul de texture SFS" + endC)
-    print(len(li_choice))
     if len(li_choice) == 6 :
         cmd_sfs = "otbcli_SFSTextureExtraction -in %s -channel 1 -out %s" %(image_pan_input, image_SFS_output)
         exitCode = os.system(cmd_sfs)

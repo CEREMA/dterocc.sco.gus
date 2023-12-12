@@ -328,7 +328,7 @@ def createSamples(image_input, vector_to_cut_input, vector_sample_output, raster
 ###########################################################################################################################################
 # FONCTION prepareAllSamples()                                                                                                            #
 ###########################################################################################################################################
-def prepareAllSamples(image_input, dic_classes_params, vector_to_cut_input, format_vector = 'ESRI Shapefile'):
+def prepareAllSamples(image_input, dic_classes_params, vector_to_cut_input, format_vector = 'ESRI Shapefile', save_intermediate_result = False):
     """
     Rôle : centralise la découpe des couches d'échantillons d'apprentissage selon l'emprise de la zone d'étude et d'une potentielle érosion
 
@@ -338,16 +338,18 @@ def prepareAllSamples(image_input, dic_classes_params, vector_to_cut_input, form
                             Format :{"nomclasse" :[vector_class_input, raster_class_output, erosionoption]} 
         vector_to_cut_input : vecteur de découpage (zone d'étude)
         format_vector : format de la donnée vectorielle, par défaut : 'ESRI Shapefile'  
+        save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par défaut : False
+
     """
     for key, value in dic_classes_params.items():
-        prepareSamples(image_input, value[0], value[1], vector_to_cut_input, value[2], format_vector)
+        prepareSamples(image_input, value[0], value[1], vector_to_cut_input, value[2], format_vector, save_intermediate_result = save_intermediate_result)
     
     return
 
 ###########################################################################################################################################
 # FONCTION prepareSamples()                                                                                                               #
 ###########################################################################################################################################
-def prepareSamples(image_ref, input_vector_class, output_raster_class, emprisevector, erosionoption = True, format_vector='ESRI Shapefile'):
+def prepareSamples(image_ref, input_vector_class, output_raster_class, emprisevector, erosionoption = True, format_vector='ESRI Shapefile', save_intermediate_result = False):
     """
     Rôle : découper la couche d'échantillons d'apprentissage selon l'emprise de la zone d'étude et option d'érosion de 1m
 
@@ -358,6 +360,7 @@ def prepareSamples(image_ref, input_vector_class, output_raster_class, empriseve
         emprisevector : couche vecteur de l'emprise de la zone d'étude
         erosionoption : choix d'érosion de la couche d'échantillon en entrée, par défaut : True
         format_vector : format de la donnée vectorielle, par défaut : 'ESRI Shapefile'
+        save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par défaut : False
 
     """
 
@@ -409,6 +412,11 @@ def prepareSamples(image_ref, input_vector_class, output_raster_class, empriseve
 
     if debug >= 3:
         print(cyan + "prepareSamples() : " + bold + green + "Fin du traitement." + endC)
+
+    if not save_intermediate_result:
+        removeFile(cut_file_tmp)
+        removeFile(erosion_file_tmp)
+        removeFile(cutcut_file_tmp)
 
 
     return

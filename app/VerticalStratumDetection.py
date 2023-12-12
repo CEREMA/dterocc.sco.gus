@@ -86,6 +86,9 @@ def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize
         print(sgt_cmd)
         raise NameError(bold + red + "segmentationVegetation() : une erreur est apparue lors de la segmentation de l'image (commande otbcli_Segmentation)." + endC)
 
+    if not save_intermediate_result:
+        removeFile(mask_veg)
+
     return
 
 ###########################################################################################################################################
@@ -320,7 +323,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
         print(bold + "Deuxième étape :\n0-Extraction des segments 'isolés' et des segments de 'regroupement'" + endC)
 
     #Préparation de trois tables : rgpt_arbu, arbu_de_rgpt, arbu_uniq 
-    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, debug)
+    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result, debug)
 
 
     ###
@@ -350,7 +353,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
     dropTable(connexion, tab_arbu_de_rgpt)
     dropTable(connexion, tab_arbu_uniq)
 
-    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, debug)
+    tab_rgpt_arbu, tab_arbu_de_rgpt, tab_arbu_uniq = pretreatment_arbu(connexion, tab_ref, save_intermediate_result, debug)
     
     ###
     #2# Deuxième phase de reclassification
@@ -368,26 +371,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
 
     tab_ref = reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil, save_intermediate_result, debug)
 
-    query = """
-    DROP TABLE IF EXISTS sgts_strate_arboree;
-    CREATE TABLE sgts_strate_arboree AS
-        SELECT *
-        FROM %s
-        WHERE strate = 'A';
-
-    DROP TABLE IF EXISTS sgts_strate_arbustive;
-    CREATE TABLE sgts_strate_arbustive AS
-        SELECT *
-        FROM %s
-        WHERE strate = 'Au';
-
-    DROP TABLE IF EXISTS sgts_strate_herbace;
-    CREATE TABLE sgts_strate_arboree AS
-        SELECT *
-        FROM %s
-        WHERE strate = 'A';
-    """ %(tab_ref, tab_ref, tab_ref)
-
+    
     if not save_intermediate_result : 
         dropTable(connexion, tab_rgpt_arbu)
         dropTable(connexion, tab_arbu_de_rgpt)
@@ -463,7 +447,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
 ###########################################################################################################################################
 # FONCTION pretreatment_arbu()                                                                                                            #
 ###########################################################################################################################################
-def pretreatment_arbu(connexion, tab_ref, debug = 0):
+def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False, debug = 0):
     """
     Rôle : calculer et créer des tables intermédiaires pour la strate arbustive à traiter : 
             - une table constituée des géométries de regroupements arbustifs et du nombre de segments les composants (rgpt_arbu)
@@ -619,6 +603,9 @@ def pretreatment_arbu(connexion, tab_ref, debug = 0):
     addSpatialIndex(connexion, tab_arbu_uniq)
     #Création d'un index sur une colonne 
     addIndex(connexion, tab_arbu_uniq, 'fid', 'idx_arbu_uniq')
+
+    if not save_intermediate_result :
+        dropTable(connexion, 'tab_interm_arbuste')
 
     return tab_rgpt_arbu, tab_arbu_rgpt, tab_arbu_uniq
     
