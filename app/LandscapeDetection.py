@@ -12,7 +12,7 @@ from libs.Lib_vector import cutoutVectors
 ###########################################################################################################################################
 # FONCTION landscapeDetection()                                                                                                           #
 ###########################################################################################################################################
-def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, debug = 0):
+def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, save_intermediate_result = False,debug = 0):
     """
     Rôle : 
 
@@ -21,28 +21,31 @@ def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, debug = 
         connexion_dic : ictionnaire des paramètres de connexion selon le modèle : {"dbname" : '', "user_db" : '', "password_db" : '', "server_db" : '', "port_number" : '', "schema" : ''}
         dic_params : dictionnaire des paramètres pour calculer les attributs descriptifs des formes végétales
         repertory : repertoire pour sauvegarder les fichiers temporaires produits
+        save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par défaut : False
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
     result = False
     if dic_params["ldsc_information"]["lcz_information"]["lcz_data"] != "":
-        ldsc_data = landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory, debug = debug)
+        ldsc_data = landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory, save_intermediate_result, debug = debug)
         dic_params["img_landscape"] = ldsc_data
         result = True
 
     elif dic_params["ldsc_information"]["img_ocs"] == "" or os.path.exists(dic_params["ldsc_information"]["img_ocs"]):
-        ldsc_data = landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, repertory, debug = debug)
-        dic_params["img_landscape"] = ldsc_data
-        result = True
+       # Attention, pour l'instant cette fonction n'est pas opérationnelle, elle sera modifiée et opérationnelle plus tard --> renvoie uniquement un message
+       print(bold + yellow + "La fonction landscapeDetectionSateeliteEdition() n'est pas encore opérationnelle. La couche paysage ne peut pas encore être produite à partir de données satellitaires." + endC) 
+        # ldsc_data = landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, repertory, save_intermediate_result, debug = debug)
+        # dic_params["img_landscape"] = ldsc_data
+        # result = True
 
     else :
-        print("Aucune donnée exploitable pour créer une couche paysage.")
+        print(bold + red + "Il n'y a AUCUNE donnée exploitable pour créer une couche paysage." + endC)
 
     return result
 
 ###########################################################################################################################################
 # FONCTION landscapeDetectionLCZEdition()                                                                                                 #
 ###########################################################################################################################################
-def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory, debug = 0):
+def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory, save_intermediate_result = False, debug = 0):
     """
     Rôle : création d'une couche vecteur et raster "paysage" à partir des données LCZ
 
@@ -51,10 +54,10 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
         connexion_dic : ictionnaire des paramètres de connexion selon le modèle : {"dbname" : '', "user_db" : '', "password_db" : '', "server_db" : '', "port_number" : '', "schema" : ''}
         dic_params : dictionnaire des paramètres pour calculer les attributs descriptifs des formes végétales
         repertory : repertoire pour sauvegarder les fichiers temporaires produits
+        save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par défaut : False
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
  
     """  
-    debug = 3
     #Préparation des noms de fichiers intermédiaires
     lcz_data = dic_params["ldsc_information"]["lcz_information"]["lcz_data"]  
     extension = os.path.splitext(lcz_data)[1]
@@ -157,9 +160,10 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
     rasterizeVector(landscape_gpkg_file, landscape_tif_file, dic_params["ldsc_information"]["img_ocs"], 'dn', codage="uint8", ram_otb=10000)
 
     #Suppression des fichiers et tables inutiles
-    removeFile(lcz_cut)
-    dropTable(connexion, tab_lcz)
-    dropTable(connexion, tab_pay) 
+    if not save_intermediate_result :
+        removeFile(lcz_cut)
+        dropTable(connexion, tab_lcz)
+        dropTable(connexion, tab_pay) 
 
 
     return
@@ -167,7 +171,7 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
 ###########################################################################################################################################
 # FONCTION landscapeDetectionSatelliteEdition()                                                                                                 #
 ###########################################################################################################################################
-def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, repertory, num_class = {"bati" : 1, "route" : 2, "solnu" : 3, "eau" : 4, "vegetation" : 5}, debug = 0):
+def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, repertory, num_class = {"bati" : 1, "route" : 2, "solnu" : 3, "eau" : 4, "vegetation" : 5}, save_intermediate_result = False, debug = 0):
     """
     Rôle : création d'une couche vecteur et raster "paysage" à partir des données satellitaires
 
@@ -177,6 +181,7 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
         dic_params : dictionnaire des paramètres pour calculer les attributs descriptifs des formes végétales
         repertory : repertoire pour sauvegarder les fichiers temporaires produits
         num_class : dictionnaire des codes associés aux classes de l'ocs. Par défaut : {"bati" : 1, "route" : 2, "solnu" : 3, "eau" : 4, "vegetation" : 5}
+        save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par féfaut : False
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
  
     """
@@ -210,42 +215,42 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
     #     print("message d'erreur")
     
 
-    # #Extraction des 3 masques bâti, route et eau de l'ocs
-    # img_mask_bati = repertory_tmp + os.sep + 'mask_bati.tif'
-    # img_mask_route = repertory_tmp + os.sep + 'mask_route.tif'
-    # img_mask_eau = repertory_tmp + os.sep + 'mask_eau.tif'
+    #Extraction des 3 masques bâti, route et eau de l'ocs
+    img_mask_bati = repertory_tmp + os.sep + 'mask_bati.tif'
+    img_mask_route = repertory_tmp + os.sep + 'mask_route.tif'
+    img_mask_eau = repertory_tmp + os.sep + 'mask_eau.tif'
 
-    # command_maskbati = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_bati, dic_params["ldsc_information"]["ocs_classes"]["build"]) 
-    # exitcode = os.system(command_maskbati)
-    # if exitcode == 0:
-    #     print("message")
+    command_maskbati = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_bati, dic_params["ldsc_information"]["ocs_classes"]["build"]) 
+    exitcode = os.system(command_maskbati)
+    if exitcode == 0:
+        print("message")
 
-    # command_maskroute = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_route, dic_params["ldsc_information"]["ocs_classes"]["road"]) 
-    # exitcode = os.system(command_maskroute)
-    # if exitcode == 0:
-    #     print("message")
+    command_maskroute = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_route, dic_params["ldsc_information"]["ocs_classes"]["road"]) 
+    exitcode = os.system(command_maskroute)
+    if exitcode == 0:
+        print("message")
 
-    # command_maskeau = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_eau, dic_params["ldsc_information"]["ocs_classes"]["water"]) 
-    # exitcode = os.system(command_maskeau)
-    # if exitcode == 0:
-    #     print("message")
+    command_maskeau = "otbcli_BandMath -il %s -out %s -exp '(im1b1==%s)?1:0'" %(img_ocs_cut, img_mask_eau, dic_params["ldsc_information"]["ocs_classes"]["water"]) 
+    exitcode = os.system(command_maskeau)
+    if exitcode == 0:
+        print("message")
 
     #Conversion des trois images masques en vecteur
     vect_mask_bati = repertory_tmp + os.sep + 'mask_bati.shp'
     vect_mask_route = repertory_tmp + os.sep + 'mask_route.shp'
     vect_mask_eau = repertory_tmp + os.sep + 'mask_eau.shp'
 
-    # polygonizeRaster(img_mask_bati, vect_mask_bati, 'mask_bati', field_name="id", vector_export_format="ESRI Shapefile")
-    # polygonizeRaster(img_mask_route, vect_mask_route, 'mask_route', field_name="id", vector_export_format="ESRI Shapefile")
-    # polygonizeRaster(img_mask_eau, vect_mask_eau, 'mask_eau', field_name="id", vector_export_format="ESRI Shapefile")
+    polygonizeRaster(img_mask_bati, vect_mask_bati, 'mask_bati', field_name="id", vector_export_format="ESRI Shapefile")
+    polygonizeRaster(img_mask_route, vect_mask_route, 'mask_route', field_name="id", vector_export_format="ESRI Shapefile")
+    polygonizeRaster(img_mask_eau, vect_mask_eau, 'mask_eau', field_name="id", vector_export_format="ESRI Shapefile")
 
     #Import en base des trois données vecteurs sous la forme de trois tables
     tab_bati = 'tab_bati'
     tab_route = 'tab_route'
     tab_eau = 'tab_eau'
-    # importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_bati, tab_bati, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
-    # importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_route, tab_route, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
-    # importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_eau, tab_eau, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_bati, tab_bati, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_route, tab_route, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_mask_eau, tab_eau, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     #Suppression des polygones "non bati", "non route" et "non eau" 
     query = """
@@ -259,14 +264,14 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
     #executeQuery(connexion, query)
 
     #Ajout des index
-    #addSpatialIndex(connexion, tab_bati) 
-    #addSpatialIndex(connexion, tab_route) 
-    #addSpatialIndex(connexion, tab_eau) 
+    addSpatialIndex(connexion, tab_bati) 
+    addSpatialIndex(connexion, tab_route) 
+    addSpatialIndex(connexion, tab_eau) 
 
     #Correction tologiques
-    # topologyCorrections(connexion, tab_eau)
-    # topologyCorrections(connexion, tab_route)
-    # topologyCorrections(connexion, tab_bati) 
+    topologyCorrections(connexion, tab_eau)
+    topologyCorrections(connexion, tab_route)
+    topologyCorrections(connexion, tab_bati) 
 
     ##Travaux sur la couche "eau"##  
 
@@ -280,10 +285,10 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
 
     if debug >= 3:
         print(query)
-    # executeQuery(connexion, query)
+    executeQuery(connexion, query)
 
-    # #Ajout des index
-    # addSpatialIndex(connexion, 'tab_etendueetcoursdeau') 
+    #Ajout des index
+    addSpatialIndex(connexion, 'tab_etendueetcoursdeau') 
 
 
     
@@ -384,13 +389,21 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
 
 
     #Suppression des tables inutiles
-    dropTable(connexion, tab_bati)
-    dropTable(connexion, tab_eau)
-    dropTable(connexion, tab_route)
-    dropTable(connexion, 'tab_etendueetcoursdeau')
-    dropTable(connexion, 'tab_milieuurbanise')  
-    dropTable(connexion, 'tab_voirieetinfrastructure')
-    dropTable(connexion, 'tab_milieuagrifor')
-    dropTable(connexion, 'paysage_level1')
+    if not save_intermediate_result:
+        removeFile(img_ocs_cut)
+        removeFile(img_mask_bati)
+        removeFile(img_mask_route)
+        removeFile(img_mask_eau)
+        removeFile(vect_mask_bati)
+        removeFile(vect_mask_route)
+        removeFile(vect_mask_eau)
+        dropTable(connexion, tab_bati)
+        dropTable(connexion, tab_eau)
+        dropTable(connexion, tab_route)
+        dropTable(connexion, 'tab_etendueetcoursdeau')
+        dropTable(connexion, 'tab_milieuurbanise')  
+        dropTable(connexion, 'tab_voirieetinfrastructure')
+        dropTable(connexion, 'tab_milieuagrifor')
+        dropTable(connexion, 'paysage_level1')
 
     return landscape_tif_file
