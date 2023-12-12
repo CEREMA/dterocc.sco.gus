@@ -13,7 +13,7 @@ from app.LandscapeDetection import landscapeDetection
 ###########################################################################################################################################
 def createFeatures(connexion, connexion_dic, tab_ref, dic_attributs):
     """
-    Rôle : 
+    Rôle : Créé les champs attributaires dans la table des formes végétalisées.
 
     Paramètres :
         connexion : paramètres de connexion à la base de données
@@ -23,7 +23,9 @@ def createFeatures(connexion, connexion_dic, tab_ref, dic_attributs):
     dic_columname ={} 
     for attr in dic_attributs.keys():
         col = [] 
+        print(attr)
         for i in range(len(dic_attributs[attr])):
+            print(dic_attributs[attr][i][0], dic_attributs[attr][i][1])
             addColumn(connexion, tab_ref, dic_attributs[attr][i][0], dic_attributs[attr][i][1])
             col.append(dic_attributs[attr][i][0])
         dic_columname[attr] = col
@@ -35,7 +37,7 @@ def createFeatures(connexion, connexion_dic, tab_ref, dic_attributs):
 ###########################################################################################################################################
 def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs, dic_params, repertory, output_layer = '',  save_intermediate_result = False, debug = 0):
     """
-    Rôle :
+    Rôle : Créé et rempli les champs attributaires des formes végétalisées
 
     Paramètres :
         connexion : paramètres de connexion à la base de données
@@ -53,46 +55,46 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     if not os.path.isdir(repertory_tmp):
             os.makedirs(repertory_tmp)
     
-    # #Calcul des images temporaires de NDVI
-    # dic_params["img_ndvi_spg"],dic_params["img_ndvi_wtr"] = calculateSpringAndWinterNdviImage(dic_params["img_ref"], dic_params["img_wtr"], repertory = repertory_tmp)
+    #Calcul des images temporaires de NDVI
+    dic_params["img_ndvi_spg"],dic_params["img_ndvi_wtr"] = calculateSpringAndWinterNdviImage(dic_params["img_ref"], dic_params["img_wtr"], repertory = repertory_tmp)
 
-    # #Ajout des attributs descriptifs à la table principale + création d'un dictionnaire de nom des colonnes par indicateur 
-    # dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
-    # #Implémentation de la surface de la FV 
-    # areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
+    #Ajout des attributs descriptifs à la table principale + création d'un dictionnaire de nom des colonnes par indicateur 
+    print(tab_ref)
+    dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
+    #Implémentation de la surface de la FV 
+    areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
 
-    # #Implémentation des attributs de hauteur des FV 
-    # heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+    #Implémentation des attributs de hauteur des FV 
+    heightIndicators(connexion, connexion_dic, tab_ref, dic_columname["height_indicators"], dic_params["img_mnh"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
     
-    # #Implémentation du type "persistant" ou "caduc" des FV 
-    # evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["ndvi_difference_everdecid_thr"], columns_indics_name = dic_columname["evergreendeciduous_indicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+    #Implémentation du type "persistant" ou "caduc" des FV 
+    evergreenDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"],dic_params["img_ndvi_spg"], dic_params["img_ndvi_wtr"], tab_ref, seuil = dic_params["ndvi_difference_everdecid_thr"], columns_indics_name = dic_columname["evergreendeciduous_indicators"], superimpose_choice = dic_params["superimpose_choice"], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
     
-    # #Implémentation du type "conifère" ou "feuillu" des FV 
-    # coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["pir_difference_thr"], columns_indics_name = dic_columname["coniferousdeciduous_indicators"], repertory = repertory_tmp,save_intermediate_result = save_intermediate_result, debug = debug)
+    #Implémentation du type "conifère" ou "feuillu" des FV 
+    coniferousDeciduousIndicators(connexion, connexion_dic, dic_params["img_ref"], tab_ref, seuil = dic_params["pir_difference_thr"], columns_indics_name = dic_columname["coniferousdeciduous_indicators"], repertory = repertory_tmp,save_intermediate_result = save_intermediate_result, debug = debug)
     
-    # #Implémentation du type de sol support des FV 
-    # typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["ndvi_difference_groundtype_thr"], column_indic_name = dic_columname["typeofground_indicator"][0], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+    #Implémentation du type de sol support des FV 
+    typeOfGroundIndicator(connexion, connexion_dic, dic_params["img_ref"], dic_params["img_ndvi_wtr"], tab_ref, seuil  = dic_params["ndvi_difference_groundtype_thr"], column_indic_name = dic_columname["typeofground_indicator"][0],column_indic_persistant = dic_columname["evergreendeciduous_indicators"][0], repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
 
     #Implémentation du paysage
     if dic_params["ldsc_information"]["img_landscape"] == "": 
-        result = landscapeDetection(connexion, connexion_dic, dic_params, repertory = repertory_tmp, debug = debug)
+        result = landscapeDetection(connexion, connexion_dic, dic_params, repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
         if result : 
-            #landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"],repertory = repertory_tmp, debug = debug)
-            print("ca a fonctionné !")
+            landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"],repertory = repertory_tmp, debug = debug)
         else :
-            print("VL'attribut 'paysage' ne sera pas implémenté pour l'ensemble des formes végétales.") 
+            print(bold + yellow + "Faute de données paysage, l'attribut 'paysage' ne sera pas implémenté pour l'ensemble des formes végétales." + endC) 
     else:
-        #landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"], repertory = repertory_tmp, debug = debug)
-        print("sisi")
+        landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"], repertory = repertory_tmp, debug = debug)
     closeConnection(connexion)
 
     #Export résultat au format GPKG
-    # if output_layer == '':
-    #     print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur de la cartographie finale de la végétation (détaillée). Vous n'avez pas fournit de chemin de sauvegarde." + endC) 
-    # else :
-    #     #export au format vecteur 
-    #     exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-    #     # #export au format raster 
+    if output_layer == '':
+        print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur de la cartographie finale de la végétation (détaillée). Vous n'avez pas fournit de chemin de sauvegarde." + endC) 
+    else :
+        #export au format vecteur 
+        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+        print(bold + yellow + "L'export au format raster n'est pas disponible." + endC)
+        # #export au format raster --> pour l'instant l'export au format tif n'est pas opérationnel.
         # #creation du chemin de sauvegarde de la donnée raster 
         # repertory_output = os.path.dirname(output_layer["output_fv"])
         # filename =  os.path.splitext(os.path.basename(output_layer["output_fv"]))[0]
@@ -361,6 +363,8 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
             removeFile(vect_fv_cadu_out)
         if os.path.exists(filetablevegin):
             removeFile(filetablevegin)
+        if os.path.exists(img_ndvi_si_wtr):
+            removeFile(img_ndvi_si_wtr)
 
     #Suppression des tables intermédiaires
     dropTable(connexion,table_cadu) 
@@ -394,6 +398,7 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
         if not os.path.isdir(repertory):
             os.makedirs(repertory)
     extension = os.path.splitext(img_ref)[1]
+
     image_conif_out = repertory + os.sep + 'img_mask_coniferous' + extension
     image_feuill_out = repertory + os.sep + 'img_mask_feuillus' + extension
 
@@ -470,6 +475,8 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
             removeFile(vect_fv_conif_out)
         if os.path.exists(vect_fv_feuill_out):
             removeFile(vect_fv_feuill_out)
+        if os.path.exists(filetablevegin):
+            removeFile(filetablevegin)
         
 
     #Suppression des tables intermédiaires  
@@ -482,7 +489,7 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
 ###########################################################################################################################################
 # FONCTION typeOfGroundIndicator()                                                                                                        #
 ###########################################################################################################################################
-def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_ref, seuil  = 0.3, column_indic_name = 'type_sol', repertory = '', save_intermediate_result = False, debug = 0):
+def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_ref, seuil  = 0.3, column_indic_name = 'type_sol', column_indic_persistant = 'perc_persistant',repertory = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : cette fonction permet d'indiquer si le sol sous-jacent à la végétation est de type perméable ou imperméable
 
@@ -504,11 +511,11 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
         if not os.path.isdir(repertory):
             os.makedirs(repertory)
     extension = os.path.splitext(img_ref)[1]
-    image_permeable = repertory + os.sep + 'img_mask_permeable' + extension
-    image_impermeable = repertory + os.sep + 'img_mask_impermeable' + extension
+    img_surf_veg = repertory + os.sep + 'img_mask_surfacevegetalisee' + extension
+    img_surf_nonveg = repertory + os.sep + 'img_mask_surfacenonvegetalisee' + extension
 
-    vect_fv_perm_out = repertory + os.sep + 'vect_fv_stats_perm.gpkg'
-    vect_fv_imperm_out = repertory + os.sep + 'vect_fv_stats_imperm.gpkg'
+    vect_fv_surfveg_out = repertory + os.sep + 'vect_fv_stats_surfacevegetalisee.gpkg'
+    vect_fv_surfnonveg_out = repertory + os.sep + 'vect_fv_stats_surfacenonvegetalisee.gpkg'
 
    
     #Export de la table vegetation en couche vecteur gpkg
@@ -518,35 +525,35 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
     
     #Calcul du masque perméable
-    cmd_mask_permeable = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1>=%s)?1:0'" %(img_ndvi_wtr, image_permeable, seuil)
-    os.system(cmd_mask_permeable)
+    cmd_mask_surfveg = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1>=%s)?1:0'" %(img_ndvi_wtr, img_surf_veg, seuil)
+    os.system(cmd_mask_surfveg)
     
 
     #Calcul du masque imperméable
-    cmd_mask_impermeable = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1<%s)?1:0'" %(img_ndvi_wtr, image_impermeable, seuil)
-    os.system(cmd_mask_impermeable)
+    cmd_mask_surfnonveg = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1<%s)?1:0'" %(img_ndvi_wtr, img_surf_nonveg, seuil)
+    os.system(cmd_mask_surfnonveg)
     
 
     #Statistiques zonales sur les polygones de formes végétales concernées : tous les segments appartennant à la strate arborée et arbustive
     col_to_add_list = ["count"]
     col_to_delete_list = ["unique", "range", "max", "median", "mean","std", "sum"]
     class_label_dico = {0:'non', 1:'oui'}
-    statisticsVectorRaster(image_permeable, filetablevegin, vect_fv_perm_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    statisticsVectorRaster(img_surf_veg, filetablevegin, vect_fv_surfveg_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
     
-    statisticsVectorRaster(image_impermeable, filetablevegin, vect_fv_imperm_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    statisticsVectorRaster(img_surf_nonveg, filetablevegin, vect_fv_surfnonveg_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
     
     #Import des données dans la BD et concaténation des colonnes
 
     table_surfveg = 'tab_fv_surfveg'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_perm_out, table_surfveg, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_surfveg_out, table_surfveg, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     table_surfnonveg = 'tab_fv_surfnonveg'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_imperm_out, table_surfnonveg, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_surfnonveg_out, table_surfnonveg, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     query = """
     DROP TABLE IF EXISTS tab_indic_surfveg_nonveg;
     CREATE TABLE tab_indic_surfveg_nonveg AS
-        SELECT t1.ogc_fid AS fid, t1.oui AS perm_count, t2.oui AS imp_count
+        SELECT t1.ogc_fid AS fid, t1.oui AS surfveg_count, t2.oui AS surfnonveg_count
         FROM %s AS t1, %s AS t2
         WHERE t1.ogc_fid = t2.ogc_fid;
     """ %(table_surfveg,table_surfnonveg)
@@ -559,11 +566,11 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     #Update de l'attribut perc_caduque et perc_persistant
 
     query = """
-     UPDATE %s AS t SET %s = 'surface vegetalisee' FROM tab_indic_surfveg_nonveg AS t2 WHERE t.fid = t2.fid AND t2.perm_count >= 50.0;
+     UPDATE %s AS t SET %s = 'surface vegetalisee' FROM tab_indic_surfveg_nonveg AS t2 WHERE t.fid = t2.fid AND t2.surfveg_count >= 50.0;
     """ %(tab_ref, column_indic_name)
     
     query += """
-     UPDATE %s AS t SET %s = 'surface non vegetalisee' FROM tab_indic_surfveg_nonveg AS t2 WHERE t.fid = t2.fid AND t2.perm_count < 50.0;
+     UPDATE %s AS t SET %s = 'surface non vegetalisee' FROM tab_indic_surfveg_nonveg AS t2 WHERE t.fid = t2.fid AND t2.surfveg_count < 50.0;
     """ %(tab_ref, column_indic_name)
 
     #Exécution de la requête SQL
@@ -572,9 +579,20 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     executeQuery(connexion, query)
 
     #Correction pour les boisements et la strate herbacée --> hypothèse que ce n'est que du sol végétalisé sous-jacent
+    # La détection des boisements n'est pas encore optimisée étant donné que les tâches arborées et arbustives sont pour l'instant classées en "boisement" 
+    # query = """
+    # UPDATE %s AS t SET %s = 'surface vegetalisee' WHERE t.fv in ('BOA', 'BOAu', 'H', 'C');
+    # """ %(tab_ref, column_indic_name) 
+
+    #Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    #Correction pour les couverts persistants --> on ne fournit aucune information
     query = """
-    UPDATE %s AS t SET %s = 'surface vegetalisee' WHERE t.fv in ('BOA', 'BOAu', 'H', 'C');
-    """ %(tab_ref, column_indic_name) 
+    UPDATE %s AS t SET %s = '' WHERE t.%s >= 80.0;
+    """ %(tab_ref, column_indic_name, column_indic_persistant) 
 
     #Exécution de la requête SQL
     if debug >= 1:
@@ -626,7 +644,7 @@ def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, dic_ldsc
 
     filetablevegin = repertory + os.sep + 'couche_vegetation_bis.gpkg'
  
-    # exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_fv, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
+    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_fv, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
     
     vector_output = repertory + os.sep + 'sgts_vegetation_cross_landscape.gpkg'
 
