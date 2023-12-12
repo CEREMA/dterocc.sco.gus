@@ -1,5 +1,7 @@
 {
     "repertory":"/mnt/RAM_disk",
+    "save_intermediate_result" : false,
+    "display_comments" : true, 
     "steps_to_run":{
         "img_assembly" : false,
         "create_DHM" : false,
@@ -44,7 +46,7 @@
         "dbname": "gus",
         "user_db": "postgres",
         "password_db": "postgres",
-        "server_db": "",
+        "server_db": "172.22.xxx.xx",
         "port_number": 5432,
         "schema" : ""
     },
@@ -235,7 +237,7 @@
         "surface_rate": 0.25
     },
     "vegetation_form_stratum_detection": {
-        "db_table" : "",
+        "db_table" : "data_final.vegetation2",
         "clean" : true,
         "tree" :{
             "isolatedtree_max_surface": 100,
@@ -318,7 +320,7 @@
         "landscape" :{
             "landscape_feature" : "paysage",
             "landscape_type" : "varchar(100)",
-            "landscape_data" : "",
+            "landscape_data" : "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/2-RESULTATS_GUS/1-MGN/1-DONNEES_100PERC_SATELLITE/ProjetGUS/4-CalculATtributs/paysages_LCZ.tif",
             "landscape_dic_classes" : {
                 "milieu_urbanise" : 1, 
                 "voirie_et_infrastructure" : 2, 
