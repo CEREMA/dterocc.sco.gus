@@ -156,6 +156,8 @@ Nous mettons à disposition un fichier de configuration `config.json` qui permet
 | Balise | Définition |
 | :-------- | :------------------------- |
 | *repertory* | Répertoire de création du dossier du projet |
+| *save_intermediate_result* | Paramètre de sauvegarde des résultats intermédiaires |
+| *display_comments* | Paramètre d'affichage des commentaires intermédiaires |   
 | *steps_to_run* | Gestion des étapes de traitements |   
 | *data_entry* | Données d'entrée initiales |
 | *db_params* | Paramètres de création de la base de données PgSql |
