@@ -583,7 +583,9 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     # query = """
     # UPDATE %s AS t SET %s = 'surface vegetalisee' WHERE t.fv in ('BOA', 'BOAu', 'H', 'C');
     # """ %(tab_ref, column_indic_name) 
-
+    query = """
+    UPDATE %s AS t SET %s = 'surface vegetalisee' WHERE t.fv in ('H', 'C');
+    """ %(tab_ref, column_indic_name) 
     #Exécution de la requête SQL
     if debug >= 1:
         print(query)
