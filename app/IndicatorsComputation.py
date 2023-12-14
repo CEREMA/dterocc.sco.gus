@@ -1,11 +1,13 @@
 #Import des librairies python
-import os,sys
+import os,sys, shutil
 
 #Import des librairies de /libs
-from libs.Lib_display import green,endC
+from libs.Lib_display import bold, yellow, red, green,endC
 from libs.Lib_file import removeFile
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_postgis import addColumn, dropColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, addSpatialIndex, addUniqId
+
+#Import des applications de /app
 from app.LandscapeDetection import landscapeDetection
 
 ###########################################################################################################################################
@@ -23,9 +25,7 @@ def createFeatures(connexion, connexion_dic, tab_ref, dic_attributs):
     dic_columname ={} 
     for attr in dic_attributs.keys():
         col = [] 
-        print(attr)
         for i in range(len(dic_attributs[attr])):
-            print(dic_attributs[attr][i][0], dic_attributs[attr][i][1])
             addColumn(connexion, tab_ref, dic_attributs[attr][i][0], dic_attributs[attr][i][1])
             col.append(dic_attributs[attr][i][0])
         dic_columname[attr] = col
@@ -55,11 +55,10 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     if not os.path.isdir(repertory_tmp):
             os.makedirs(repertory_tmp)
     
-    #Calcul des images temporaires de NDVI
+    # #Calcul des images temporaires de NDVI
     dic_params["img_ndvi_spg"],dic_params["img_ndvi_wtr"] = calculateSpringAndWinterNdviImage(dic_params["img_ref"], dic_params["img_wtr"], repertory = repertory_tmp)
 
     #Ajout des attributs descriptifs à la table principale + création d'un dictionnaire de nom des colonnes par indicateur 
-    print(tab_ref)
     dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
     #Implémentation de la surface de la FV 
     areaIndicator(connexion, tab_ref, dic_columname["area_indicator"][0], debug = debug)
@@ -78,13 +77,14 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
 
     #Implémentation du paysage
     if dic_params["ldsc_information"]["img_landscape"] == "": 
-        result = landscapeDetection(connexion, connexion_dic, dic_params, repertory = repertory_tmp, save_intermediate_result = save_intermediate_result, debug = debug)
+        result = landscapeDetection(connexion, connexion_dic, dic_params, repertory = dic_params["ldsc_information"]["dirname"] , save_intermediate_result = save_intermediate_result, debug = debug)
         if result : 
-            landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"],repertory = repertory_tmp, debug = debug)
+            landscapeIndicator(connexion, connexion_dic, dic_params["ldsc_information"]["img_landscape"]  , tab_ref,  column_indic_name = dic_columname["landscape_indicator"][0], dic_ldsc_class = dic_params["ldsc_information"]["ldsc_class"],repertory = repertory_tmp, debug = debug)
         else :
             print(bold + yellow + "Faute de données paysage, l'attribut 'paysage' ne sera pas implémenté pour l'ensemble des formes végétales." + endC) 
     else:
-        landscapeIndicator(connexion, connexion_dic, dic_params["img_landscape"] , tab_ref, dic_params["dic_ldsc_class"], repertory = repertory_tmp, debug = debug)
+        landscapeIndicator(connexion, connexion_dic, dic_params["ldsc_information"]["img_landscape"] , tab_ref,  column_indic_name = dic_columname["landscape_indicator"][0], dic_ldsc_class = dic_params["ldsc_information"]["ldsc_class"],repertory = repertory_tmp, debug = debug)    
+    
     closeConnection(connexion)
 
     #Export résultat au format GPKG
@@ -103,6 +103,11 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
         
         # #suppression de la colonne non utile "strate_r"
         # dropColumn(connexion, tab_name, 'strate_r') 
+
+    #Suppression des fichiers intermédiaires
+    if not save_intermediate_result : 
+        removeFile(dic_params["img_ndvi_spg"]) 
+        removeFile(dic_params["img_ndvi_wtr"] )
 
     return 
 
@@ -559,7 +564,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     """ %(table_surfveg,table_surfnonveg)
 
    # Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -574,7 +579,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     """ %(tab_ref, column_indic_name)
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -587,7 +592,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     UPDATE %s AS t SET %s = 'surface vegetalisee' WHERE t.fv in ('H', 'C');
     """ %(tab_ref, column_indic_name) 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
@@ -597,17 +602,18 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     """ %(tab_ref, column_indic_name, column_indic_persistant) 
 
     #Exécution de la requête SQL
-    if debug >= 1:
+    if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
     #Suppression du dossier temporaire
     if not save_intermediate_result:
         if os.path.exists(repertory):
-            contenu = os.listdir(repertory)
-            for x in contenu:
-                os.remove(x)
-            os.rmdir(repertory)
+            shutil.rmtree(repertory)
+            # contenu = os.listdir(repertory)
+            # for x in contenu:
+            #     os.remove(x)
+            # os.rmdir(repertory)
 
     dropTable(connexion, 'tab_indic_surfveg_nonveg')
     dropTable(connexion, table_surfveg)
@@ -619,7 +625,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
 ###########################################################################################################################################
 # FONCTION landscapeIndicator()                                                                                                           #
 ###########################################################################################################################################
-def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, dic_ldsc_class = {"milieu_urbanise" : 1, "voirie_et_infrastructure" : 2, "etendue_et_cours_eau" : 3, "milieu_agricole_et_forestier" : 4}, repertory = '', save_intermediate_result = False, debug = 0):
+def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, column_indic_name = 'paysage', dic_ldsc_class = {"milieu_urbanise" : 1, "voirie_et_infrastructure" : 2, "etendue_et_cours_eau" : 3, "milieu_agricole_et_forestier" : 4}, repertory = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : attribut la classe du paysage dans lequel s'inscrit la forme végétale
 
@@ -684,10 +690,11 @@ def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, dic_ldsc
     #Suppression du dossier temporaire
     if not save_intermediate_result:
         if os.path.exists(repertory):
-            contenu = os.listdir(repertory)
-            for x in contenu:
-                os.remove(x)
-            os.rmdir(repertory)
+            shutil.rmtree(repertory)
+            # contenu = os.listdir(repertory)
+            # for x in contenu:
+            #     os.remove(x)
+            # os.rmdir(repertory)
 
     dropTable(connexion, tab_cross) 
 
