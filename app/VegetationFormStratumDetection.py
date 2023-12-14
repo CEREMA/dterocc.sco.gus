@@ -75,7 +75,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     tab_herbace = ''
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate herbacée" + endC)
-    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref,  dic_thresholds["herbaceous"], output_layers["herbaceous"], save_intermediate_result = save_intermediate_result, debug = debug)
+    #tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref,  dic_thresholds["herbaceous"], output_layers["herbaceous"], save_intermediate_result = save_intermediate_result, debug = debug)
 
     #4# Concaténation des données en une seule table 'végétation'
     tab_name = 'vegetation'
@@ -793,60 +793,60 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, threshold
 
     #1# Récupération de la table composée uniquement des segments herbaces
     tab_herb_ini = 'herbace_ini'
-    # query = """
-    # DROP TABLE IF EXISTS %s;
-    # CREATE TABLE %s AS
-    #     SELECT *
-    #     FROM %s
-    #     WHERE strate = 'H';
-    # """ %(tab_herb_ini, tab_herb_ini, schem_tab_ref)
+    query = """
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS
+        SELECT *
+        FROM %s
+        WHERE strate = 'H';
+    """ %(tab_herb_ini, tab_herb_ini, schem_tab_ref)
 
-    # #Exécution de la requête SQL
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-    # #Création des indexes 
-    # addSpatialIndex(connexion, tab_herb_ini)
-    # addIndex(connexion, tab_herb_ini, 'fid', 'idx_fid_herbeini')
+    #Création des indexes 
+    addSpatialIndex(connexion, tab_herb_ini)
+    addIndex(connexion, tab_herb_ini, 'fid', 'idx_fid_herbeini')
 
     #2# Regroupement et lissage des segments herbacés
     tab_in = 'herbace'
 
-    # query = """
-    # DROP TABLE IF EXISTS %s ;
-    # CREATE TABLE %s AS
-    #     SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
-    #     FROM %s AS t;
-    # """ %(tab_in, tab_in, tab_herb_ini)
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
+        FROM %s AS t;
+    """ %(tab_in, tab_in, tab_herb_ini)
 
-    # #Exécution de la requête SQL
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    #Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-    # #Correction topologique
-    # topologyCorrections(connexion, tab_in)
+    #Correction topologique
+    topologyCorrections(connexion, tab_in)
 
-    # #Création d'un identifiant unique
-    # addUniqId(connexion, tab_in)
+    #Création d'un identifiant unique
+    addUniqId(connexion, tab_in)
 
-    # #Création d'un index spatial
-    # addSpatialIndex(connexion, tab_in)
+    #Création d'un index spatial
+    addSpatialIndex(connexion, tab_in)
 
-    # #Création de la colonne strate qui correspond à 'A' pour tous les polygones et complétion
-    # addColumn(connexion, tab_in, 'strate', 'varchar(100)')
+    #Création de la colonne strate qui correspond à 'A' pour tous les polygones et complétion
+    addColumn(connexion, tab_in, 'strate', 'varchar(100)')
 
-    # query = """
-    # UPDATE %s SET strate = 'H' WHERE fid = fid;
-    # """ %(tab_in)
+    query = """
+    UPDATE %s SET strate = 'H' WHERE fid = fid;
+    """ %(tab_in)
 
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
-    # #Création de la colonne fv
-    # addColumn(connexion, tab_in, 'fv', 'varchar(100)')
+    #Création de la colonne fv
+    addColumn(connexion, tab_in, 'fv', 'varchar(100)')
     #Pas de complétion de cet attribut pour l'instant
     tab_herbace = ''
 
@@ -900,38 +900,37 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
         save_intermediate_result : paramètre de sauvegarde des tables et/ou fichiers intermédiaires. Par défaut : False
         debug : paramètre du niveau de debug. Par défaut : 0
     """
-    #Crossing vector raster + majority
 
-    # repertory = os.path.dirname(thresholds["img_grasscrops"])
-    # layer_sgts_veg_h = repertory + os.sep + 'sgts_vegetation_herbace.gpkg'
-    # vector_output = repertory + os.sep + 'sgts_vegetation_hebace_plus_maj.gpkg'
+    repertory = os.path.dirname(thresholds["img_grasscrops"])
+    layer_sgts_veg_h = repertory + os.sep + 'sgts_vegetation_herbace.gpkg'
+    vector_output = repertory + os.sep + 'sgts_vegetation_hebace_plus_maj.gpkg'
 
-    # removeVectorFile(layer_sgts_veg_h, format_vector='GPKG')
-    # removeVectorFile(vector_output, format_vector='GPKG')
+    removeVectorFile(layer_sgts_veg_h, format_vector='GPKG')
+    removeVectorFile(vector_output, format_vector='GPKG')
 
-    # #Export des le donnée vecteur des segments herbacés en couche GPKG
-    # exportVectorByOgr2ogr(connexion_dic["dbname"], layer_sgts_veg_h, tab_in, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+    #Export des le donnée vecteur des segments herbacés en couche GPKG
+    exportVectorByOgr2ogr(connexion_dic["dbname"], layer_sgts_veg_h, tab_in, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
         
-    # #Calcul de la classe majoritaire par segments herbacé 
-    # col_to_add_list = ["majority"]
-    # col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range", "median", "minority" ]
-    # class_label_dico = {} 
-    # statisticsVectorRaster(thresholds["img_grasscrops"], layer_sgts_veg_h, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    #Calcul de la classe majoritaire par segments herbacé 
+    col_to_add_list = ["majority"]
+    col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range", "median", "minority" ]
+    class_label_dico = {} 
+    statisticsVectorRaster(thresholds["img_grasscrops"], layer_sgts_veg_h, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
     
     #Import en base de la ocuche vecteur
     tab_cross = 'tab_cross_h_classif'
-    #importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
+    importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
     
-    # # Attribution du label 'PR' (prairie) ou 'C' (culture)
-    # query = """
-    # UPDATE %s AS t1 SET fv = 'PR' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
-    # UPDATE %s AS t1 SET fv = 'C' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
-    # """  %(tab_in, tab_cross, thresholds["label_prairie"],tab_in,tab_cross, thresholds["label_culture"])
+    # Attribution du label 'PR' (prairie) ou 'C' (culture)
+    query = """
+    UPDATE %s AS t1 SET fv = 'PR' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    UPDATE %s AS t1 SET fv = 'C' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    """  %(tab_in, tab_cross, thresholds["label_prairie"],tab_in,tab_cross, thresholds["label_culture"])
 
-    # if debug >= 3:
-    #     print(query)
-    # executeQuery(connexion, query)
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
 
     #Regroupe par localisation et par label (fv) les semgents de végétation herbacés 
