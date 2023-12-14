@@ -94,6 +94,8 @@ Cette partie est divisée en quatre sous-parties :
 - la création de l'environnement : dossier du projet, chemins de sauvegarde, base de données pgsql/postgis
 - le lancement des étapes de production de la cartographie
 
+/!\ ne pas oublier de vérifier le nom du fichier json lu dans le fichier `main.py` à la ligne 33.
+
 #### Pré-traitements 
 
 | Fonction | Usage | Optionnel |
