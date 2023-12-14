@@ -30,7 +30,7 @@ if __name__ == "__main__":
     # RECUPERATION DES VARIABLES #
     ##############################  
 
-    with open('config.json') as f:
+    with open('config22.json') as f:
       config = json.load(f)
 
     img_ref = config["data_entry"]["img_RVBPIR_ref"]  
