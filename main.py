@@ -42,7 +42,7 @@ if __name__ == "__main__":
 
     if config["save_intermediate_result"] :
       save_intermediate_result = config["save_intermediate_result"]
-      
+
     if config["display_comments"]:
       debug = 3
 
@@ -55,27 +55,6 @@ if __name__ == "__main__":
     ########################################
     # RENSEIGNEMENT DES DONNEES EN ENTREE  #  
     ########################################
-
-    img_ref = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/ProjetGUS/ORT_20220614_NADIR_16B_MGN_V2.tif'
-
-    img_ref_PAN = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/RAMDISKDU11072023/ProjetGUS/0-Data/00-DonneesEntrees/ORT_P1AP_MGN.tif'
-    #NB : l'image PAN doit aussi être découpée à la même emprise que l'image de référence --> pour que la superposition des résultats suivant puisse se faire correctement 
-
-    shp_zone = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/ProjetGUS/MGN_contours.shp'
-
-    img_mnt =  r''
-
-    img_mns = r''
-
-    img_mnh = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/ProjetGUS/mnh.tif'
-
-    img_spring = img_ref
-
-    img_winter = r'/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/0-IMAGES_SATELLITES/2021/NANCY/2021_12_21/16Bits/Assemblage_zone_etude_MGN/ORT_20211221_NADIR_16B_MGN.tif'
-
-    img_texture = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/ProjetGUS/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
-
-    img_ocs_2 = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/ProjetGUS/img_ocs_MGN.tif'
 
     #Données optionnelles fournis
 
@@ -112,10 +91,10 @@ if __name__ == "__main__":
 
     #Paramètres de sélection des échantillons d'apprentissage. Par défaut, classe bati : 1, route :2, sol nu : 3, eau : 4 et végétation : 5
     samples_selection = {
-      1 : config["vegetation_extraction"]["samples_selection"]["build_ratio"]   
-      2 : config["vegetation_extraction"]["samples_selection"]["road_ratio"]
-      3 : config["vegetation_extraction"]["samples_selection"]["baresoil_ratio"]
-      4 : config["vegetation_extraction"]["samples_selection"]["water_ratio"]
+      1 : config["vegetation_extraction"]["samples_selection"]["build_ratio"],   
+      2 : config["vegetation_extraction"]["samples_selection"]["road_ratio"],
+      3 : config["vegetation_extraction"]["samples_selection"]["baresoil_ratio"],
+      4 : config["vegetation_extraction"]["samples_selection"]["water_ratio"],
       5 : config["vegetation_extraction"]["samples_selection"]["vegetation_ratio"]
     }  
 
@@ -194,7 +173,7 @@ if __name__ == "__main__":
     #Paramètres de calcul des attributs
     #On n'a pas forcément besoin d'aller chercher dans le fichier config. 
     dic_attributs = {
-      "paysage" : [[config["indicators_computation"]["landscape"]["landscape_feature"]  ,config["indicators_computation"]["landscape"]["landscape_type"]]], 
+      "landscape_indicator" : [[config["indicators_computation"]["landscape"]["landscape_feature"]  ,config["indicators_computation"]["landscape"]["landscape_type"]]], 
       "area_indicator" :  [[config["indicators_computation"]["area"]["area_feature"]  ,config["indicators_computation"]["area"]["area_type"]]],
       "height_indicators" : [[config["indicators_computation"]["height"]["mean_height_feature"]  ,config["indicators_computation"]["height"]["mean_height_type"]],
                              [config["indicators_computation"]["height"]["median_height_feature"]  ,config["indicators_computation"]["height"]["median_height_type"]],
@@ -219,6 +198,7 @@ if __name__ == "__main__":
       "img_wtr" : img_winter,
       "shp_zone" : shp_zone,
       "ldsc_information" :{
+        "dirname" : path_landscape,
         "img_landscape" : config["indicators_computation"]["landscape"]["landscape_data"],
         "lcz_information" : config["data_entry"]["entry_options"]["lcz_information"]   ,
         "img_ocs" : "",
@@ -266,6 +246,9 @@ if __name__ == "__main__":
     #Dossier de sauvegarde des résultats de calcul des attributs descriptifs de la végétation
     path_datafinal = path_prj + os.sep + '4-Calcul_attributs_descriptifs' 
 
+    #Dossier de sauvegarde des résultats de paysage
+    path_landscape = path_prj + os.sep + '5-Paysages' 
+
       
     ##Création des répertoires s'ils n'existent pas
     if  not os.path.exists(path_prj):
@@ -304,6 +287,9 @@ if __name__ == "__main__":
     if not os.path.exists(path_datafinal):
       os.makedirs(path_datafinal)
 
+    if not os.path.exists(path_landscape):
+      os.makedirs(path_landscape)
+
 
 
     #######################################################
@@ -324,8 +310,6 @@ if __name__ == "__main__":
     img_msavi = path_tmp_neochannels+ os.sep + 'img_ref_MSAVI.tif'
     img_sfs = path_tmp_neochannels + os.sep + 'img_ref_SFS.tif'
     img_teinte = path_tmp_neochannels + os.sep + 'img_ref_SFS.tif'
-
-    img_sfs = r'/mnt/Data/10_Agents_travaux_en_cours/Mathilde/12-Cartographie_vegetation_MGN_octobre2023/ProjetGUS/TMP_NEOCHANNELSCOMPUTATION/ORT_20220614_NADIR_16B_MGN_V2_txtSFS.tif'
 
     dic_neochannels = {
       "ndvi" : img_ndvi,

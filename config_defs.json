@@ -17,19 +17,19 @@
         "img_PAN_ref": "image ortho Pléiades de référence(printemps/été) PANCHROMATIC résolution 50 cm (raster .tif)",
         "studyzone_shp": "emprise de la zone d'étude (vecteur .shp)",
         "img_winter": "image ortho Pléiades d'hiver RVBPIR résolution 50 cm(raster .tif)",
-        "img_dtm": "image du MNT (raster .tif)",
-        "img_dsm": "image du MNS résolution 50 cm (raster .tif)",
+        "img_dtm": "image du MNT sur la zone d'étude (raster .tif)",
+        "img_dsm": "image du MNS résolution 50 cm sur la zone d'étude (raster .tif)",
         "entry_options" : {
             "repertory_img_assembly" : "repertoire contenant les imagettes Pléaides à assembler --> uniquement dispo pour l'image Pléiades de référence img_RVBPIR_ref",
-            "img_dhm": "image du MNH résolution 50cm (raster .tif)",
-            "img_data_concatenation" : "image de concaténation des données",
+            "img_dhm": "image du MNH résolution 50cm (raster .tif) dans le référentiel de la zone d'étude et sur l'emprise de la zone",
+            "img_data_concatenation" : "image de concaténation des données avec référentiel de la zone d'étude et sur l'emprise de la zone d'étude",
             "img_ocs": "image de classification en 5 classes (raster .tif)",
             "data_classes": {
-                "build": "vecteur des polygones de bâti (vecteur .shp)",
-                "road": "vecteur des polygones de route (vecteur .shp)",
-                "baresoil": "vecteur des polygones de sol nu (vecteur .shp)",
-                "water": "vecteur des polygones d'eau (vecteur .shp)",
-                "vegetation": "vecteur des polygones de végétation (vecteur .shp)"
+                "build": "vecteur des polygones de bâti (vecteur .shp) --> emprise + référentiel de l'étude",
+                "road": "vecteur des polygones de route (vecteur .shp) --> emprise + référentiel de l'étude",
+                "baresoil": "vecteur des polygones de sol nu (vecteur .shp) --> emprise + référentiel de l'étude",
+                "water": "vecteur des polygones d'eau (vecteur .shp) --> emprise + référentiel de l'étude",
+                "vegetation": "vecteur des polygones de végétation (vecteur .shp) --> emprise + référentiel de l'étude"
                 },
             "lcz_information" : {
                 "lcz_data" : "fichier vecteur de lcz sur la zone d'étude",
@@ -48,41 +48,41 @@
         "password_db": "mot de passe de connexion à la bd",
         "server_db": "numéro du serveur postgres où on se connecte",
         "port_number": "numéro de port",
-        "schema" : "schema"
+        "schema" : "doit rester vide --> pas besoin de le notifier"
     },
     "vegetation_extraction": {
         "samples_creation": {
             "build": {
                 "data1": {
-                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'bati'",
+                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'bati' /!\ doit être dans le référentiel et sur la zone d'étude",
                     "buffer": "valeur du buffer appliqué sur le polygone",
                     "exp": "expression sql avec les conditions de récupération des polygones dans la db"
                 }
             },
             "road": {
                 "data1": {
-                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'route'",
+                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'route' /!\ doit être dans le référentiel et sur la zone d'étude",
                     "buffer": "valeur du buffer appliqué sur le polygone",
                     "exp": "expression sql avec les conditions de récupération des polygones dans la db"
                 }
             },
             "baresoil": {
                 "data1": {
-                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'sol nu'",
+                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'sol nu' /!\ doit être dans le référentiel et sur la zone d'étude",
                     "buffer": "valeur du buffer appliqué sur le polygone",
                     "exp": "expression sql avec les conditions de récupération des polygones dans la db"
                 }
             },
             "water": {
                 "data1": {
-                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'eau'",
+                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'eau' /!\ doit être dans le référentiel et sur la zone d'étude" ,
                     "buffer": "valeur du buffer appliqué sur le polygone",
                     "exp": "expression sql avec les conditions de récupération des polygones dans la db"
                 }
             },
             "vegetation": {
                 "data1": {
-                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'vegetation'",
+                    "source": "chemin d'accès à la db dans laquelle on cherche les polygones d'apprentissage pour la classe 'vegetation' /!\ doit être dans le référentiel et sur la zone d'étude",
                     "buffer": "valeur du buffer appliqué sur le polygone",
                     "exp": "expression sql avec les conditions de récupération des polygones dans la db"
                 }
@@ -91,51 +91,51 @@
         "samples_cleaning": {
             "build": {
                 "data1": {
-                    "name": "nom de l'indice radiométrique",
-                    "source": "chemin d'accès à l'image de l'indice radiométrique",
+                    "name": "nom de l'indice radiométrique /!\ si la source n'est pas fournie vous n'avez le droit qu'à 'ndvi', 'msavi', 'ndwi','hue'",
+                    "source": "chemin d'accès à l'image de l'indice radiométrique, possibilité de ne pas la fournir si l'indice a été créé dans le projet : ndvi, msavi, ndwi et hue",
                     "min": "valeur minimale du filtre sur l'indice",
                     "max": "valeur maximale du filtre sur l'indice"
                 }
             },
             "road": {
                 "data1": {
-                    "name": "nom de l'indice radiométrique",
-                    "source": "chemin d'accès à l'image de l'indice radiométrique",
+                    "name": "nom de l'indice radiométrique /!\ si la source n'est pas fournie vous n'avez le droit qu'à 'ndvi', 'msavi', 'ndwi','hue'",
+                    "source": "chemin d'accès à l'image de l'indice radiométrique, possibilité de ne pas la fournir si l'indice a été créé dans le projet : ndvi, msavi, ndwi et hue",
                     "min": "valeur minimale du filtre sur l'indice",
                     "max": "valeur maximale du filtre sur l'indice"
                 }
             },
             "baresoil": {
                 "data1": {
-                    "name": "nom de l'indice radiométrique",
-                    "source": "chemin d'accès à l'image de l'indice radiométrique",
+                    "name": "nom de l'indice radiométrique /!\ si la source n'est pas fournie vous n'avez le droit qu'à 'ndvi', 'msavi', 'ndwi','hue'",
+                    "source": "chemin d'accès à l'image de l'indice radiométrique, possibilité de ne pas la fournir si l'indice a été créé dans le projet : ndvi, msavi, ndwi et hue",
                     "min": "valeur minimale du filtre sur l'indice",
                     "max": "valeur maximale du filtre sur l'indice"
                 }
             },
             "water": {
                 "data1": {
-                    "name": "nom de l'indice radiométrique",
-                    "source": "chemin d'accès à l'image de l'indice radiométrique",
+                    "name": "nom de l'indice radiométrique /!\ si la source n'est pas fournie vous n'avez le droit qu'à 'ndvi', 'msavi', 'ndwi','hue'",
+                    "source": "chemin d'accès à l'image de l'indice radiométrique, possibilité de ne pas la fournir si l'indice a été créé dans le projet : ndvi, msavi, ndwi et hue",
                     "min": "valeur minimale du filtre sur l'indice",
                     "max": "valeur maximale du filtre sur l'indice"
                 }
             },
             "vegetation": {
                 "data1": {
-                    "name": "nom de l'indice radiométrique",
-                    "source": "chemin d'accès à l'image de l'indice radiométrique",
+                    "name": "nom de l'indice radiométrique /!\ si la source n'est pas fournie vous n'avez le droit qu'à 'ndvi', 'msavi', 'ndwi','hue'",
+                    "source": "chemin d'accès à l'image de l'indice radiométrique, possibilité de ne pas la fournir si l'indice a été créé dans le projet : ndvi, msavi, ndwi et hue",
                     "min": "valeur minimale du filtre sur l'indice",
                     "max": "valeur maximale du filtre sur l'indice"
                 }
             }
         },
         "samples_selection": {
-            "build_ratio": "ratio (entre 0 et 1) de sélection des pixels d'entraînement pour la classe 'bati'",
-            "road_ratio":  "ratio (entre 0 et 1) de sélection des pixels d'entraînement pour la classe 'route'",
-            "baresoil_ratio":  "ratio (entre 0 et 1) de sélection des pixels d'entraînement pour la classe 'eau'",
-            "water_ratio":  "ratio (entre 0 et 1) de sélection des pixels d'entraînement pour la classe 'sol nu'",
-            "vegetation_ratio":  "ratio (entre 0 et 1) de sélection des pixels d'entraînement pour la classe 'vegetation'"
+            "build_ratio": "ratio (entre 0 et 1) de sélection des pixels d'entraînement pour la classe 'bati' -> ratio des pixels sélectionnés par rapport aux pixels disponibles pour la classe",
+            "road_ratio":  "ratio (entre 0 et 1) de sélection des pixels d'entraînement pour la classe 'route' -> ratio des pixels sélectionnés par rapport aux pixels disponibles pour la classe",
+            "baresoil_ratio":  "ratio (entre 0 et 1) de sélection des pixels d'entraînement pour la classe 'eau' -> ratio des pixels sélectionnés par rapport aux pixels disponibles pour la classe",
+            "water_ratio":  "ratio (entre 0 et 1) de sélection des pixels d'entraînement pour la classe 'sol nu' -> ratio des pixels sélectionnés par rapport aux pixels disponibles pour la classe",
+            "vegetation_ratio":  "ratio (entre 0 et 1) de sélection des pixels d'entraînement pour la classe 'vegetation' -> ratio des pixels sélectionnés par rapport aux pixels disponibles pour la classe"
         },
         "classes_numbers": {
             Cette balise permet de spécifier le nom des classes de l'ocs fournie dans la balise data_entry>entry_options>img_ocs
@@ -201,65 +201,65 @@
         },
         "herbaceous" : {
             "img_grasscrops":  "chemin d'accès à l'image prairieVSculture avec une résolution de 50cm (la même que l'image de référence), dans le bon référentiel (idem que image de référence) et découpée sur la zone d'étude",
-            "label_prairie" : "label dans la classification 'grasscrops' de la classe prairie",
-            "label_culture" : "label dans la classification 'grasscrops' de la classe culture"
+            "label_prairie" : "label attribué à la classe prairie dans l'img_grasscrops",
+            "label_culture" : "label attribué à la classe culture dans l'img_grasscrops"
         }
     }, 
     "indicators_computation": {
         "area": {
-            "area_feature": "surface",
-            "area_type": "float",
-            "trust_area_feature": "idc_surface",
+            "area_feature": "nom attribué au champ de surface",
+            "area_type": "type du champ : float, string, etc ... --> /!\ si modification par rapport au modèle de base sur la MGN --> modifier le code associé",
+            "trust_area_feature": "nom attribué au champ de l'indice de confiance de surface",
             "trust_area_type": "float"
         },
         "height": {
-            "mean_height_feature": "h_moy",
+            "mean_height_feature": "nom attribué au champ de hauteur moyenne",
             "mean_height_type": "float",
-            "median_height_feature": "h_med",
+            "median_height_feature": "nom attribué au champ de hauteur médiane",
             "median_height_type": "float",
-            "std_height_feature": "h_et",
+            "std_height_feature": "nom attribué au champ de l'écart-type de hauteur",
             "std_height_type": "float",
-            "max_height_feature": "h_max",
+            "max_height_feature": "nom attribué au champ de hauteur max",
             "max_height_type": "float",
-            "min_height_feature": "h_min",
+            "min_height_feature": "nom attribué au champ de hauteur min",
             "min_height_type": "float",
-            "trust_height_feature": "idc_h",
+            "trust_height_feature": "nom attribué au champ de l'indice de confiance de hauteur",
             "trust_height_type": "float"
         },
         "evergreen_deciduous": {
-            "evergreen_feature": "perc_persistant",
+            "evergreen_feature": "nom attribué au champ persistant",
             "evergreen_type": "float",
-            "deciduous_feature": "perc_caduc",
+            "deciduous_feature": "nom attribué au champ caduc",
             "deciduous_type": "float",
             "ndvi_difference_thr": "Valeur seuil de différence de NDVI à partir de laquelle on considère que le pixel appartient à un couvert caduc",
-            "trust_everdecid_feature": "idc_perscadu",
+            "trust_everdecid_feature": "nom attribué au champ de l'indice de confiance de persistant/caduc",
             "trust_everdecid_type": "float"
         },
         "coniferous_deciduous": {
-            "coniferous_feature": "perc_conifere",
+            "coniferous_feature": "nom attribué au champ conifere",
             "coniferous_type": "float",
-            "deciduous_feature": "perc_feuillu",
+            "deciduous_feature": "nom attribué au champ feuillu",
             "deciduous_type": "float",
             "pir_difference_thr": "Valeur seuil de réflectance dans le PIR à partir de laquelle il s’agit d’un pixel appartenant à un feuillu",
-            "trust_conifdecid_feature": "idc_coniffeuil",
+            "trust_conifdecid_feature": "nom attribué au champ de l'indice de confiance de conifere/feuillu",
             "trust_conifdecid_type": "float"
         },
         "ground_type": {
-            "groundtype_feature": "type_sol",
+            "groundtype_feature": "nom attribué au champ type de sol",
             "groundtype_type": "varchar(100)",
             "ndvi_difference_thr": "Valeur seuil de NDVI hiver à partir de laquelle on considère que le pixel représente un couvert avec sol support de surface végétalisée",
-            "trust_groundtype_feature": "idc_typesol",
+            "trust_groundtype_feature": "nom attribué au champ de l'indice de confiance de type de sol",
             "trust_groundtype_type": "float"
         },
         "landscape" :{
-            "landscape_feature" : "paysage",
+            "landscape_feature" : "nom attribué au champ paysage",
             "landscape_type" : "varchar(100)",
-            "landscape_data" : "Image paysage qui aura été produite ou que l'opérateur aura fournit. Si vide --> elle sera produite à partir de la donnée satellitaire OU dérivé de la donnée LCZ fournit en option (cf balise entry_options)",
+            "landscape_data" : "Image paysage qui aura été produite ou que l'opérateur aura fournit (dans ce cas, doit être dans le bon référentiel 2154 + sur emprise zone étude). Si vide --> elle sera produite à partir de la donnée satellitaire OU dérivé de la donnée LCZ fournit en option (cf balise entry_options)",
             "landscape_dic_classes" : {
-                "milieu_urbanise" : "Code attribué aux pixels de ce paysage. Par défaut : 1", 
-                "voirie_et_infrastructure" : "Code attribué aux pixels de ce paysage. Par défaut : 2", 
-                "etendue_et_cours_eau" : "Code attribué aux pixels de ce paysage. Par défaut : 3", 
-                "milieu_agricole_et_forestier" : "Code attribué aux pixels de ce paysage. Par défaut : 4"
+                "milieu_urbanise" : "Code attribué aux pixels de ce paysage dans la cartographie. Par défaut : 1", 
+                "voirie_et_infrastructure" : "Code attribué aux pixels de ce paysage dans la cartographie. Par défaut : 2", 
+                "etendue_et_cours_eau" : "Code attribué aux pixels de ce paysage dans la cartographie. Par défaut : 3", 
+                "milieu_agricole_et_forestier" : "Code attribué aux pixels de ce paysage dans la cartographie. Par défaut : 4"
                 } 
         } 
     }
