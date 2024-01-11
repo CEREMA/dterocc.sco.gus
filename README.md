@@ -8,8 +8,6 @@ Ce projet a pour volonté de produire une méthodologie de cartographie détaill
 - indépendant de bases de données locales ou nationales
 - servir de base à l'évaluation de 5 services écosystémiques : sevrice de régulation du climat local, service de régulation de la qualité de l'air, service de support socio- culturels, service de continuité écologique et service d'irrigation.
 
-
-
 ## Principe
 
 Ce dépôt GITHUB présente l'ensemble des scripts python produits afin de générer automatiquement une cartographie détaillée de la végétation, à partir d'une image Pléaides THRS donnée.
