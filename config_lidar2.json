@@ -1,17 +1,17 @@
 {
     "repertory":"/mnt/RAM_disk",
-    "save_intermediate_result" : true,
-    "display_comments" : true,
+    "save_intermediate_result" : false,
+    "display_comments" : true, 
     "steps_to_run":{
         "img_assembly" : false,
         "create_DHM" : false,
         "neochannels_computation" : false,
         "data_concatenation" : false,
         "vegetation_extraction" : false,
-        "vertical_stratum_detection" : true,
+        "vertical_stratum_detection" : false,
         "vegetation_form_stratum_detection" : false,
-        "indicators_computation" : false
-    },
+        "indicators_computation" : true
+    }, 
     "data_entry": {
         "img_RVBPIR_ref": "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/0-IMAGES_SATELLITES/2022/NANCY/2022_06_14/16Bits/Assemblage_zone_etude_MGN/ORT_20220614_NADIR_16B_MGN_V2.tif",
         "img_PAN_ref":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/0-IMAGES_SATELLITES/2022/NANCY/2022_06_14/16Bits/Assemblage_zone_etude_MGN/ORT_20220614_P1AP_MGN.tif",
@@ -21,7 +21,7 @@
         "img_dsm":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNS/2022/NANCY/2022_06_14/MNSCARS/DSM_PRODUITS_BRUTS.tif",
         "entry_options" : {
             "repertory_img_assembly" : null,
-            "img_dhm": null,
+            "img_dhm": "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNH/2020/NANCY/MNH_LIDAR_MGN_2020.tif",
             "img_data_concatenation" : null,
             "img_ocs": "",
             "data_classes": {
@@ -38,15 +38,15 @@
                 "1" : ["1","2","3","4","5","6","7","8","9"],
                 "2" : ["E"],
                 "3" : ["G"],
-                "4" : ["A", "B", "C", "D", "F"]
-            }
+                "4" : ["A", "B", "C", "D", "F"]  
+            } 
         }
     },
     "database_params": {
-        "dbname": "gus",
+        "dbname": "gus2",
         "user_db": "postgres",
         "password_db": "postgres",
-        "server_db": "172.22.xxx.xx",
+        "server_db": "172.22.130.99",
         "port_number": 5432,
         "schema" : ""
     },
@@ -223,7 +223,7 @@
     },
     "segmentation" : {
         "minsize" : 10
-    },
+    }, 
     "vertical_stratum_detection": {
         "db_table" : "",
         "height_or_texture" : "texture",
@@ -251,7 +251,7 @@
             "extension_1_thr": 4,
             "extension_2_thr": 2,
             "extension_3_thr": 2.5
-        },
+        }, 
         "shrub":{
             "isolatedshrub_max_surface": 20,
             "isolatedshrub_min_surface": 3,
@@ -269,7 +269,7 @@
             "img_grasscrops":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/2-BD_EXOGENES/3-IOTA2_PRAIRIEVSCULTURE/img_ocs_prairie_culture.tif",
             "label_prairie" : 1,
             "label_culture" : 2
-        }
+        } 
     },
     "indicators_computation": {
         "area": {
@@ -322,11 +322,11 @@
             "landscape_type" : "varchar(100)",
             "landscape_data" : "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/2-RESULTATS_GUS/1-DONNEES_100PERC_SATELLITE/ProjetGUS/5-Paysages/paysages_LCZ.tif",
             "landscape_dic_classes" : {
-                "milieu_urbanise" : 1,
-                "voirie_et_infrastructure" : 2,
-                "etendue_et_cours_eau" : 3,
+                "milieu_urbanise" : 1, 
+                "voirie_et_infrastructure" : 2, 
+                "etendue_et_cours_eau" : 3, 
                 "milieu_agricole_et_forestier" : 4
-                }
-        }
-      }
+                } 
+        } 
+      }   
 }
