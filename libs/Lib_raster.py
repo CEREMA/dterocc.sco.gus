@@ -14,7 +14,7 @@
  Ce module contient un certain nombre de fonctions de bases pour réaliser des traitement sur les images raster, ils reposent tous sur les bibliothèques GDAL et OTB.
 """
 
-#Import des librairies Python 
+#Import des librairies Python
 import os,glob,sys,shutil,time, numpy
 from sklearn.cluster import KMeans
 from osgeo import gdal, osr, gdalnumeric, gdalconst
@@ -25,12 +25,12 @@ from PIL import Image
 from pylab import *
 
 #Import des librairies /libs
-from Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
-from Lib_operator import *
-from Lib_vector import getEmpriseFile
-from Lib_text import writeTextFile, appendTextFileCR
-from Lib_file import renameFile, removeFile
-from Lib_xml import parseDom, getListNodeDataDom, getListValueAttributeDom
+from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
+from libs.Lib_operator import *
+from libs.Lib_vector import getEmpriseFile
+from libs.Lib_text import writeTextFile, appendTextFileCR
+from libs.Lib_file import renameFile, removeFile
+from libs.Lib_xml import parseDom, getListNodeDataDom, getListValueAttributeDom
 
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire
@@ -1325,7 +1325,7 @@ def deletePixelsSuperpositionMasks(images_input_list, images_output_list, image_
 
             # Attribution du nom de l image nettoyée en sortie
             image_cleaned = images_output_list[idx_image]
-            
+
             if os.path.exists(image_cleaned):
                 os.remove(image_cleaned)
 
