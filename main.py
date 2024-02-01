@@ -566,14 +566,14 @@ if __name__ == "__main__":
       if debug >= 1:
         print(cyan + "\nCréation du MNH" + endC)
 
-      mnhCreation(img_mns, img_mnt, img_mnh, shp_zone , img_ref,  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_results = save_intermediate_result)
+      mnhCreation(img_mns, img_mnt, img_mnh, shp_zone , img_ref,  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_result = save_intermediate_result)
 
     # CALCUL DES NEOCANAUX
     if config["steps_to_run"]["neochannels_computation"]:
       if debug >= 1:
         print(cyan + "\nCalcul des néocanaux" + endC)
 
-      neochannelComputation(img_ref, img_ref_PAN, dic_neochannels, shp_zone, save_intermediate_results = save_intermediate_result)
+      neochannelComputation(img_ref, img_ref_PAN, dic_neochannels, shp_zone, save_intermediate_result = save_intermediate_result)
 
     dic_neochannels["mnh"] = img_mnh
 
@@ -735,7 +735,7 @@ if __name__ == "__main__":
       #Ouverture connexion
       connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
 
-      tab_veg = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, cleanfv, save_intermediate_results = save_intermediate_result, overwrite = False,  debug = debug)
+      tab_veg = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = False,  debug = debug)
 
       closeConnection(connexion)
       print(bold + green + "\nLa détection des formes végétales horizontales s'est bien déroulée. Le résultat est disponible dans la table %s et dans le(s) fichier(s) %s"%(tab_veg, output_fv_layers) + endC)

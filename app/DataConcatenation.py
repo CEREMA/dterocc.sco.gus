@@ -5,7 +5,7 @@ from libs.Lib_file import removeFile
 ###########################################################################################################################################
 # FONCTION concatenateData()                                                                                                              #
 ###########################################################################################################################################
-def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, code = "float", save_intermediate_results = False, overwrite = True):
+def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, code = "float", save_intermediate_result = False, overwrite = True):
     """
     Rôle : ajout de neocanaux (mnh, textures et/ou indices) deja calcules ou non a l'image d'origine
 
@@ -15,7 +15,7 @@ def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, cod
         img_ref : image de référence du projet
         shp_zone : emprise de la zone d'étude
         code : encodage du fichier de sortie, par défaut : float
-        save_intermediate_results : fichiers de sorties intermediaires non nettoyees, par defaut = False
+        save_intermediate_result : fichiers de sorties intermediaires non nettoyees, par defaut = False
         overwrite : si vrai, ecrase les fichiers existants, par défaut True
 
     Sortie :
@@ -29,10 +29,10 @@ def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, cod
         print(cyan + "concatenateData() : " + endC + "images_input_list : " + str(images_input_list) + endC)
         print(cyan + "concatenateData() : " + endC + "stack_image_output : " + str(stack_image_output) + endC)
         print(cyan + "concatenateData() : " + endC + "code : " + str(code) + endC)
-        print(cyan + "concatenateData() : " + endC + "save_intermediate_results : " + str(save_intermediate_results) + endC)
+        print(cyan + "concatenateData() : " + endC + "save_intermediate_result : " + str(save_intermediate_result) + endC)
         print(cyan + "concatenateData() : " + endC + "overwrite : " + str(overwrite) + endC)
 
-    images_input_list = [] 
+    images_input_list = []
     for el in images_input_dic.values():
         images_input_list.append(el)
 
@@ -89,7 +89,7 @@ def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, cod
                 os.system(cmd_superimpose)
                 cutImageByVector(shp_zone ,file_tmp_mnh, file_mnh)
                 images_input_dic["mnh"] = file_mnh
- 
+
                 elements_to_stack_list_str = ""
                 for el in images_input_dic.values():
                     elements_to_stack_list_str += " " + el

@@ -33,14 +33,14 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
         liste des fichiers d'indices radiométriques
     """
     # Utilisation de fichiers temporaires pour produire les indices radiométriques
-    repertory = os.path.dirname(dic_neochannels["img_ndvi"])
-    file_name_ndvi = os.path.splitext(os.path.basename(dic_neochannels["img_ndvi"]))[0]
-    file_name_ndwi = os.path.splitext(os.path.basename(dic_neochannels["img_ndwi"]))[0]
-    file_name_msavi = os.path.splitext(os.path.basename(dic_neochannels["img_msavi"]))[0]
-    file_name_sfs = os.path.splitext(os.path.basename(dic_neochannels["img_sfs"]))[0]
-    file_name_teinte = os.path.splitext(os.path.basename(dic_neochannels["img_teinte"]))[0]
+    repertory = os.path.dirname(dic_neochannels["ndvi"])
+    file_name_ndvi = os.path.splitext(os.path.basename(dic_neochannels["ndvi"]))[0]
+    file_name_ndwi = os.path.splitext(os.path.basename(dic_neochannels["ndwi"]))[0]
+    file_name_msavi = os.path.splitext(os.path.basename(dic_neochannels["msavi"]))[0]
+    file_name_sfs = os.path.splitext(os.path.basename(dic_neochannels["sfs"]))[0]
+    file_name_teinte = os.path.splitext(os.path.basename(dic_neochannels["teinte"]))[0]
 
-    extension = os.path.splitext(dic_neochannels["img_ndvi"])[1]
+    extension = os.path.splitext(dic_neochannels["ndvi"])[1]
 
     file_out_tmp = "_tmp"
 
@@ -78,27 +78,27 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
     #Calcul du NDVI
     createNDVI(image_input, ndvi_file_tmp)
     #Decoupe sur la zone d'étude
-    cutImageByVector(empriseVector ,ndvi_file_tmp, dic_neochannels["img_ndvi"])
+    cutImageByVector(empriseVector ,ndvi_file_tmp, dic_neochannels["ndvi"])
 
     #Calcul du MSAVI2
     createMSAVI2(image_input, msavi2_file_tmp)
     #Decoupe sur la zone d'étude
-    cutImageByVector(empriseVector ,msavi2_file_tmp, dic_neochannels["img_msavi"])
+    cutImageByVector(empriseVector ,msavi2_file_tmp, dic_neochannels["msavi"])
 
     #Calcul du NDWI2
     createNDWI2(image_input, ndwi2_file_tmp)
     #Decoupe sur la zone d'étude
-    cutImageByVector(empriseVector ,ndwi2_file_tmp, dic_neochannels["img_ndwi"])
+    cutImageByVector(empriseVector ,ndwi2_file_tmp, dic_neochannels["ndwi"])
 
     #Calcul de la teinte
     createHIS(image_input, h_file_tmp, li_choice = ["H"])[0]
     #Decoupe sur la zone d'étude
-    cutImageByVector(empriseVector ,h_file_tmp, dic_neochannels["img_teinte"])
+    cutImageByVector(empriseVector ,h_file_tmp, dic_neochannels["teinte"])
 
     #Calcul de la texture SFS
     createSFS(image_pan_input, sfs_file_tmp)
     #Decoupe sur la zone d'étude
-    cutImageByVector(empriseVector ,sfs_file_tmp, dic_neochannels["img_sfs"])
+    cutImageByVector(empriseVector ,sfs_file_tmp, dic_neochannels["sfs"])
 
     #Suppression des fichiers temporaires
     if not save_intermediate_result:
@@ -117,7 +117,7 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
         if os.path.exists(sfs_file_tmp):
             removeFile(sfs_file_tmp)
 
-    return 
+    return
 
 
 

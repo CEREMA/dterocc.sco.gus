@@ -14,7 +14,7 @@ from libs.Lib_file import removeFile
 #########################################################################
 # FONCTION mnhCreation()                                                #
 #########################################################################
-def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, epsg = 2154,  nivellement = True, format_raster = 'GTiff', format_vector = 'GPKG',  overwrite = True, save_intermediate_results = False):
+def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, epsg = 2154,  nivellement = True, format_raster = 'GTiff', format_vector = 'GPKG',  overwrite = True, save_intermediate_result = False):
     """
     Rôle : calculer le MNH à partir d'un MNS et d'un MNT en entrée
 
@@ -29,7 +29,7 @@ def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, ep
         format_raster : format de la donnée raster. Par défaut : GTiff
         format_vector : format de la donnée vecteur. Par défaut : GPKG
         overwrite : ré-écriture des fichiers. Par défaut : True
-        save_intermediate_results : sauvegarde des résultats intermédiaire. Par défaut : False
+        save_intermediate_result : sauvegarde des résultats intermédiaire. Par défaut : False
     """
     if debug >= 3:
         print(cyan + "MnhCreation() : Début de la sélection des dossiers images" + endC)
@@ -40,7 +40,7 @@ def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, ep
         print(cyan + "MnhCreation() : " + endC + "Nivellement : " + str(nivellement) + endC)
         print(cyan + "MnhCreation() : " + endC + "Format raster : " + str(format_raster) + endC)
         print(cyan + "MnhCreation() : " + endC + "Formar vecteur : " + str(format_vector) + endC)
-        print(cyan + "MnhCreation() : " + endC + "Sauvegarde des résultats intermédiaires : " + str(save_intermediate_results) + endC)
+        print(cyan + "MnhCreation() : " + endC + "Sauvegarde des résultats intermédiaires : " + str(save_intermediate_result) + endC)
 
     # Récupération de la valeur nodata du mns
     nodatavalue = getNodataValueImage(file_mns)
@@ -76,12 +76,12 @@ def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, ep
 
     # Préparation du MNS
     print(cyan + "MnhCreation : Début du preprocessing du MNS" + endC)
-    mnsPrepare(file_mns, mns_file_tmp, epsg, save_intermediate_results = save_intermediate_results)
+    mnsPrepare(file_mns, mns_file_tmp, epsg, save_intermediate_result = save_intermediate_result)
     print(cyan + "MnhCreation : Fin du preprocessing du MNS" + endC)
 
     # Préparation du MNT
     print(cyan + "MnhCreation : Début du preprocessing du MNT" + endC)
-    mntPrepare(file_mnt, mnt_file_tmp, epsg, mns_file_tmp, save_intermediate_results = save_intermediate_results)
+    mntPrepare(file_mnt, mnt_file_tmp, epsg, mns_file_tmp, save_intermediate_result = save_intermediate_result)
     print(cyan + "MnhCreation : Fin du preprocessing du MNS" + endC)
 
     # Calcul du MNH
@@ -130,7 +130,7 @@ def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, ep
         print(cyan + "MnhCreation : Fin du découpage du MNH à partir de l'emprise de la zone d'étude" + endC)
 
     # Suppression des fichiers temporaires
-    if not save_intermediate_results:
+    if not save_intermediate_result:
         if os.path.exists(mns_file_tmp):
             removeFile(mns_file_tmp)
 
@@ -153,7 +153,7 @@ def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, ep
 #########################################################################
 # FONCTION mnsPrepare()                                                 #
 #########################################################################
-def mnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 'GTiff', save_intermediate_results = False):
+def mnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 'GTiff', save_intermediate_result = False):
     """
     Rôle : prépare la donnée MNS
 
@@ -163,7 +163,7 @@ def mnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 
         epsg : epsg dans lequel on travail
         md_value : paramètre d'interpolation correspondant à la distance maximale avec laquelle l'algorithm va chercher à interpoler ses valeurs. Par défaut : 100
         format_raster : format de la donnée mns. Par défaut : GTiff
-        save_intermediate_results : variable si sauvegarde ou non des résultats intermédiaires. Par défaut : False
+        save_intermediate_result : variable si sauvegarde ou non des résultats intermédiaires. Par défaut : False
     """
 
     if os.path.exists(file_mns_out):
@@ -200,7 +200,7 @@ def mnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 
     if debug >= 3:
         print(cyan + "mnsPrepare : Fin de la reprojection et donc de la préparation du MNS" + endC)
 
-    if not save_intermediate_results:
+    if not save_intermediate_result:
         if os.path.exists(interpol_file_tmp):
             removeFile(interpol_file_tmp)
     return
@@ -208,7 +208,7 @@ def mnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 
 #########################################################################
 # FONCTION mntPrepare()                                                 #
 #########################################################################
-def mntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100, format_raster = 'GTiff', save_intermediate_results = False):
+def mntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100, format_raster = 'GTiff', save_intermediate_result = False):
     """
     Rôle : prépare la donnée MNT
 
@@ -219,7 +219,7 @@ def mntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100
         file_superimpose : fichier pour échantillonner et stacker le MNT aux mêmes dimensions que le MNS
         md_value : paramètre d'interpolation correspondant à la distance maximale avec laquelle l'algorithm va chercher à interpoler ses valeurs, par défaut : 100
         format_raster : format de la donnée mns, par défaut : GTiff
-        save_intermediate_results : variable si sauvegarde ou non des résultats intermédiaires, par défaut : False
+        save_intermediate_result : variable si sauvegarde ou non des résultats intermédiaires, par défaut : False
     """
 
     if os.path.exists(file_mnt_out):
@@ -276,7 +276,7 @@ def mntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100
     if debug >= 3:
         print(cyan + "mnsPrepare : Fin du superimpose du MNT" + endC)
 
-    if not save_intermediate_results:
+    if not save_intermediate_result:
         if os.path.exists(interpol_file_tmp):
             removeFile(interpol_file_tmp)
         if os.path.exists(reproj_file_tmp):

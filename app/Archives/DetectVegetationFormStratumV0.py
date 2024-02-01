@@ -1,13 +1,13 @@
 from libs.Lib_postgis import *
 
 ################################################
-## Classification des FV de la strate arborée ## 
+## Classification des FV de la strate arborée ##
 ################################################
 
 ###########################################################################################################################################
 # FONCTION detectInTreeStratum()                                                                                                          #
 ###########################################################################################################################################
-def detectInTreeStratum(connexion, tab_ref, output_tree_layer, connexion_fv_dic, thresholds = 0, save_results_as_layer = False, save_intermediate_results = False):
+def detectInTreeStratum(connexion, tab_ref, output_tree_layer, connexion_fv_dic, thresholds = 0, save_results_as_layer = False, save_intermediate_result = False):
     """
     Rôle : détecté les formes végétales horizontales au sein de la strate arborée
 
@@ -18,7 +18,7 @@ def detectInTreeStratum(connexion, tab_ref, output_tree_layer, connexion_fv_dic,
         connexion_fv_dic : dictionnaire contenant les paramètres de connexion (pour la sauvegarde en fin de fonction)
         thresholds : dictionnaire des seuils à appliquer, par défaut : {"seuil_surface" : 0, "seuil_compacite_1" : 0, "seuil_compacite_2" : 0, "seuil_convexite" : 0, "seuil_elongation" : 0, "val_largeur_max_alignement" : 0, "val_buffer" : 0}
         save_result_as_layer : sauvegarde ou non du résultat final en une couche vectorielle, par défaut False
-        save_intermediate_results : sauvegarde ou non des tables intermédiaires
+        save_intermediate_result : sauvegarde ou non des tables intermédiaires
 
     Sortie :
         tab_ref : nom de la table contenant les éléments de la strate arborée classés horizontalement
@@ -29,7 +29,7 @@ def detectInTreeStratum(connexion, tab_ref, output_tree_layer, connexion_fv_dic,
         thresholds = {"seuil_surface" : 30, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.7, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 7, "val_buffer" : 1}
 
     ###################################################
-    ## Préparation de la couche arborée de référence ## 
+    ## Préparation de la couche arborée de référence ##
     ###################################################
 
     #1# Récupération de la table composée uniquement des segments arborés
@@ -45,7 +45,7 @@ def detectInTreeStratum(connexion, tab_ref, output_tree_layer, connexion_fv_dic,
         print(query)
     executeQuery(connexion, query)
 
-    #Création des indexes 
+    #Création des indexes
     addSpatialIndex(connexion, 'arbore_ini')
     addIndex(connexion, 'arbore_ini', 'fid', 'idx_fid_arboreini')
 
@@ -72,7 +72,7 @@ def detectInTreeStratum(connexion, tab_ref, output_tree_layer, connexion_fv_dic,
 
     query = """
     UPDATE arbore SET strate = 'arbore' WHERE fid = fid;
-    """ 
+    """
     executeQuery(connexion, query)
 
     #Création de la colonne fv
@@ -100,7 +100,7 @@ def detectInTreeStratum(connexion, tab_ref, output_tree_layer, connexion_fv_dic,
         tab_ref = 'strate_arboree'
 
     # SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
-    if not save_intermediate_results :
+    if not save_intermediate_result :
         dropTable(connexion, 'arbore_ini')
         dropTable(connexion, 'arbore')
         dropTable(connexion, 'arbore_bststr')
@@ -448,7 +448,7 @@ def createLayerTree(connexion, tab_firstclass, tab_woodstrict, tab_lastclass):
 
 
 ##################################################
-## Classification des FV de la strate arbustive ## 
+## Classification des FV de la strate arbustive ##
 ##################################################
 
 ###########################################################################################################################################
@@ -518,7 +518,7 @@ def detectInShrubStratum(connexion, tab_ref, output_shrub_layer, connexion_fv_di
     #Ajout de la valeur 'arbore' pour toutes les entités de la table arbore
     query = """
     UPDATE arbustif SET strate = 'arbustif' WHERE fid = fid;
-    """ 
+    """
     # executeQuery(connexion, query)
 
     # # #Création de la colonne fv
@@ -801,7 +801,7 @@ def createLayerShrub(connexion, tab_firstclass, tab_woodstrict, tab_lastclass):
 
 
 #####################################
-## Fonctions indicateurs de formes ## 
+## Fonctions indicateurs de formes ##
 #####################################
 
 ########################################################################

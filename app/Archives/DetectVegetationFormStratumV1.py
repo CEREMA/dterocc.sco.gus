@@ -3,12 +3,12 @@ from libs.Lib_display import endC, bold, yellow, cyan, red
 
 #################################################
 ## Concaténation des trois tables pour obtenir ##
-## une unique cartographie                     ##  
+## une unique cartographie                     ##
 #################################################
 
-def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_results = False, overwrite = False, debug = 0):
+def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, save_intermediate_result = False, overwrite = False, debug = 0):
     """
-    Rôle : concatène les trois tables arboré, arbustive et herbacée en un unique 
+    Rôle : concatène les trois tables arboré, arbustive et herbacée en un unique
            correspondant à la carotgraphie de la végétation
 
     Paramètres :
@@ -17,15 +17,15 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         schem_tab_ref : schema et nom de la table de référence des segments végétation classés en strates verticales
         dic_thresholds : dictionnaire des seuils à attribuer en fonction de la strate verticale
         output_layers : dictionnaire des noms de fichier de sauvegarde
-        save_intermediate_results : sauvegarde ou non des fichiers/tables intermédiaires. Par défaut : False
+        save_intermediate_result : sauvegarde ou non des fichiers/tables intermédiaires. Par défaut : False
         overwrite : paramètre de ré-écriture des tables. Par défaut False
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         nom de la table contenant toutes les formes végétales
-    """ 
+    """
 
-    #Rappel du paramétrage 
+    #Rappel du paramétrage
     if debug >= 2 :
         print(cyan + "cartographyVegetation() : Début de la classification en strates verticales végétales" + endC)
         print(cyan + "cartographyVegetation : " + endC + "connexion_dic : " + str(connexion_dic) + endC)
@@ -42,7 +42,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         query ="""
         SELECT format('DROP TABLE %s.%s', table_schema, table_name)
         FROM information_schema.tables
-        WHERE table_schema = '%s'; 
+        WHERE table_schema = '%s';
         """ %('%I', '%I',connexion_stratev_dic["schema"])
         cursor = connexion.cursor()
         cursor.execute(query)
@@ -53,17 +53,17 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     #1# Formes végétales arborées
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate arborée" + endC)
-    tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["tree"], output_layers["tree"], save_intermediate_results = save_intermediate_results, debug = debug)
+    tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["tree"], output_layers["tree"], save_intermediate_result = save_intermediate_result, debug = debug)
 
     #2# Formes végétales arbustives
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate arbustive" + endC)
-    tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["schrub"], save_intermediate_results = save_intermediate_results, debug = debug)
-    
+    tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["schrub"], save_intermediate_result = save_intermediate_result, debug = debug)
+
     #3# Formes végétales herbacées
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate herbacée" + endC)
-    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layers["herbaceous"], save_intermediate_results = save_intermediate_results, debug = debug)
+    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layers["herbaceous"], save_intermediate_result = save_intermediate_result, debug = debug)
 
     #4# Concaténation des données en une seule table 'végétation'
     tab_name = 'vegetation'
@@ -75,10 +75,10 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     SELECT fid, geom, strate, fv FROM %s
     UNION
     SELECT fid, geom, strate, fv FROM %s
-    UNION 
+    UNION
     SELECT fid, geom, strate, fv FROM %s
     """ %(tab_name, tab_arbore, tab_arbustive, tab_herbace)
-    
+
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
@@ -93,24 +93,24 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
 
 
 ################################################
-## Classification des FV de la strate arborée ## 
+## Classification des FV de la strate arborée ##
 ################################################
 
 ###########################################################################################################################################
 # FONCTION detectInTreeStratum()                                                                                                          #
 ###########################################################################################################################################
-def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0, output_layer = '', save_intermediate_results = False, debug = 0):
+def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0, output_layer = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : détecté les formes végétales horizontales au sein de la strate arborée
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
         connexion_dic : dictionnaire contenant les paramètres de connexion (pour la sauvegarde en fin de fonction)
-        schem_tab_ref : schema.nom de la table correspondant aux segments de végétation 
+        schem_tab_ref : schema.nom de la table correspondant aux segments de végétation
         thresholds : dictionnaire des seuils à appliquer, par défaut : {"seuil_surface" : 0, "seuil_compacite_1" : 0, "seuil_compacite_2" : 0, "seuil_convexite" : 0, "seuil_elongation" : 0, "val_largeur_max_alignement" : 0, "val_buffer" : 0}
         output_layer : sauvegarde du résultat final en une couche vectorielle, par défaut ''
-        save_intermediate_results : sauvegarde ou non des tables intermédiaires
-        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0 
+        save_intermediate_result : sauvegarde ou non des tables intermédiaires
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         tab_arbore : nom de la table contenant les éléments de la strate arborée classés horizontalement
@@ -121,7 +121,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
         thresholds = {"seuil_surface" : 30, "seuil_compacite_1" : 0.7, "seuil_compacite_2" : 0.7, "seuil_convexite" : 0.7, "seuil_elongation" : 2.5, "val_largeur_max_alignement" : 7, "val_buffer" : 1}
 
     ###################################################
-    ## Préparation de la couche arborée de référence ## 
+    ## Préparation de la couche arborée de référence ##
     ###################################################
 
     #1# Récupération de la table composée uniquement des segments arborés
@@ -139,7 +139,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
         print(query)
     executeQuery(connexion, query)
 
-    #Création des indexes 
+    #Création des indexes
     addSpatialIndex(connexion, tab_arb_ini)
     addIndex(connexion, tab_arb_ini, 'fid', 'idx_fid_arboreini')
 
@@ -190,7 +190,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
         print(bold + "Classement des segments en 'AI', 'TA' et 'RGPTA' basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
 
     fst_class = firstClassification(connexion, tab_arb,  thresholds, 'arbore', debug = debug)
-    
+
     #4# Travaux sur les "regroupements arborés"
     if debug >= 3:
         print(bold + "Classement des segments en 'regroupements arborés'" + endC)
@@ -208,7 +208,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
         tab_arbore = 'strate_arboree'
 
     # SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
-    if not save_intermediate_results :
+    if not save_intermediate_result :
         dropTable(connexion, tab_arb_ini)
         dropTable(connexion, fst_class)
         dropTable(connexion, sec_class)
@@ -428,7 +428,7 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
-        nom de la table contenant tous les polygones de formes végétales arborées 
+        nom de la table contenant tous les polygones de formes végétales arborées
 
     """
 
@@ -475,13 +475,13 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
 
 
 ##################################################
-## Classification des FV de la strate arbustive ## 
+## Classification des FV de la strate arbustive ##
 ##################################################
 
 ###########################################################################################################################################
 # FONCTION detectInShrubStratum()                                                                                                         #
 ###########################################################################################################################################
-def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layer = '', save_intermediate_results = False, debug = 0):
+def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layer = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : détecté les formes végétales horizontales au sein de la strate arbustive
 
@@ -491,7 +491,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
         schem_tab_ref : schema.nom de la table
         dic_thresholds : dictionnaire des seuils à appliquer, par défaut : {"seuil_surface" : 0, "seuil_compacite_1" : 0, "seuil_compacite_2" : 0, "seuil_convexite" : 0, "seuil_elongation" : 0, "val_largeur_max_alignement" : 0, "val_buffer" : 0}
         output_layer : sauvegarde ou non du résultat final en une couche vectorielle, par défaut ''
-        save_intermediate_results : sauvegarde ou non des tables intermédiaires
+        save_intermediate_result : sauvegarde ou non des tables intermédiaires
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
@@ -517,8 +517,8 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
-    
-    #Ajout des indexes 
+
+    #Ajout des indexes
     addSpatialIndex(connexion, tab_arbu_ini)
     addIndex(connexion, tab_arbu_ini, 'fid', 'idx_fid_arbustifini')
 
@@ -552,7 +552,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
     query = """
     UPDATE %s SET strate = 'Au' WHERE fid = fid;
     """ %(tab_arbu)
-    
+
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
@@ -569,7 +569,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
         print(bold + "Classement des segments en 'AuI'(arbuste isolé), 'TAu'(tâche arbustive) et 'RGPTAu'(regroupement arbustif) basé sur un critère de surface et de seuil sur l'indice de compacité" + endC)
 
     fst_class = firstClassification(connexion, tab_arbu, thresholds,  'arbustif', debug = debug)
-    
+
     #4# Travaux sur les "regroupements arbustifs"
     if debug >= 3:
         print(bold + "Classement des segments en 'regroupements arbustifs'" + endC)
@@ -588,7 +588,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
         tab_arbustif = 'strate_arbustive'
 
     ## SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
-    if not save_intermediate_results :
+    if not save_intermediate_result :
         dropTable(connexion, tab_arbu_ini)
         dropTable(connexion, fst_class)
         dropTable(connexion, sec_class)
@@ -598,7 +598,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds
         print(yellow + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification des FV arbustives. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
         exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_arbustif, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
-    
+
     return tab_arbustif
 
 
@@ -660,13 +660,13 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass, debug = 0):
 
 
 ##################################################
-## Classification des FV de la strate herbacée  ## 
+## Classification des FV de la strate herbacée  ##
 ##################################################
 
 ###########################################################################################################################################
 # FONCTION detectInHerbaceousStratum()                                                                                                    #
 ###########################################################################################################################################
-def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layer = '', save_intermediate_results = False, debug = 0):
+def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_layer = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : détecter les formes végétales horizontales au sein de la strate herbacée
 
@@ -675,14 +675,14 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
         connexion_dic : dictionnaire contenant les paramètres de connexion (pour la sauvegarde en fin de fonction)
         schem_tab_ref : schema.nom de la table
         output_layer : sauvegarde ou non du résultat final en une couche vectorielle, par défaut ''
-        save_intermediate_results : sauvegarde ou non des tables intermédiaires
+        save_intermediate_result : sauvegarde ou non des tables intermédiaires
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     Sortie :
         tab_herbace : nom de la table contenant les éléments de la strate herbace classés horizontalement
     """
     ####################################################
-    ## Préparation de la couche herbacée de référence ## 
+    ## Préparation de la couche herbacée de référence ##
     ####################################################
 
     #1# Récupération de la table composée uniquement des segments herbaces
@@ -699,7 +699,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
         print(query)
     executeQuery(connexion, query)
 
-    #Création des indexes 
+    #Création des indexes
     addSpatialIndex(connexion, tab_herb_ini)
     addIndex(connexion, tab_herb_ini, 'fid', 'idx_fid_herbeini')
 
@@ -744,7 +744,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
         tab_herbace = 'herbace'
 
     # SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
-    if not save_intermediate_results :
+    if not save_intermediate_result :
         dropTable(connexion, tab_herb_ini)
 
     ## SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
@@ -753,10 +753,10 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, output_la
     else:
         exportVectorByOgr2ogr(connexion_fv_dic["dbname"], output_layer, tab_herbace, user_name = connexion_fv_dic["user_db"], password = connexion_fv_dic["password_db"], ip_host = connexion_fv_dic["server_db"], num_port = connexion_fv_dic["port_number"], schema_name = connexion_fv_dic["schema"], format_type='GPKG')
 
-    return tab_herbace  
+    return tab_herbace
 
 #####################################
-## Fonctions indicateurs de formes ## 
+## Fonctions indicateurs de formes ##
 #####################################
 
 ########################################################################
@@ -896,13 +896,13 @@ def distinctForestLineTreeShrub(connexion, tab_rpgt, seuil_larg, debug = 0):
     """
     Rôle : détecter les aligments d'arbres et les boisements
 
-    Paramètres : 
+    Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
         tab_rgpt : nom de la table de regroupement
         seuil_larg : valeur du seuil de largeur maximale d'un alignement
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
-    # Création des squelettes des FVs de regroupements 
+    # Création des squelettes des FVs de regroupements
     tab_sqt = tab_rgpt + '_squelette'
     query = """
     CREATE TABLE %s AS
@@ -948,11 +948,11 @@ def distinctForestLineTreeShrub(connexion, tab_rpgt, seuil_larg, debug = 0):
             print(bold + "    Traitement du segment route : " + endC + str(treat_seg) + "/" + str(nb_seg))
 
         id_seg = id_seg[0]
-        
+
         query = """
         SELECT id FROM %s WHERE id_seg = %s;
         """ %(tab_sgt_sqt, id_seg)
-        
+
         cursor.execute(query)
         id = cursor.fetchone()[0]
 
@@ -1056,7 +1056,7 @@ def distinctForestLineTreeShrub(connexion, tab_rpgt, seuil_larg, debug = 0):
     query_seg_perp = query_seg_perp[:-2] + ";\n" # Transformer la virgule de la dernière ligne SQL en point-virgule (pour terminer la requête)
     query_seg_perp += "ALTER TABLE ara_seg_perp ALTER COLUMN geom TYPE geometry(LINESTRING,%s) USING ST_SetSRID(geom,%s);\n" % ('2154','2154') # Mise à jour du système de coordonnées
     query_seg_perp += "CREATE INDEX IF NOT EXISTS seg_perp_geom_gist ON ara_seg_perp USING GIST (geom);\n"
-    
+
     if debug >= 3:
         print(query_seg_perp)
     executeQuery(connexion, query_seg_perp)
@@ -1086,14 +1086,14 @@ def distinctForestLineTreeShrub(connexion, tab_rpgt, seuil_larg, debug = 0):
     # Requête de récupération de longueur et largeur moyenne des formes végétales
     query = """
     CREATE TABLE long_larg_rgpt AS
-        SELECT t1.fid, public.ST_LENGTH(t2.geom) AS long, t1.largeur_moy AS larg 
+        SELECT t1.fid, public.ST_LENGTH(t2.geom) AS long, t1.largeur_moy AS larg
         FROM (
-            SELECT t2.fid, AVG(public.ST_LENGTH(t1.geom)) AS largeur_moy 
-            FROM ara_intersect_bound AS t1, %s AS t2 
-            WHERE public.ST_INTERSECTS(t2.geom, t1.geom) 
+            SELECT t2.fid, AVG(public.ST_LENGTH(t1.geom)) AS largeur_moy
+            FROM ara_intersect_bound AS t1, %s AS t2
+            WHERE public.ST_INTERSECTS(t2.geom, t1.geom)
             GROUP BY t2.fid
             ) as t1,
-            %s AS t2 
+            %s AS t2
         WHERE t1.fid = t2.fid;
     """ %(tab_rgpt, tab_sqt)
 
@@ -1101,7 +1101,7 @@ def distinctForestLineTreeShrub(connexion, tab_rpgt, seuil_larg, debug = 0):
         print(query)
     executeQuery(connexion, query)
 
-    # Ajout de la colonne de l'indicateur élongation et implémentation 
+    # Ajout de la colonne de l'indicateur élongation et implémentation
     query = """
     ALTER TABLE %s ADD COLUMN elong float;
     """ %(tab_rgpt)
