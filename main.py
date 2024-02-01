@@ -290,7 +290,7 @@ if __name__ == "__main__":
     img_ndwi = path_tmp_neochannels + os.sep + 'img_ref_NDWI.tif'
     img_msavi = path_tmp_neochannels+ os.sep + 'img_ref_MSAVI.tif'
     img_sfs = path_tmp_neochannels + os.sep + 'img_ref_SFS.tif'
-    img_teinte = path_tmp_neochannels + os.sep + 'img_ref_SFS.tif'
+    img_teinte = path_tmp_neochannels + os.sep + 'img_ref_teinte.tif'
 
     dic_neochannels = {
       "ndvi" : img_ndvi,

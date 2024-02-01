@@ -94,7 +94,7 @@ def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize
 ###########################################################################################################################################
 # FONCTION classificationVerticalStratum()                                                                                                #
 ###########################################################################################################################################
-def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = False, overwrite = False, debug = 0):
+def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = 0):
     """
     Rôle : classe les segments en trois strates : arborée, arbustive et herbacée
 
