@@ -1,6 +1,6 @@
-#Import des librairies Python 
+#Import des librairies Python
 import os, platform
-
+debug = 1
 #########################################################################
 # FONCTION getExtensionApplication()                                    #
 #########################################################################
@@ -23,7 +23,7 @@ def getExtensionApplication():
     else :
         raise NameError ("!!! Erreur le type de systeme n'a pu être déterminer : " + os_system)
     return extend_cmd
-    
+
 #########################################################################
 # CLASSE QUI SIMULE UN SWITCH CASE                                      #
 #########################################################################

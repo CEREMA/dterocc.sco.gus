@@ -26,7 +26,7 @@ from libs.Lib_display import bold,red,cyan,endC
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire
 # debug = 3
-
+debug = 1
 #########################################################################
 # FONCTION parseLxml()                                                  #
 #########################################################################

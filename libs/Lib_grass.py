@@ -13,6 +13,7 @@ from libs.Lib_raster import getPixelSizeImage, getProjectionImage, getEmpriseIma
 
 # debug = 3
 
+debug = 1
 # ATTENTION : pour appeler GRASS, il faut avoir mis à jour le fichier .profile (/home/scgsi/.profile). Ajouter à la fin du fichier (attention au numéro de version de GRASS qui peut changer, ici 7.2) :
 '''
 # Paramétrages GRASS :
@@ -30,7 +31,7 @@ export PYTHONPATH="$PYTHONPATH:$GISBASE/etc/python"
 def connectionGrass(gisbase, gisdb, location="", mapset="PERMANENT", projection=2154) :
     """
     Rôle : Permet l'initialisation si la base GRASS avant création ou la connexion à une base GRASS déjà créer
-   
+
     Paramètres :
        gisbase : variable d'environnement de GRASS. Par défaut, os.environ['GISBASE'].
        gisdb : nom de la géodatabase, 1er niveau. Par défaut, "GRASS_database".
@@ -398,8 +399,8 @@ def rasterStatsV(image_input, vector_input, stats_list, repository):
     #       image_input : fichier raster de calcul des statistiques
     #       vector_input : fichier vecteur sur lequel on calcul les statistiques de l'image_input
     #       vector_output : fichier vecteur contenant les polygones avec les statistiques calculées en attributs
-    #       stats_list : liste des statistiques à calcule. Par défaut : 
-    #       repository : répertoire de stockage des données intermédiaires. Par défaut : '' 
+    #       stats_list : liste des statistiques à calcule. Par défaut :
+    #       repository : répertoire de stockage des données intermédiaires. Par défaut : ''
     #
     #   Sortie :
     #       vector_output : chemin du fichier vecteur contenant les polygones avec les statistiques calculées en attributs
@@ -428,7 +429,7 @@ def rasterStatsV(image_input, vector_input, stats_list, repository):
     initializeGrass(repository, xmin, xmax, ymin, ymax, pixel_size_x, pixel_size_y, projection=epsg)
 
     # PARAMETRAGE
-    name_raster = filename_r 
+    name_raster = filename_r
     name_vector = filename_v
 
     # Import des raster

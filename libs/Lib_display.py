@@ -12,6 +12,8 @@ else :
     from PyQt5 import QtGui
     from tkinter import *
 
+debug = 1
+
 ##############################################################
 # MISE EN FORME DES MESSAGES DANS LA CONSOLE                 #
 ##############################################################

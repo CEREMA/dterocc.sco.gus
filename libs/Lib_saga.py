@@ -26,8 +26,8 @@ from libs.Lib_file import cleanTempData, deleteDir
 # debug = 3 : affichage maximum de commentaires lors de l'exécution du script. Intermédiaire : affichage intermédiaire
 
 # debug = 3
-
-# ATTENTION : pour appeler SAGA, il faut avoir installé l'outil SAGA sur la machine hôte
+debug = 1
+# ATTENTIONdebug = 1 : pour appeler SAGA, il faut avoir installé l'outil SAGA sur la machine hôte
 
 #########################################################################
 # FONCTION importGtiff2Sgrd()                                           #

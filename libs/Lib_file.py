@@ -5,7 +5,7 @@ from osgeo import ogr
 #Import des librairies /libs
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 
-# debug = 1
+debug = 1
 
 #########################################################################
 # FONCTION cleanTempData()                                              #

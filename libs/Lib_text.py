@@ -36,7 +36,7 @@ from libs.Lib_math import findPositionList
 # debug = 0 : affichage minimum de commentaires lors de l'execution du script
 # debug = 3 : affichage maximum de commentaires lors de l'execution du script. Intermédiaire : affichage intermédiaire
 # debug = 2
-
+debug = 1
 #########################################################################
 # FONCTION readTextFileBySeparator()                                    #
 #########################################################################
