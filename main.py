@@ -566,14 +566,14 @@ if __name__ == "__main__":
       if debug >= 1:
         print(cyan + "\nCréation du MNH" + endC)
 
-      mnhCreation(img_mns, img_mnt, img_mnh, shp_zone , img_ref,  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_result = save_intermediate_result)
+      mnhCreation(img_mns, img_mnt, img_mnh, shp_zone , img_ref,  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_result=save_intermediate_result)
 
     # CALCUL DES NEOCANAUX
     if config["steps_to_run"]["neochannels_computation"]:
       if debug >= 1:
         print(cyan + "\nCalcul des néocanaux" + endC)
 
-      neochannelComputation(img_ref, img_ref_PAN, dic_neochannels, shp_zone, save_intermediate_result = save_intermediate_result)
+      neochannelComputation(img_ref, img_ref_PAN, dic_neochannels, shp_zone, save_intermediate_result=save_intermediate_result, debug=debug)
 
     dic_neochannels["mnh"] = img_mnh
 
@@ -583,7 +583,7 @@ if __name__ == "__main__":
       if debug >= 1:
         print(cyan + "\nConcaténation des néocanaux" + endC)
 
-      concatenateData(dic_neochannels, img_stack, img_ref, shp_zone)
+      concatenateData(dic_neochannels, img_stack, img_ref, shp_zone, debug=debug)
 
     else :
       if config["data_entry"]["entry_options"]["img_data_concatenation"] != "" :

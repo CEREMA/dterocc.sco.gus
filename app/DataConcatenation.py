@@ -5,7 +5,7 @@ from libs.Lib_file import removeFile
 ###########################################################################################################################################
 # FONCTION concatenateData()                                                                                                              #
 ###########################################################################################################################################
-def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, code = "float", save_intermediate_result = False, overwrite = True):
+def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, code = "float", save_intermediate_result = False, overwrite = True, debug = 0):
     """
     Rôle : ajout de neocanaux (mnh, textures et/ou indices) deja calcules ou non a l'image d'origine
 
@@ -17,6 +17,7 @@ def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, cod
         code : encodage du fichier de sortie, par défaut : float
         save_intermediate_result : fichiers de sorties intermediaires non nettoyees, par defaut = False
         overwrite : si vrai, ecrase les fichiers existants, par défaut True
+        debug : niveau de debug pour l'affichage des commentaires
 
     Sortie :
         le nom complet de l'image de sortie
@@ -31,6 +32,7 @@ def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, cod
         print(cyan + "concatenateData() : " + endC + "code : " + str(code) + endC)
         print(cyan + "concatenateData() : " + endC + "save_intermediate_result : " + str(save_intermediate_result) + endC)
         print(cyan + "concatenateData() : " + endC + "overwrite : " + str(overwrite) + endC)
+        print(cyan + "concatenateData() : " + endC + "debug : " + str(debug) + endC)
 
     images_input_list = []
     for el in images_input_dic.values():
