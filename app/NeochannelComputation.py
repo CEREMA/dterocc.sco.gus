@@ -92,7 +92,7 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
 
     #Calcul de la teinte
     createHIS(image_input, h_file_tmp, li_choice = ["H"], debug=debug)
-
+    h_file_tmp = os.path.splitext(h_file_tmp)[0]  + "_H.tif"
     #Decoupe sur la zone d'étude
     cutImageByVector(empriseVector ,h_file_tmp, dic_neochannels["teinte"])
 
@@ -299,9 +299,9 @@ def createHIS(image_input, image_HIS_output, li_choice = ["H","I","S"], channel_
     filename = os.path.splitext(os.path.basename(image_input))[0]
 
     # Creer les images Rouge, Vert, Bleu
-    fp_red = repository+'/'+filename+"_R.tif"
-    fp_green =  repository+'/'+filename+"_V.tif"
-    fp_blue = repository+'/'+filename+"_B.tif"
+    fp_red = repository + os.sep + filename + "_R.tif"
+    fp_green =  repository + os.sep + filename + "_V.tif"
+    fp_blue = repository + os.sep + filename + "_B.tif"
     # Rouge
     command_red = "gdal_translate -b 1 %s %s" %(image_input, fp_red)
     os.system(command_red)
