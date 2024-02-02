@@ -656,6 +656,7 @@ def getProjectionImage(image_raster):
     """
 
     epsg = 0
+    srs = None
     dataset = gdal.Open(image_raster, GA_ReadOnly)
     if dataset is not None:
         srs = osr.SpatialReference()
