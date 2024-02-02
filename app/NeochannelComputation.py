@@ -16,7 +16,7 @@ PRECISION = 0.0000001
 #########################################################################
 # FONCTION neochannelComputation()                                      #
 #########################################################################
-def neochannelComputation(image_input, image_pan_input, dic_neochannels, empriseVector, imagechannel_order = ["Red","Green","Blue","NIR"], codage="float",save_intermediate_result = False, debug = 0):
+def neochannelComputation(image_input, image_pan_input, dic_neochannels, empriseVector, imagechannel_order = ["Red","Green","Blue","NIR"], codage="float",save_intermediate_result = False, overwrite = False, debug = 0):
     """
     Rôle : Cette fonction permet de créer l'ensemble des indices radiométriques
 
@@ -28,6 +28,7 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
            channel_order : liste d'ordre des bandes de l'image. Par défaut : ["Red","Green","Blue","NIR"]
            codage : type de codage du fichier de sortie. Par défaut : float
            save_intermediate_result : sauvegarde des résultats intermédiaire. Par défaut : False
+           overwrite : paramètre de ré-écriture des fichiers. Par défaut : False
            debug : niveau de debug pour l'affichage des commentaires
 
     Sortie :
@@ -74,6 +75,19 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
 
     if os.path.exists(sfs_file_tmp):
         os.remove(sfs_file_tmp)
+
+    #Nettoyage des Fichiers de sortis
+    if overwrite:
+        if os.path.exists(dic_neochannels["ndvi"]):
+            os.remove(dic_neochannels["ndvi"])
+        if os.path.exists(dic_neochannels["msavi"]):
+            os.remove(dic_neochannels["msavi"])
+        if os.path.exists(dic_neochannels["ndwi"]):
+            os.remove(dic_neochannels["ndwi"])
+        if os.path.exists(dic_neochannels["teinte"]):
+            os.remove(dic_neochannels["teinte"])
+        if os.path.exists(dic_neochannels["sfs"]):
+            os.remove(dic_neochannels["sfs"])
 
     #Calcul du NDVI
     createNDVI(image_input, ndvi_file_tmp, debug=debug)

@@ -268,11 +268,6 @@ if __name__ == "__main__":
       "ndvi_difference_groundtype_thr" : config["indicators_computation"]["ground_type"]["ndvi_difference_thr"]
     }
 
-
-
-
-
-
     #######################################################
     # CRÉATION DES CHEMINS D'ACCES DANS LE DOSSIER PROJET #
     #                 AUX FICHIERS CRÉÉS                  #
@@ -326,7 +321,6 @@ if __name__ == "__main__":
         "eau" : eau_img,
         "vegetation" : vegetation_img
       }
-
 
       #Paramètres création des échantillons d'apprentissage
 
@@ -573,7 +567,7 @@ if __name__ == "__main__":
       if debug >= 1:
         print(cyan + "\nCalcul des néocanaux" + endC)
 
-      neochannelComputation(img_ref, img_ref_PAN, dic_neochannels, shp_zone, save_intermediate_result=save_intermediate_result, debug=debug)
+      neochannelComputation(img_ref, img_ref_PAN, dic_neochannels, shp_zone, save_intermediate_result=save_intermediate_result, overwrite = True, debug=debug)
 
     dic_neochannels["mnh"] = img_mnh
 
@@ -622,7 +616,7 @@ if __name__ == "__main__":
       if debug >= 1:
         print(cyan + "\nNettoyage des échantillons d'apprentissage" + endC)
 
-      cleanAllSamples(dic_img_cleansamples, correction_images_dic, extension_raster = ".tif", save_results_intermediate = save_intermediate_result, overwrite = False)
+      cleanAllSamples(dic_img_cleansamples, correction_images_dic, extension_raster = ".tif", save_results_intermediate = save_intermediate_result, overwrite = True)
 
       #4.Nettoyage recouvrement des échantillons d'apprentissage
       if debug >= 1:
@@ -681,7 +675,7 @@ if __name__ == "__main__":
       if debug >= 1:
         print(cyan + "\nSegmentation de l'image de végétation " + endC)
 
-      segmentationImageVegetetation(img_ref, img_classif_filtered, sgts_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = save_intermediate_result, overwrite = False)
+      segmentationImageVegetetation(img_ref, img_classif_filtered, sgts_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = save_intermediate_result, overwrite = True)
 
       #2.Classification en strates verticales
       if debug >= 1:
@@ -699,7 +693,7 @@ if __name__ == "__main__":
       tab_ref_stratesv = 'segments_vegetation'
       schem_tab_ref_stratesv = 'data_final.segments_vegetation'
 
-      tab_ref_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = save_intermediate_result, overwrite = False, debug = debug)
+      tab_ref_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = save_intermediate_result, overwrite = True, debug = debug)
 
       closeConnection(connexion)
 
@@ -735,7 +729,7 @@ if __name__ == "__main__":
       #Ouverture connexion
       connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
 
-      tab_veg = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = False,  debug = debug)
+      tab_veg = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = True,  debug = debug)
 
       closeConnection(connexion)
       print(bold + green + "\nLa détection des formes végétales horizontales s'est bien déroulée. Le résultat est disponible dans la table %s et dans le(s) fichier(s) %s"%(tab_veg, output_fv_layers) + endC)

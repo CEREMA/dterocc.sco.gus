@@ -13,12 +13,12 @@
         "indicators_computation" : false
     },
     "data_entry": {
-        "img_RVBPIR_ref": "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/0-IMAGES_SATELLITES/2022/NANCY/2022_06_14/16Bits/Assemblage_zone_etude_MGN/ORT_20220614_NADIR_16B_MGN_v2.tif",
-        "img_PAN_ref":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/0-IMAGES_SATELLITES/2022/NANCY/2022_06_14/16Bits/Assemblage_zone_etude_MGN/ORT_20220614_P1AP_MGN.tif",
+        "img_RVBPIR_ref": "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/0-IMAGES_SATELLITES/2022/NANCY/2022_06_14/16Bits/Assemblage_zone_etude_MGN/ORT_20220614_NADIR_16B_MGN_v2.tif",
+        "img_PAN_ref":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/0-IMAGES_SATELLITES/2022/NANCY/2022_06_14/16Bits/Assemblage_zone_etude_MGN/ORT_20220614_P1AP_MGN.tif",
         "studyzone_shp":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/0-EMPRISES_ETUDE/NANCY/Zone_Test_Emma.shp",
-        "img_winter":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/0-IMAGES_SATELLITES/2021/NANCY/2021_12_21/16Bits/Assemblage_zone_etude_MGN/ORT_20211221_NADIR_16B_MGN.tif",
+        "img_winter":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/0-IMAGES_SATELLITES/2021/NANCY/2021_12_21/16Bits/Assemblage_zone_etude_MGN/ORT_20211221_NADIR_16B_MGN.tif",
         "img_dtm":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNT/2021/NANCY/MNT_RGEALTI/",
-        "img_dsm":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNS/2022/NANCY/2022_06_14/MNSCARS/DSM_PRODUITS_BRUTS.tif",
+        "img_dsm":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/1-DATAS/1-DONNEES_ELEVATION/MNS/2022/NANCY/2022_06_14/MNSCARS/DSM_PRODUITS_BRUTS.tif",
         "entry_options" : {
             "repertory_img_assembly" : null,
             "img_dhm": "/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/mnh.tif",
