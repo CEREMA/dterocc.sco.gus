@@ -137,7 +137,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
         SELECT format('DROP TABLE %s.%s', table_schema, table_name)
         FROM information_schema.tables
         WHERE table_schema = '%s';
-        """ %('%I', '%I',connexion_stratev_dic["schema"])
+        """ %('%I', '%I',connexion_dic["schema"])
         cursor = connexion.cursor()
         cursor.execute(query)
         tables_schema = cursor.fetchall()
