@@ -126,7 +126,7 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
         print(cyan + "classificationVerticalStratum : " + endC + "format_type : " + str(format_type) + endC)
         print(cyan + "classificationVerticalStratum : " + endC + "save_intermediate_result : " + str(save_intermediate_result) + endC)
         print(cyan + "classificationVerticalStratum : " + endC + "overwrite : " + str(overwrite) + endC)
-        print(cyan + "/nclassificationVerticalStratum : /nSortie :" + endC + "files_output : " + str(output_layers) + endC)
+        print(cyan + "classificationVerticalStratum : " + endC + "files_output : " + str(output_layers) + endC)
 
     #####################################################################
     ## Création et export en base de la couche des segments végétation ##
