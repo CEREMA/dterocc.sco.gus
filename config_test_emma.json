@@ -6,7 +6,7 @@
         "img_assembly" : false,
         "create_DHM" : false,
         "neochannels_computation" : true,
-        "data_concatenation" : false,
+        "data_concatenation" : true,
         "vegetation_extraction" : false,
         "vertical_stratum_detection" : true,
         "vegetation_form_stratum_detection" : false,
@@ -23,7 +23,7 @@
             "repertory_img_assembly" : null,
             "img_dhm": "/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/mnh.tif",
             "img_data_concatenation" : null,
-            "img_ocs": "",
+            "img_ocs": "/mnt/RAM_disk/ProjetGUS/1-ExtractionVegetation/img_classification_filtered.tif",
             "data_classes": {
                 "createsamples" : true,
                 "build": null,

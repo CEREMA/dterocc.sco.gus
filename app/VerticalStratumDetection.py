@@ -4,6 +4,7 @@ import os,sys,glob
 #Import des librairies de /libs
 from libs.Lib_display import bold,red,yellow,cyan,endC
 from libs.CrossingVectorRaster import statisticsVectorRaster
+from libs.Lib_raster import rasterizeVector
 from libs.Lib_postgis import readTable, executeQuery, addColumn, addUniqId, addIndex, addSpatialIndex, dropTable, dropColumn, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
 
 ###########################################################################################################################################
@@ -42,7 +43,7 @@ def vegetationMask(img_input, img_output, num_class = {"bati" : 1, "route" : 2, 
 ###########################################################################################################################################
 # FONCTION segmentationImageVegetetation()                                                                                                #
 ###########################################################################################################################################
-def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize = 10, num_class = {"bati" : 1, "route" : 2, "sol nu" : 3, "eau" : 4, "vegetation" : 5}, format_vector='GPKG', save_intermediate_result = True, overwrite = False):
+def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize = 10, num_class = {"bati" : 1, "route" : 2, "sol nu" : 3, "eau" : 4, "vegetation" : 5}, format_vector='GPKG', save_intermediate_result = True, overwrite = True):
     """
     Rôle : segmente l'image en entrée à partir d'une fonction OTB_Segmentation MEANSHIFT
 
@@ -94,13 +95,15 @@ def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize
 ###########################################################################################################################################
 # FONCTION classificationVerticalStratum()                                                                                                #
 ###########################################################################################################################################
-def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = 0):
+def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_layers, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = 0):
     """
     Rôle : classe les segments en trois strates : arborée, arbustive et herbacée
 
     Paramètres :
+
         connexion : correspond à la variable de connexion à la base de données
         connexion_dic : dictionnaire des paramètres de connexion selon le modèle : {"dbname" : 'projetgus', "user_db" : 'postgres', "password_db" : 'postgres', "server_db" : 'localhost', "port_number" : '5432', "schema" : ''}
+        img_ref : image de référence Pléiades rvbpir
         output_layers : dictionnaire des couches vectorielles de sortie composé de quatres chemins : une pour chaque strate et un contenant toutes les strates
         sgts_input : fichier vecteur de segmentation
         raster_dic : dictionnaire associant le type de donnée récupéré avec le fichier raster contenant les informations, par exemple : {"mnh" : filename}
@@ -475,9 +478,9 @@ def classificationVerticalStratum(connexion, connexion_dic, output_layers, sgts_
         repertory_output = os.path.dirname(output_layers["output_stratesv"])
         filename =  os.path.splitext(os.path.basename(output_layers["output_stratesv"]))[0]
         raster_output = repertory_output + os.sep + filename  + '.tif'
-        rasterizeVector(output_layers["output_stratesv"], raster_output,  output_layers["img_ref"], 'fv_r', codage="uint8", ram_otb=0)
+        rasterizeVector(output_layers["output_stratesv"], raster_output,  img_ref, 'fv_r', codage="uint8", ram_otb=0)
         #suppression de la colonne non utile "strate_r"
-        dropColumn(connexion, tab_name, 'strate_r')
+        dropColumn(connexion, tab_ref, 'strate_r')
     return tab_ref
 
 ###########################################################################################################################################

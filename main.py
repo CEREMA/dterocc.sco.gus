@@ -5,6 +5,7 @@ from osgeo import ogr ,osr
 
 #Librairies /libs
 from libs.Lib_display import bold,red,green,cyan,endC
+from libs.Lib_raster import cutImageByVector
 from libs.Lib_postgis import createDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema
 
 #Applications /apps
@@ -18,7 +19,7 @@ from app.VegetationFormStratumDetection import cartographyVegetation
 from app.DhmCreation import mnhCreation
 from app.NeochannelComputation import neochannelComputation
 from app.DataConcatenation import concatenateData
-from app.ImagesAssembly import assemblyRasters
+from app.ImagesAssembly import assemblyRasters, assemblyImages
 from app.IndicatorsComputation import createAndImplementFeatures
 
 if __name__ == "__main__":
@@ -155,7 +156,6 @@ if __name__ == "__main__":
 
     if not os.path.exists(path_landscape):
       os.makedirs(path_landscape)
-
 
     ########################################
     #   RENSEIGNEMENT DES PARAMETRES ET    #
@@ -555,6 +555,16 @@ if __name__ == "__main__":
 
       assemblyImages(repertory, img_tiles_repertory, img_ref, no_data_value, epsg, save_results_intermediate = save_intermediate_result, ext_txt = '.txt',  format_raster = 'GTiff')
 
+    # Decoupage de l'image sur la zone d'etude (Gilles)
+    SUFFIX_CUT = "_cut"
+    img_ref_cut = os.path.splitext(img_ref)[0] + SUFFIX_CUT + os.path.splitext(img_ref)[1]
+    cutImageByVector(shp_zone ,img_ref, img_ref_cut)
+    img_ref = img_ref_cut
+    img_ref_PAN_cut = os.path.splitext(img_ref_PAN)[0] + SUFFIX_CUT + os.path.splitext(img_ref_PAN)[1]
+    cutImageByVector(shp_zone ,img_ref_PAN, img_ref_PAN_cut)
+    img_ref_PAN = img_ref_PAN_cut
+
+
     # MNH CREATION
     if config["steps_to_run"]["create_DHM"]:
       if debug >= 1:
@@ -568,6 +578,10 @@ if __name__ == "__main__":
         print(cyan + "\nCalcul des néocanaux" + endC)
 
       neochannelComputation(img_ref, img_ref_PAN, dic_neochannels, shp_zone, save_intermediate_result=save_intermediate_result, overwrite = True, debug=debug)
+
+    img_mnh_cut = os.path.splitext(img_mnh)[0] + SUFFIX_CUT + os.path.splitext(img_mnh)[1]
+    cutImageByVector(shp_zone, img_mnh, img_mnh_cut)
+    img_mnh = img_mnh_cut
 
     dic_neochannels["mnh"] = img_mnh
 
@@ -592,8 +606,12 @@ if __name__ == "__main__":
         print(bold + cyan + "\n*1* EXTRACTION DE LA VÉGÉTATION" + endC)
     if not config["steps_to_run"]["vegetation_extraction"]:
       if config["data_entry"]["entry_options"]["img_ocs"] != "":
-        img_classification_filtered = config["data_entry"]["entry_options"]["img_ocs"]
-        print(cyan + "\nLe fichier image classifié est fourni et disponible via le chemin " + img_classification_filtered + endC)
+        img_classif_filtered = config["data_entry"]["entry_options"]["img_ocs"]
+        print(cyan + "\nLe fichier image classifié est fourni et disponible via le chemin " + img_classif_filtered + endC)
+
+        img_classif_filtered_cut = os.path.splitext(img_classif_filtered)[0] + SUFFIX_CUT + os.path.splitext(img_classif_filtered)[1]
+        cutImageByVector(shp_zone, img_classif_filtered, img_classif_filtered_cut)
+        img_classif_filtered = img_classif_filtered_cut
 
     else :
       if debug >= 1:
@@ -648,7 +666,8 @@ if __name__ == "__main__":
       #7.Application du filtre majoritaire
       if debug >= 1:
         print(cyan + "\nApplication du filtre majoritaire" + endC)
-
+      print("DEGUG")
+      exit()
       filterImageMajority(img_classif, img_classif_filtered, umc_pixels = 8, save_results_intermediate = save_intermediate_result)
 
 
@@ -693,7 +712,7 @@ if __name__ == "__main__":
       tab_ref_stratesv = 'segments_vegetation'
       schem_tab_ref_stratesv = 'data_final.segments_vegetation'
 
-      tab_ref_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = save_intermediate_result, overwrite = True, debug = debug)
+      tab_ref_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, img_ref, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = save_intermediate_result, overwrite = True, debug = debug)
 
       closeConnection(connexion)
 

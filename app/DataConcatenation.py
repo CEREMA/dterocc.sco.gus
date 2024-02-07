@@ -27,7 +27,7 @@ def concatenateData(images_input_dic, stack_image_output, img_ref, shp_zone, cod
 
     if debug >= 3:
         print(bold + green + "concatenateData() : fonction de concaténtaion des images en une unique image à plusieurs bandes." + endC)
-        print(cyan + "concatenateData() : " + endC + "images_input_list : " + str(images_input_list) + endC)
+        print(cyan + "concatenateData() : " + endC + "images_input_dic : " + str(images_input_dic) + endC)
         print(cyan + "concatenateData() : " + endC + "stack_image_output : " + str(stack_image_output) + endC)
         print(cyan + "concatenateData() : " + endC + "code : " + str(code) + endC)
         print(cyan + "concatenateData() : " + endC + "save_intermediate_result : " + str(save_intermediate_result) + endC)
