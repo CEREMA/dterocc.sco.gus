@@ -1,6 +1,11 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#!/usr/bin/python
-#Import des librairies Python
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+# Import des librairies Python
 import os, platform
 
 import six

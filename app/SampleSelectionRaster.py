@@ -1,8 +1,15 @@
-#Import des librairies Python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+#I mport des librairies Python
 import os, sys, glob, copy, random, math, threading
 from osgeo import gdal, ogr
 
-#Import des librairies /libs
+# Import des librairies /libs
 from libs.Lib_raster import identifyPixelValues, countPixelsOfValue, getRawDataImage, getGeometryImage, getEmpriseImage, getPixelWidthXYImage, getProjectionImage
 from libs.Lib_vector import createPointsFromCoordList, getAttributeValues, getAttributeNameList, createEmpriseShapeReduced, fusionVectors
 from libs.Lib_text import writeTextFile, appendTextFileCR
@@ -325,7 +332,7 @@ def selectSamples(image_input_list, sample_image_input, vector_output, table_sta
 
         if debug >= 3:
             print(cyan + "selectSamples() : " + bold + green + "Start extraction des points d'echantillon dans l'image..." + endC)
-        
+
         print(len(image_input_list))
         # Cas ou l'on a une seule image
         if len(image_input_list) == 1:

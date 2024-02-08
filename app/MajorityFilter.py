@@ -1,7 +1,14 @@
-#Import des librairies python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+# Import des librairies python
 import os,sys,glob
 
-#Import des librairies de /libs
+# Import des librairies de /libs
 from libs.Lib_display import bold,red,green,cyan,endC
 from libs.Lib_file import removeFile
 

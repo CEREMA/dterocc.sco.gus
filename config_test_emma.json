@@ -5,11 +5,11 @@
     "steps_to_run":{
         "img_assembly" : false,
         "create_DHM" : false,
-        "neochannels_computation" : true,
-        "data_concatenation" : true,
+        "neochannels_computation" : false,
+        "data_concatenation" : false,
         "vegetation_extraction" : false,
-        "vertical_stratum_detection" : true,
-        "vegetation_form_stratum_detection" : false,
+        "vertical_stratum_detection" : false,
+        "vegetation_form_stratum_detection" : true,
         "indicators_computation" : false
     },
     "data_entry": {

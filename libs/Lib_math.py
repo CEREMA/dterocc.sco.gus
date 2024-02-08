@@ -1,7 +1,14 @@
-#Import des librairies Python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+# Import des librairies Python
 import sys, math
 
-#Import des librairies /libs
+# Import des librairies /libs
 from libs.Lib_display import bold,black,red,green,yellow,blue,magenta,cyan,endC
 debug = 1
 #########################################################################

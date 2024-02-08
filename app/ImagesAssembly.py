@@ -15,14 +15,12 @@ from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 
-#Import des librairies de /libs
-
+# Import des librairies de /libs
 from libs.Lib_display import bold,black,red,cyan,endC
 from libs.Lib_vector import getEmpriseFile, createEmpriseShapeReduced
 from libs.Lib_raster import getPixelWidthXYImage, getProjectionImage, updateReferenceProjection, cutImageByVector, getNodataValueImage, getDataTypeImage
 from libs.Lib_file import removeFile
 from libs.Lib_text import appendTextFileCR
-
 
 #########################################################################
 # FONCTION assembleRasters()                                            #

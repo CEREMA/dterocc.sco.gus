@@ -1,5 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-from libs.Lib_raster import  deletePixelsSuperpositionMasks, mergeListRaster, updateReferenceProjection 
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+from libs.Lib_raster import  deletePixelsSuperpositionMasks, mergeListRaster, updateReferenceProjection
 import os
 
 ###########################################################################################################################################
@@ -19,15 +25,15 @@ def cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merg
 
     length_mask = len(mask_samples_macro_input_list)
     images_mask_cleaned_list = []
-    images_list_out =[] 
+    images_list_out =[]
     temporary_files_list = []
     repertory_output_tmp_list = []
     extension_raster =  os.path.splitext(image_samples_merged_output)[1]
 
-    #Le repertoire intermédiaire est situé dans le dossier où se sauvegarde le résultat 
+    #Le repertoire intermédiaire est situé dans le dossier où se sauvegarde le résultat
     repertory_base_output = os.path.dirname(image_samples_merged_output)
     filename = os.path.splitext(os.path.basename(image_samples_merged_output))[0]
-    
+
     for macroclass_id in range(length_mask):
 
         repertory_output = repertory_base_output + os.sep + os.path.splitext(os.path.basename(mask_samples_macro_input_list[macroclass_id]))[0]
@@ -40,7 +46,7 @@ def cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merg
         images_mask_cleaned_list.append(image_mask_cleaned)
         image_out = repertory_output + os.sep + filename + "cleaned" + extension_raster
         images_list_out.append(image_out)
-        
+
 
 
     # Suppression des pixels possédant la même valeur binaire sur plusieurs images
@@ -52,7 +58,7 @@ def cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merg
         images_mask_cleaned_list = mask_samples_macro_input_list
 
     #Attribution des valeurs de label aux masques de chaque classe pour les pixels valant 1
-    length = len(images_mask_cleaned_list)  
+    length = len(images_mask_cleaned_list)
     for img in range(len(images_mask_cleaned_list)):
         command = "otbcli_BandMath -il %s -out %s -exp '(im1b1==1)?%s:0'" %(images_mask_cleaned_list[img],images_list_out[img], str(img+1))
         exitCode = os.system(command)

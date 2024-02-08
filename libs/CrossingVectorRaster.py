@@ -1,8 +1,15 @@
-#Import des librairies Python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+# Import des librairies Python
 import os,sys,glob,argparse,shutil
 from osgeo import ogr
 
-#Import des librairie de /libs
+# Import des librairie de /libs
 from libs.rasterstats2 import raster_stats
 from libs.Lib_display import bold,red,green,yellow,cyan,endC,displayIHM
 from libs.Lib_raster import getPixelSizeImage, getEmpriseImage, identifyPixelValues
@@ -119,7 +126,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
         # Suppression de la valeur no date à 0
         if 0 in class_label_dico :
             del class_label_dico[0]
-    
+
 
     # ETAPE 2/4 : CREATION DES COLONNES DANS LE FICHIER SHAPE
     if debug >= 2:
@@ -458,7 +465,7 @@ def statisticsVectorRaster(image_input, vector_input, vector_output, band_number
 
     # Mise à jour du Log
     ending_event = "statisticsVectorRaster() : Compute statistic crossing ending : "
-    
+
 
     return
 

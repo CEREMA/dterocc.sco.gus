@@ -2,6 +2,12 @@
 # Librairies Python
 import sys,os, json, re
 from osgeo import ogr ,osr
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
 
 # Librairies /libs
 from libs.Lib_display import bold,red,green,cyan,endC

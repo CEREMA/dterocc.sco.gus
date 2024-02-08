@@ -1,9 +1,16 @@
-#Import des librairies Python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+# Import des librairies Python
 import grass.script as grass
 import grass.script.setup as gsetup
 import sys,os,shutil,glob, time, subprocess
 
-#Import des librairies de /libs
+# Import des librairies de /libs
 from libs.Lib_display import bold,red,green,blue,cyan,endC
 from libs.Lib_file import deleteDir
 from libs.Lib_raster import getPixelSizeImage, getProjectionImage, getEmpriseImage, getPixelWidthXYImage

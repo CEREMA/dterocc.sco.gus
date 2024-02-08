@@ -1,13 +1,20 @@
-#Import des librairies python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+# Import des librairies python
 import os,sys, shutil
 
-#Import des librairies de /libs
+# Import des librairies de /libs
 from libs.Lib_display import bold, yellow, red, green,endC
 from libs.Lib_file import removeFile
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_postgis import addColumn, dropColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, addSpatialIndex, addUniqId
 
-#Import des applications de /app
+# Import des applications de /app
 from app.LandscapeDetection import landscapeDetection
 
 ###########################################################################################################################################

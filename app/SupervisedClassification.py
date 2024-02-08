@@ -1,7 +1,14 @@
-#Import des librairie de Python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+# Import des librairie de Python
 import os,sys,time
 
-#Import des librairies /libs
+# Import des librairies /libs
 from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_operator import getExtensionApplication
 from libs.Lib_raster import updateReferenceProjection, getGeometryImage, computeStatisticsImage
@@ -88,8 +95,8 @@ def classifySupervised(image_input_list, sample_points_values_input, classificat
            4) extraction des échantillons seléctionés à partir l'image et des échantillons points selectionés,
            5) creation du model a partir des echantillons points et des statistiques image,
            6) classification a partir des statistiques et du model
-    
-    Paramètres : 
+
+    Paramètres :
         image_input_list : liste d'image d'entrée stacké au format .tif
         sample_points_values_input : fichier de points d'échantillons en entrée au format .shp
         classification_file_output : fichier resultat de la classification
@@ -105,10 +112,10 @@ def classifySupervised(image_input_list, sample_points_values_input, classificat
         extension_vector : extension du fichier vecteur de sortie, par defaut = '.shp'
         save_results_intermediate : fichiers de sorties intermediaires nettoyees, par defaut = False
         overwrite : supprime ou non les fichiers existants ayant le meme nom
-    
+
     Sortie :
         Eléments générés par la fonction : deux fichiers statistics ("*_statistics.xml"), un fichier model ("*_model.txt"), une image classee("*_raw.tif")
-    
+
     """
 
     # Mise à jour du Log
@@ -173,7 +180,7 @@ def classifySupervised(image_input_list, sample_points_values_input, classificat
         model_file_output = model_output
     else :
         model_file_output = repertory_output + os.sep + name + SUFFIX_MODEL + EXT_TEXT
-    
+
     # 1. CALCUL DES STATISTIQUES DE L'IMAGE SAT
     #------------------------------------------
 
@@ -218,8 +225,8 @@ def classifySupervised(image_input_list, sample_points_values_input, classificat
         print(cyan + "classifySupervised() : " + bold + green + "Statistics image are ready." + endC)
 
     # 2.CALCUL DU MODELE
-    #----------------------------- 
-    
+    #-----------------------------
+
     print(cyan + "classifySupervised() : " + bold + green + "Classification model computation for input images ..." + endC)
 
     # Vérification de l'existence du vecteur de valeurs d'entrainement pour creer le modèle de classification
@@ -252,7 +259,7 @@ def classifySupervised(image_input_list, sample_points_values_input, classificat
         # Calcul du model en fonction de l'algo choisi
         if classifier_mode.lower() == "rf" :
             computeModelRF(sample_points_values_input, statistics_image_output, model_file_output, matrix_file_output, field_class, feat_list, rf_parametres_struct)
-        
+
         print(cyan + "classifySupervised() : " + bold + green + "Model are ready." + endC)
 
     # 3. CLASSIFICATION DE L'IMAGE

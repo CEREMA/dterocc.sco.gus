@@ -1,7 +1,14 @@
-#Import des librairies Python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+# Import des librairies Python
 import os,sys,glob,shutil
 
-#Import des librairies /libs
+# Import des librairies /libs
 from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_file import cleanTempData, deleteDir, removeFile, removeVectorFile, copyVectorFile
 from libs.Lib_raster import createBinaryMaskThreshold, applyMaskAnd, rasterizeBinaryVector, cutImageByVector
@@ -25,21 +32,21 @@ def createAllSamples(image_input, vector_to_cut_input, vectors_samples_output, r
         vector_to_cut_input : vecteur de découpage (zone d'étude)
         vectors_samples_output : dictionnaire contenant, par classe, le chemin de sauvegarde du fichier de sortie au format vecteur
         rasters_samples_output : dictionnaire contenant, par classe, le chemin de sauvegarde du fichier de sortie au format raster (optionnel)
-        params_to_find_samples : dictionnaire contenant, par classe, les paramètres de recherche des échantillons d'apprentissage au format {"nom_classe":[['chemin premier base', buffer, requêtesql],['chemin deuxieme base]] } . 
-                                Ex :{"bâti":[['/mnt/RAM_disk/BDTOPO/BATIMENT.shp', 2, 'select *']] } 
+        params_to_find_samples : dictionnaire contenant, par classe, les paramètres de recherche des échantillons d'apprentissage au format {"nom_classe":[['chemin premier base', buffer, requêtesql],['chemin deuxieme base]] } .
+                                Ex :{"bâti":[['/mnt/RAM_disk/BDTOPO/BATIMENT.shp', 2, 'select *']] }
         simplify_vector_param : parmetre de simplification des polygones
         format_vector : format du fichier vecteur. Optionnel, par default : 'ESRI Shapefile'
         extension_vector : extension du fichier vecteur de sortie, par defaut = '.shp'
         save_results_intermediate : fichiers de sorties intermediaires nettoyees, par defaut = False
-        overwrite : boolen ecrasement ou non des fichiers ayant un nom similaire, par defaut à True      
+        overwrite : boolen ecrasement ou non des fichiers ayant un nom similaire, par defaut à True
     """
     for key in vectors_samples_output.keys():
-        bd_vector_list = [params_to_find_samples[key][i][0] for i in range(len(params_to_find_samples[key]))]  
-        bd_buff_list = [params_to_find_samples[key][i][1] for i in range(len(params_to_find_samples[key]))]    
-        sql_expression_list = [params_to_find_samples[key][i][2] for i in range(len(params_to_find_samples[key]))]   
+        bd_vector_list = [params_to_find_samples[key][i][0] for i in range(len(params_to_find_samples[key]))]
+        bd_buff_list = [params_to_find_samples[key][i][1] for i in range(len(params_to_find_samples[key]))]
+        sql_expression_list = [params_to_find_samples[key][i][2] for i in range(len(params_to_find_samples[key]))]
         createSamples(image_input, vector_to_cut_input, vectors_samples_output[key], rasters_samples_output[key], bd_vector_list, bd_buff_list, sql_expression_list, key,simplify_vector_param, format_vector, extension_vector, save_results_intermediate, overwrite)
 
-    return 
+    return
 
 ###########################################################################################################################################
 # FONCTION createSamples()                                                                                                                #
@@ -47,8 +54,8 @@ def createAllSamples(image_input, vector_to_cut_input, vectors_samples_output, r
 def createSamples(image_input, vector_to_cut_input, vector_sample_output, raster_sample_output, bd_vector_input_list, bd_buff_list, sql_expression_list, sample_name="", simplify_vector_param=10.0, format_vector='ESRI Shapefile', extension_vector=".shp", save_results_intermediate=False, overwrite=True) :
     """
     Rôle : créé une couche d'échantillons d'apprentissage à partir de une ou plusieurs BD exogènes
-        
-    
+
+
     Paramètres :
         image_input : image d'entrée brute
         vector_to_cut_input : le vecteur pour le découpage (zone d'étude)
@@ -57,7 +64,7 @@ def createSamples(image_input, vector_to_cut_input, vector_sample_output, raster
         bd_vector_input_list : liste des vecteurs de la bd exogene pour créer l'échantillon
         bd_buff_list : liste des valeurs des buffers associés au traitement à appliquer aux vecteurs de bd exogenes
         sql_expression_list : liste d'expression sql pour le filtrage des fichiers vecteur de bd exogenes
-        sample_name : nom de l'echantillon 
+        sample_name : nom de l'echantillon
         simplify_vector_param : parmetre de simplification des polygones
         format_vector : format du fichier vecteur. Optionnel, par default : 'ESRI Shapefile'
         extension_vector : extension du fichier vecteur de sortie, par defaut = '.shp'
@@ -191,7 +198,7 @@ def createSamples(image_input, vector_to_cut_input, vector_sample_output, raster
                 vector_cut = vectors_cut_list[idx_vector]
                 if idx_vector < len(sql_expression_list) :
                     sql_expression = sql_expression_list[idx_vector]
-                    
+
                 else :
                     sql_expression = ""
                 vector_filtered = repertory_samples_filtering_temp + os.sep + vector_name + SUFFIX_VECTOR_FILTER + extension_vector
@@ -335,15 +342,15 @@ def prepareAllSamples(image_input, dic_classes_params, vector_to_cut_input, form
     Paramètres :
         image_input : image d'entrée brute
         dic_classes_params : dictionnaire des paramètres de préparation des échantillons d'apprentissage par classe.
-                            Format :{"nomclasse" :[vector_class_input, raster_class_output, erosionoption]} 
+                            Format :{"nomclasse" :[vector_class_input, raster_class_output, erosionoption]}
         vector_to_cut_input : vecteur de découpage (zone d'étude)
-        format_vector : format de la donnée vectorielle, par défaut : 'ESRI Shapefile'  
+        format_vector : format de la donnée vectorielle, par défaut : 'ESRI Shapefile'
         save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par défaut : False
 
     """
     for key, value in dic_classes_params.items():
         prepareSamples(image_input, value[0], value[1], vector_to_cut_input, value[2], format_vector, save_intermediate_result = save_intermediate_result)
-    
+
     return
 
 ###########################################################################################################################################
@@ -430,9 +437,9 @@ def cleanAllSamples(images_in_output, correction_images_dic, extension_raster = 
 
     Paramètres :
         images_in_output : dictionnaire des images d'entrée et de sortie des échantillons d'apprentissage.
-                          Format :{"nomclasse" :[img_input, img_output], etc } 
+                          Format :{"nomclasse" :[img_input, img_output], etc }
         correction_images_dic : dictionnaire des corrections à apporter par classe et quel traitement.
-                          Format :{"nomclasse" :[[nomtraitement, img_masque, seuilmin, seuilmax],[nomtraitement2, img_masque2, seuilmin2, seuilmax2]], etc} 
+                          Format :{"nomclasse" :[[nomtraitement, img_masque, seuilmin, seuilmax],[nomtraitement2, img_masque2, seuilmin2, seuilmax2]], etc}
         extension_raster : extension des fichiers raster de sortir. Par defaut : '.tif'
         save_results_intermediate : fichiers de sorties intermediaires nettoyees. Par defaut : False
         overwrite : boolen ecrasement ou non des fichiers ayant un nom similaire. Par defaut : False
@@ -442,15 +449,15 @@ def cleanAllSamples(images_in_output, correction_images_dic, extension_raster = 
         image_input = images_in_output[key][0]
         image_output = images_in_output[key][1]
         #Création du dictionnaire des corrections
-        dic_correct_treat = {} 
+        dic_correct_treat = {}
         for treatment in correction_images_dic[key]:
             print(treatment[0])
             dic_correct_treat[treatment[0]] =[treatment[1], treatment[2], treatment[3]]
-            print(dic_correct_treat) 
+            print(dic_correct_treat)
 
         cleanSamples(image_input, image_output, dic_correct_treat, extension_raster, save_results_intermediate, overwrite)
 
-    return 
+    return
 
 ####################################################################################################################################
 # FONCTION cleanSamples()                                                                                                          #
@@ -586,9 +593,9 @@ def processingSample(sample_raster_file_input, sample_raster_file_output, file_m
     # Traitement préparation
 
 
-  
+
     file_mask_output_temp = repertory_temp + os.sep + os.path.splitext(os.path.basename(file_mask_input))[0] + "_mask_tmp" + os.path.splitext(file_mask_input)[1]
-     
+
     if os.path.isfile(file_mask_output_temp) :
         removeFile(file_mask_output_temp)
 

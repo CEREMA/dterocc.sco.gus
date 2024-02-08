@@ -1,10 +1,17 @@
-#Import des bibliothèques python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
+# Import des bibliothèques python
 import os, sys
 from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 
-#Import des librairies de /libs
+# Import des librairies de /libs
 from libs.Lib_display import bold,red,cyan,endC
 from libs.Lib_raster import  getProjectionImage, cutImageByVector, getNodataValueImage
 from libs.Lib_file import removeFile

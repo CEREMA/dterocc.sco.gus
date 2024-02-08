@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+#############################################################################
+# Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
+#############################################################################
+
 import os, sys, glob
 from libs.Lib_display import bold,red,green,yellow,cyan,endC
 from libs.Lib_file import removeFile
