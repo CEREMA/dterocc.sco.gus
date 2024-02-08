@@ -64,10 +64,11 @@ def segmentationImageVegetetation(img_ref, img_input, file_output, param_minsize
     # Utilisation d'un fichier temporaire pour la couche masque
     repertory_output = os.path.dirname(file_output)
     file_name = os.path.splitext(os.path.basename(file_output))[0]
+    file_name = file_name.replace("vect", "img")
     extension = os.path.splitext(img_input)[1]
 
-    file_out_suffix_mask_veg= "_mask_veg"
-    mask_veg = repertory_output + os.sep + file_name + file_out_suffix_mask_veg + extension
+    SUFFIX_MASK_VEG = "_mask_veg"
+    mask_veg = repertory_output + os.sep + file_name + SUFFIX_MASK_VEG + extension
 
     if overwrite:
         if os.path.exists(mask_veg):
@@ -195,6 +196,7 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
 
     # Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
     tab_sgt_ini = 'segments_vegetation_ini_t0'
+    dropTable(connexion, tab_sgt_ini)
     query = """
     CREATE TABLE %s AS
         SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
@@ -208,20 +210,18 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     executeQuery(connexion, query)
 
     # Traitement des artefacts au reflet blanc
-    tab_sgt_txt_val0 = 'segments_txt_val0'
-    query = """
-    CREATE TABLE %s AS
-        SELECT *
-        FROM %s
-        WHERE txt = 0;
-
-    DELETE FROM %s WHERE txt = 0;
-    """ %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
-
+    #tab_sgt_txt_val0 = 'segments_txt_val0'
+    #query = """
+    #CREATE TABLE %s AS
+    #    SELECT *
+    #    FROM %s
+    #    WHERE txt = 0;
+    #DELETE FROM %s WHERE txt = 0;
+    #""" %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
     # Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    #if debug >= 3:
+    #    print(query)
+    #executeQuery(connexion, query)
 
     # Suppression des deux tables txt et mnh
     if tablename_txt != '' :
@@ -262,8 +262,8 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     # Ajout de l'attribut "strate"
     addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
 
-    if not save_intermediate_result:
-        dropTable(connexion, tab_sgt_txt_val0)
+    #if not save_intermediate_result:
+    #    dropTable(connexion, tab_sgt_txt_val0)
 
     #####################################################################
     ## Première étape : classification générale, à partir de règles de ##
