@@ -1,16 +1,15 @@
-#Import des librairies Python
+# Import des librairies Python
 import os, sys
 from os import chdir
 from osgeo import gdal, ogr
 from osgeo.gdalconst import *
-#Import des librairies de /libs
+# Import des librairies de /libs
 from libs.Lib_display import bold,red,green,blue,cyan,endC
 from libs.Lib_vector import getEmpriseFile, createEmpriseShapeReduced
-from libs.Lib_raster import cutImageByVector
 from libs.Lib_file import removeFile
 from libs.Lib_grass import convertRGBtoHIS
 
-#debug = 2
+# debug = 2
 PRECISION = 0.0000001
 
 #########################################################################
@@ -43,39 +42,7 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
     file_name_teinte = os.path.splitext(os.path.basename(dic_neochannels["teinte"]))[0]
 
     extension = os.path.splitext(dic_neochannels["ndvi"])[1]
-    """
-    SUFFIX_TMP = "_tmp"
 
-    # Fichiers intermédiaires NDVI
-    ndvi_file_tmp = repertory + os.sep + file_name_ndvi + SUFFIX_TMP + extension
-
-    if os.path.exists(ndvi_file_tmp):
-        os.remove(ndvi_file_tmp)
-
-    # Fichiers intermédiaires MSAVI2
-    msavi2_file_tmp = repertory + os.sep + file_name_msavi + SUFFIX_TMP + extension
-
-    if os.path.exists(msavi2_file_tmp):
-        os.remove(msavi2_file_tmp)
-
-    # Fichiers intermédiaires NDWI2
-    ndwi2_file_tmp = repertory + os.sep + file_name_ndwi + SUFFIX_TMP + extension
-
-    if os.path.exists(ndwi2_file_tmp):
-        os.remove(ndwi2_file_tmp)
-
-    # Fichiers intermédiaires teinte Hue
-    h_file_tmp = repertory + os.sep + file_name_teinte + SUFFIX_TMP + extension
-
-    if os.path.exists(h_file_tmp):
-        os.remove(h_file_tmp)
-
-    # Fichiers intermédiaire texture SFS
-    sfs_file_tmp = repertory + os.sep + file_name_sfs + SUFFIX_TMP + extension
-
-    if os.path.exists(sfs_file_tmp):
-        os.remove(sfs_file_tmp)
-    """
     # Nettoyage des Fichiers de sortis
     if overwrite:
         if os.path.exists(dic_neochannels["ndvi"]):
@@ -91,53 +58,20 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
 
     # Calcul du NDVI
     createNDVI(image_input, dic_neochannels["ndvi"], debug=debug)
-    #createNDVI(image_input, ndvi_file_tmp, debug=debug)
-    #Decoupe sur la zone d'étude
-    #cutImageByVector(empriseVector ,ndvi_file_tmp, dic_neochannels["ndvi"])
 
     # Calcul du MSAVI2
     createMSAVI2(image_input, dic_neochannels["msavi"], debug=debug)
-    #createMSAVI2(image_input, msavi2_file_tmp, debug=debug)
-    #Decoupe sur la zone d'étude
-    #cutImageByVector(empriseVector ,msavi2_file_tmp, dic_neochannels["msavi"])
 
     # Calcul du NDWI2
     createNDWI2(image_input, dic_neochannels["ndwi"], debug=debug)
-    #createNDWI2(image_input, ndwi2_file_tmp, debug=debug)
-    #Decoupe sur la zone d'étude
-    #cutImageByVector(empriseVector ,ndwi2_file_tmp, dic_neochannels["ndwi"])
 
     # Calcul de la teinte
     createHIS(image_input, dic_neochannels["teinte"], li_choice = ["H"], debug=debug)
     dic_neochannels["teinte"] = os.path.splitext(dic_neochannels["teinte"])[0]  + "_H" + os.path.splitext(dic_neochannels["teinte"])[1]
-    #createHIS(image_input, h_file_tmp, li_choice = ["H"], debug=debug)
-    #Decoupe sur la zone d'étude
-    #cutImageByVector(empriseVector ,h_file_tmp, dic_neochannels["teinte"])
 
     # Calcul de la texture SFS
     createSFS(image_pan_input, dic_neochannels["sfs"], debug=debug)
-    #createSFS(image_pan_input, sfs_file_tmp, debug=debug)
-    #Decoupe sur la zone d'étude
-    #cutImageByVector(empriseVector ,sfs_file_tmp, dic_neochannels["sfs"])
 
-    """
-    # Suppression des fichiers temporaires
-    if not save_intermediate_result:
-        if os.path.exists(ndvi_file_tmp):
-            removeFile(ndvi_file_tmp)
-
-        if os.path.exists(msavi2_file_tmp):
-            removeFile(msavi2_file_tmp)
-
-        if os.path.exists(ndwi2_file_tmp):
-            removeFile(ndwi2_file_tmp)
-
-        if os.path.exists(h_file_tmp):
-            removeFile(h_file_tmp)
-
-        if os.path.exists(sfs_file_tmp):
-            removeFile(sfs_file_tmp)
-    """
     return
 
 #########################################################################
@@ -336,8 +270,8 @@ def createHIS(image_input, image_HIS_output, li_choice = ["H","I","S"], channel_
     img_H, img_I, img_S = convertRGBtoHIS(image_input, image_HIS_output, fp_red, fp_green, fp_blue)
 
     l = [img_H, img_I, img_S]
-    ##une ligne est à rajouter pour produire l'image HIS contenant les 3 bandes H, I et S (concatenation de bandes)
-    #suppression de une ou plusieurs images produites suivant le choix de sortie li_choice
+    # une ligne est à rajouter pour produire l'image HIS contenant les 3 bandes H, I et S (concatenation de bandes)
+    # suppression de une ou plusieurs images produites suivant le choix de sortie li_choice
     if "H" not in li_choice:
         if os.path.exists(img_H):
             removeFile(img_H)
