@@ -457,7 +457,7 @@ def addIndex(connexion, tablename, columnname, nameindex):
 
     executeQuery(connexion, query)
 
-    return 
+    return
 
 ########################################################################
 # FONCTION addUniqId()                                                 #
@@ -1067,7 +1067,7 @@ def addIndex(connexion, table_name, column_name, name_index):
         print(query)
     executeQuery(connexion, query)
 
-    return 
+    return
 
 ########################################################################
 # FONCTION versionPostgreSQL()                                         #
@@ -1146,7 +1146,7 @@ def dataBaseExist(connexion, dbname):
     """
     Rôle : renvoie si la base de données existe déjà
 
-    Paramètre : 
+    Paramètre :
         connexion : laisser tel quel, récupère les informations de connexion à la base
         dbname : nom de la base de données
 
@@ -1163,14 +1163,14 @@ def dataBaseExist(connexion, dbname):
 
     if result == 1 :
         exist = True
-    
+
     return exist
-    
+
 def schemaExist(connexion, schema_name):
     """
     Rôle : renvoie si le schema existe déjà
 
-    Paramètre : 
+    Paramètre :
         connexion : laisser tel quel, récupère les informations de connexion à la base
         schema_name : nom du schema
 

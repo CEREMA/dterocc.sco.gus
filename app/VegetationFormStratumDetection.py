@@ -52,7 +52,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         print(cyan + "cartographyVegetation : " + endC + "debug : " + str(debug) + endC)
 
     # Nettoyage en base si ré-écriture
-    if overwrite == True:
+    if overwrite and False:
         print(bold + "Choix de remise à zéro du schéma " + str(schem_tab_ref))
         query ="""
         SELECT format('DROP TABLE %s.%s', table_schema, table_name)
@@ -220,7 +220,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-        SELECT public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom))).geom AS geom
+        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom AS geom
         FROM %s;
     """ %(tab_arb,tab_arb, tab_arb_ini)
     #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom) AS geom
@@ -416,6 +416,8 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, save_intermediate
     """
 
     ## CREATION DE LA TABLE CONTENANT UNIQUEMENT LES ENTITES CLASSÉÉS REGROUPEMENT ##
+    # si la table de sortie exite l'effacer
+    dropTable(connexion, tab_out)
 
     query = """
     CREATE TABLE %s AS
@@ -628,7 +630,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-        SELECT public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom))).geom AS geom
+        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom AS geom
         FROM %s AS t;
     """ %(tab_arbu, tab_arbu, tab_arbu_ini)
     #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
@@ -815,7 +817,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, threshold
     query = """
     DROP TABLE IF EXISTS %s ;
     CREATE TABLE %s AS
-        SELECT public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom))).geom AS geom
+        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom AS geom
         FROM %s AS t;
     """ %(tab_in, tab_in, tab_herb_ini)
     #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
@@ -943,7 +945,7 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-        SELECT public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom))).geom AS geom
+        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom))))).geom AS geom
         FROM (SELECT geom FROM %s WHERE fv = 'PR') AS t1;
     """ %(tab_grass, tab_grass, tab_in)
     #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
@@ -956,7 +958,7 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-        SELECT public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom))).geom AS geom
+        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom))))).geom AS geom
         FROM (SELECT geom FROM %s WHERE fv = 'C') AS t1;
     """ %(tab_crop, tab_crop, tab_in)
     #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
@@ -1382,8 +1384,6 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
         dropTable(connexion, 'ara_seg_perp')
         dropTable(connexion, 'ara_temp1_seg')
     return tab_rgpt
-
-
 
 ########################################################################
 # FONCTION formStratumCleaning()                                       #
