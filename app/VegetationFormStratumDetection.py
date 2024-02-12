@@ -12,7 +12,7 @@ import math,os
 from libs.Lib_postgis import topologyCorrections, addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
 from libs.Lib_display import endC, bold, yellow, cyan, red
 from libs.CrossingVectorRaster import statisticsVectorRaster
-from libs.Lib_file import removeFile, removeVectorFile
+from libs.Lib_file import removeFile, removeVectorFile, deleteDir
 from libs.Lib_raster import rasterizeVector
 
 #################################################
@@ -852,9 +852,14 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, threshold
     # Pas de complétion de cet attribut pour l'instant
     tab_herbace = ''
 
+    # Creation d'un dossier temporaire
+    working_rep = os.path.dirname(output_layer) + os.sep + "rep_temp"
+    if not os.path.isdir(working_rep):
+        os.makedirs(working_rep)
+
     # Complétion de l'attribut fv
     if thresholds["img_grasscrops"] != "" or thresholds["img_grasscrops"] != None:
-        tab_herbace = classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save_intermediate_result = save_intermediate_result, debug = debug)
+        tab_herbace = classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, working_rep, save_intermediate_result = save_intermediate_result, debug = debug)
     else :
         tab_herbace = 'strate_herbace'
         query = """
@@ -869,10 +874,8 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, threshold
         if debug >= 3:
             print(query)
         executeQuery(connexion, query)
-
         addIndex(connexion, tab_herbace, 'fid', 'fid_veg_idx')
         addSpatialIndex(connexion, tab_herbace)
-
 
     # SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
     if not save_intermediate_result :
@@ -890,7 +893,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, threshold
 ########################################################################
 # FONCTION classificationGrassOrCrop()                                #
 ########################################################################
-def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save_intermediate_result = False, debug = 0) :
+def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, working_rep, save_intermediate_result = False, debug = 0) :
     """
     Rôle : produire les formes végétales herbacée 'Pr' (prairie) ou 'C' (culture)
 
@@ -899,13 +902,13 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
         connexion_dic :
         tab_in : nom de la table contenant les segments de végétation herbacée
         thresholds : dictionnaire des paramètres pour détecter les formes végétales herbacées
+        working_rep : répertoire temporaire de travail
         save_intermediate_result : paramètre de sauvegarde des tables et/ou fichiers intermédiaires. Par défaut : False
         debug : paramètre du niveau de debug. Par défaut : 0
     """
 
-    repertory = os.path.dirname(thresholds["img_grasscrops"])
-    layer_sgts_veg_h = repertory + os.sep + 'sgts_vegetation_herbace.gpkg'
-    vector_output = repertory + os.sep + 'sgts_vegetation_hebace_plus_maj.gpkg'
+    layer_sgts_veg_h = working_rep + os.sep + 'sgts_vegetation_herbace.gpkg'
+    vector_output = working_rep + os.sep + 'sgts_vegetation_hebace_plus_maj.gpkg'
 
     removeVectorFile(layer_sgts_veg_h, format_vector='GPKG')
     removeVectorFile(vector_output, format_vector='GPKG')
@@ -922,7 +925,6 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
     # Import en base de la ocuche vecteur
     tab_cross = 'tab_cross_h_classif'
     importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
-
 
     # Attribution du label 'PR' (prairie) ou 'C' (culture)
     query = """
@@ -945,7 +947,7 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom))))).geom AS geom
+        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom AS geom
         FROM (SELECT geom FROM %s WHERE fv = 'PR') AS t1;
     """ %(tab_grass, tab_grass, tab_in)
     #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
@@ -958,7 +960,7 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom))))).geom AS geom
+        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom AS geom
         FROM (SELECT geom FROM %s WHERE fv = 'C') AS t1;
     """ %(tab_crop, tab_crop, tab_in)
     #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
@@ -991,6 +993,7 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, save
     if not save_intermediate_result :
         removeFile(layer_sgts_veg_h)
         removeFile(vector_output)
+        deleteDir(working_rep)
         dropTable(connexion, tab_cross)
         dropTable(connexion, tab_crop)
         dropTable(connexion, tab_grass)

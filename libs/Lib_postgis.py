@@ -438,28 +438,6 @@ def dropColumn(connexion, tablename, columnname):
     return
 
 ########################################################################
-# FONCTION addIndex()                                                  #
-########################################################################
-def addIndex(connexion, tablename, columnname, nameindex):
-    """
-    Rôle : créé un index sur une colonne de la table
-
-    Paramètres :
-        conneixon :
-        tablename : nom de la table
-        columnname : nom de la colonne
-        nameindex : nom de l'index
-    """
-
-    query = """
-    CREATE INDEX %s ON %s(%s);
-    """ %(nameindex,tablename, columnname )
-
-    executeQuery(connexion, query)
-
-    return
-
-########################################################################
 # FONCTION addUniqId()                                                 #
 ########################################################################
 def addUniqId(connexion, tablename):
@@ -510,6 +488,29 @@ def addSpatialIndex(connexion, tablename, geomcolumn = 'geom', nameindex = ''):
     return
 
 ########################################################################
+# FONCTION addIndex()                                                  #
+########################################################################
+def addIndex(connexion, table_name, column_name, name_index):
+    """
+    Rôle : créé un index sur une colonne de la table
+
+    Paramètres :
+        connexion : laisser tel quel, récupère les informations de connexion à la base
+        table_name : nom de la table
+        column_name : nom de la colonne
+        name_index : nom de l'index
+    """
+    print("Création d'un index spatial :")
+    query = """
+    CREATE INDEX %s ON %s(%s);
+    """ %(name_index,table_name, column_name )
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    return
+
+########################################################################
 # FONCTION addColumn()                                                 #
 ########################################################################
 def addColumn(connexion, tablename, columnname, columntype, debug = 0):
@@ -533,7 +534,6 @@ def addColumn(connexion, tablename, columnname, columntype, debug = 0):
     executeQuery(connexion, query)
 
     return
-
 
 ########################################################################
 # FONCTION deleteData()                                                #
@@ -1045,29 +1045,6 @@ def getAllColumns(connection, table_name):
     for row in columns_list:
         print("    %s" % (row))
     return columns_list
-
-########################################################################
-# FONCTION addIndex()                                                  #
-########################################################################
-def addIndex(connexion, table_name, column_name, name_index):
-    """
-    Rôle : créé un index sur une colonne de la table
-
-    Paramètres :
-        connexion : laisser tel quel, récupère les informations de connexion à la base
-        table_name : nom de la table
-        column_name : nom de la colonne
-        name_index : nom de l'index
-    """
-    print("Création d'un index spatial :")
-    query = """
-    CREATE INDEX %s ON %s(%s);
-    """ %(name_index,table_name, column_name )
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
-
-    return
 
 ########################################################################
 # FONCTION versionPostgreSQL()                                         #
