@@ -1,6 +1,6 @@
 {
     "repertory":"/mnt/RAM_disk",
-    "save_intermediate_result" : true,
+    "save_intermediate_result" : false,
     "display_comments" : true,
     "steps_to_run":{
         "img_assembly" : false,

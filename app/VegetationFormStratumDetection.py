@@ -85,6 +85,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
 
     # 4# Concaténation des données en une seule table 'végétation'
     tab_name = 'vegetation'
+
     if tab_arbore == '':
         tab_arbore = 'strate_arboree'
     if tab_arbustive == '':
@@ -95,13 +96,14 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         print(bold + "Concaténation des données en une seule table " + tab_name + endC)
 
     query = """
+    DROP TABLE IF EXISTS %s ;
     CREATE TABLE %s AS
     SELECT geom, strate, fv FROM %s
     UNION
     SELECT geom, strate, fv FROM %s
     UNION
     SELECT geom, strate, fv FROM %s;
-    """ %(tab_name, tab_arbore, tab_arbustive, tab_herbace)
+    """ %(tab_name, tab_name, tab_arbore, tab_arbustive, tab_herbace)
 
     if debug >= 3:
         print(query)
@@ -113,6 +115,19 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
 
     # 5# Nettoyage des formes végétales plus poussée ou non, en fonction du choix de l'opérateur (cleanfv)
     tab_name = formStratumCleaning(connexion, tab_name, cleanfv, save_intermediate_result, debug)
+
+    # Lissage de la donnée finale
+    query = """
+    UPDATE %s
+        SET geom = public.ST_SimplifyPreserveTopology(t.geom, 10)
+        FROM %s AS t;
+    """ %(tab_name, tab_name)
+    #SELECT public.ST_CHAIKINSMOOTHING(t.geom) AS geom
+
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
     # Ajout de la colonne pour la sauvegarde au format raster
     addColumn(connexion, tab_name, 'fv_r', 'int')
@@ -128,6 +143,10 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     UPDATE %s SET fv_r = 32 WHERE fv = 'C';
     UPDATE %s SET fv_r = 33 WHERE fv = 'H';
     """ %(tab_name, tab_name, tab_name, tab_name, tab_name, tab_name, tab_name, tab_name, tab_name)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
     if output_layers["output_fv"] == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
@@ -145,8 +164,6 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         dropColumn(connexion, tab_name, 'strate_r')
 
     return tab_name
-
-
 
 ################################################
 ## Classification des FV de la strate arborée ##
@@ -336,7 +353,6 @@ def getCoordRectEnglValue(connexion, tab_ref, attributname = 'x0', debug = 0):
     executeQuery(connexion, query)
 
     return
-
 
 ###########################################################################################################################################
 # FONCTION firstClassification()                                                                                                          #
