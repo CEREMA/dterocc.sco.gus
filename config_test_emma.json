@@ -266,7 +266,7 @@
             "extension_3_thr": 2.5
         },
         "herbaceous" : {
-            "img_grasscrops":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/2-BD_EXOGENES/3-IOTA2_PRAIRIEVSCULTURE/img_ocs_prairie_culture.tif",
+            "img_grasscrops": "/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/img_ocs_prairie_culture.tif",
             "label_prairie" : 1,
             "label_culture" : 2
         }
