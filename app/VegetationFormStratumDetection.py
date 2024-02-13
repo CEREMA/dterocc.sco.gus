@@ -117,17 +117,17 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     tab_name = formStratumCleaning(connexion, tab_name, cleanfv, save_intermediate_result, debug)
 
     # Lissage de la donnée finale
-    query = """
-    UPDATE %s
-        SET geom = public.ST_SimplifyPreserveTopology(t.geom, 10)
-        FROM %s AS t;
-    """ %(tab_name, tab_name)
+    #query = """
+    #UPDATE %s
+    #    SET geom = public.ST_SimplifyPreserveTopology(t.geom, 10)
+    #    FROM %s AS t;
+    #""" %(tab_name, tab_name)
     #SELECT public.ST_CHAIKINSMOOTHING(t.geom) AS geom
 
     # Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    #if debug >= 3:
+    #    print(query)
+    #executeQuery(connexion, query)
 
     # Ajout de la colonne pour la sauvegarde au format raster
     addColumn(connexion, tab_name, 'fv_r', 'int')
@@ -1484,11 +1484,12 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
         dropTable(connexion, 'fv_herba_delete')
 
     # 2# Reclassification des taches arborées et arbustives ('TA' et 'TAu') en boisements arborés et arbustifs ('BOA' et 'BOAu')
-
     query = """
-    UPDATE %s SET fv = 'BOA' WHERE fv = 'TA';
-    UPDATE %s SET fv = 'BOAu' WHERE fv = 'TAu';
+    UPDATE %s SET fv = 'AI' WHERE fv = 'TA';
+    UPDATE %s SET fv = 'AuI' WHERE fv = 'TAu';
     """ %(tab_ref, tab_ref)
+    #UPDATE %s SET fv = 'BOA' WHERE fv = 'TA';
+    #UPDATE %s SET fv = 'BOAu' WHERE fv = 'TAu';
 
     if debug >= 3 :
         print(query)

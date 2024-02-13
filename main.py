@@ -754,21 +754,19 @@ if __name__ == "__main__":
       # Ouverture connexion
       connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
 
-      tab_veg = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = True,  debug = debug)
+      tab_ref_fv = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = True,  debug = debug)
 
       closeConnection(connexion)
-      print(bold + green + "\nLa détection des formes végétales horizontales s'est bien déroulée. Le résultat est disponible dans la table %s et dans le(s) fichier(s) %s"%(tab_veg, output_fv_layers) + endC)
+      print(bold + green + "\nLa détection des formes végétales horizontales s'est bien déroulée. Le résultat est disponible dans la table %s et dans le(s) fichier(s) %s"%(tab_ref_fv, output_fv_layers) + endC)
 
     else :
       if not config["vegetation_form_stratum_detection"]["db_table"] :
-        schem_tab_ref_fv = connexion_datafinal_dic["schema"] + '.' + 'vegetation'
-        tab_ref_fv = 'vegetation'
+        tab_ref_fv = 'vegetation_to_clean'
       else:
         schem_tab_ref_fv = config["vegetation_form_stratum_detection"]["db_table"]
         tab_ref_fv = schem_tab_ref_fv.split(".")[1]
 
       print(bold + green + "\nLa donnée est déjà disponible. La table correspondant : " + tab_ref_fv + endC)
-
 
     # 4# Calcul des indicateurs de végétation
     if debug >= 1:

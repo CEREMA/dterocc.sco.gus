@@ -9,8 +9,8 @@
         "data_concatenation" : false,
         "vegetation_extraction" : false,
         "vertical_stratum_detection" : false,
-        "vegetation_form_stratum_detection" : true,
-        "indicators_computation" : false
+        "vegetation_form_stratum_detection" : false,
+        "indicators_computation" : true
     },
     "data_entry": {
         "img_RVBPIR_ref": "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/0-IMAGES_SATELLITES/2022/NANCY/2022_06_14/16Bits/Assemblage_zone_etude_MGN/ORT_20220614_NADIR_16B_MGN_v2.tif",
@@ -33,9 +33,9 @@
                 "vegetation": null
             },
             "lcz_information" : {
-                "lcz_data" : "/mnt/Data/20_Etudes_Encours/URBAIN/Production/Nancy/2023-EtudeLCZ/ClassificationLCZ_SatLCZ.shp",
-                "field" : "lcz_UA_P",
-                "1" : ["1","2","3","4","5","6","7","8","9"],
+                "lcz_data" : "/mnt/RAM_disk/ProjetGUS/0-Data/01-DonneesProduites/2_ClassificationLCZ.shp",
+                "field" : "lcz",
+                "1" : ["1","2","3","4","5","6","7","8","9","10"],
                 "2" : ["E"],
                 "3" : ["G"],
                 "4" : ["A", "B", "C", "D", "F"]
@@ -237,7 +237,7 @@
         "surface_rate": 0.25
     },
     "vegetation_form_stratum_detection": {
-        "db_table" : "data_final.vegetation",
+        "db_table" : "data_final.vegetation_to_clean",
         "clean" : true,
         "tree" :{
             "isolatedtree_max_surface": 100,
@@ -320,7 +320,7 @@
         "landscape" :{
             "landscape_feature" : "paysage",
             "landscape_type" : "varchar(100)",
-            "landscape_data" : "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/2-RESULTATS_GUS/1-DONNEES_100PERC_SATELLITE/ProjetGUS/5-Paysages/paysages_LCZ.tif",
+            "landscape_data" : "",
             "landscape_dic_classes" : {
                 "milieu_urbanise" : 1,
                 "voirie_et_infrastructure" : 2,
