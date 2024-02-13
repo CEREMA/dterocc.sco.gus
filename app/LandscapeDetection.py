@@ -34,7 +34,7 @@ def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, save_int
     result = False
     if dic_params["ldsc_information"]["lcz_information"]["lcz_data"] != "":
         ldsc_data = landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory, save_intermediate_result, debug = debug)
-        dic_params["img_landscape"] = ldsc_data
+        dic_params["ldsc_information"]["img_landscape"]  = ldsc_data
         result = True
 
     elif dic_params["ldsc_information"]["img_ocs"] == "" or os.path.exists(dic_params["ldsc_information"]["img_ocs"]):

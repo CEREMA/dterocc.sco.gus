@@ -86,9 +86,8 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     # Implémentation du paysage
     result = True
     if dic_params["ldsc_information"]["img_landscape"] == "":
-        dic_params["ldsc_information"]["img_landscape"] = landscapeDetection(connexion, connexion_dic, dic_params, repertory = dic_params["ldsc_information"]["dirname"] , save_intermediate_result = save_intermediate_result, debug = debug)
-
-    if not dic_params["ldsc_information"]["img_landscape"] :
+        result = landscapeDetection(connexion, connexion_dic, dic_params, repertory = dic_params["ldsc_information"]["dirname"] , save_intermediate_result = save_intermediate_result, debug = debug)
+    if not result :
         print(bold + yellow + "Faute de données paysage, l'attribut 'paysage' ne sera pas implémenté pour l'ensemble des formes végétales." + endC)
     else:
         landscapeIndicator(connexion, connexion_dic, dic_params["ldsc_information"]["img_landscape"], tab_ref, column_indic_name = dic_columname["landscape_indicator"][0], dic_ldsc_class = dic_params["ldsc_information"]["ldsc_class"], repertory = repertory_tmp, debug = debug)
