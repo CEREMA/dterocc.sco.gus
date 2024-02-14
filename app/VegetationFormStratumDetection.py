@@ -14,13 +14,15 @@ from libs.Lib_display import endC, bold, yellow, cyan, red
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_file import removeFile, removeVectorFile, deleteDir
 from libs.Lib_raster import rasterizeVector
+# Import des applications de /app
+from app.VerticalStratumDetection import calc_statMedian
 
 #################################################
 ## Concaténation des trois tables pour obtenir ##
 ## une unique cartographie                     ##
 #################################################
 
-def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, output_layers, cleanfv = False, save_intermediate_result = False, overwrite = False, debug = 0):
+def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_thresholds, raster_dic, output_layers, cleanfv = False, save_intermediate_result = False, overwrite = False, debug = 0):
     """
     Rôle : concatène les trois tables arboré, arbustive et herbacée en un unique
            correspondant à la carotgraphie de la végétation
@@ -30,6 +32,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         connexion_dic : dictionnaire des paramètre de connexion
         schem_tab_ref : schema et nom de la table de référence des segments végétation classés en strates verticales
         dic_thresholds : dictionnaire des seuils à attribuer en fonction de la strate verticale
+        raster_dic : dictionnaire associant le type de donnée récupéré avec le fichier raster contenant les informations, par exemple : {"mnh" : filename}
         output_layers : dictionnaire des noms de fichier de sauvegarde
         cleanfv : paramètre de nettoyage des formes végétales. Par défaut : False
         save_intermediate_result : sauvegarde ou non des fichiers/tables intermédiaires. Par défaut : False
@@ -46,6 +49,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         print(cyan + "cartographyVegetation : " + endC + "connexion_dic : " + str(connexion_dic) + endC)
         print(cyan + "cartographyVegetation : " + endC + "schem_tab_ref : " + str(schem_tab_ref) + endC)
         print(cyan + "cartographyVegetation : " + endC + "dic_thresholds : " + str(dic_thresholds) + endC)
+        print(cyan + "cartographyVegetation : " + endC + "raster_dic : " + str(raster_dic) + endC)
         print(cyan + "cartographyVegetation : " + endC + "output_layers : " + str(output_layers) + endC)
         print(cyan + "cartographyVegetation : " + endC + "save_intermediate_result: " + str(save_intermediate_result) + endC)
         print(cyan + "cartographyVegetation : " + endC + "overwrite : " + str(overwrite) + endC)
@@ -85,6 +89,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
 
     # 4# Concaténation des données en une seule table 'végétation'
     tab_name = 'vegetation'
+    tab_name_clean = 'vegetation_to_clean'
 
     if tab_arbore == '':
         tab_arbore = 'strate_arboree'
@@ -114,7 +119,8 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     addSpatialIndex(connexion, tab_name)
 
     # 5# Nettoyage des formes végétales plus poussée ou non, en fonction du choix de l'opérateur (cleanfv)
-    tab_name = formStratumCleaning(connexion, tab_name, cleanfv, save_intermediate_result, debug)
+    vector_mnh_clean_tmp = os.path.dirname(output_layers["output_fv"]) + os.sep + 'vegetation_tmp.gpkg'
+    tab_name = formStratumCleaning(connexion, connexion_dic, tab_name, tab_name_clean, raster_dic["MNH"], vector_mnh_clean_tmp, cleanfv, save_intermediate_result, debug)
 
     # Lissage de la donnée finale
     #query = """
@@ -938,7 +944,7 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, work
     class_label_dico = {}
     statisticsVectorRaster(thresholds["img_grasscrops"], layer_sgts_veg_h, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
-    # Import en base de la ocuche vecteur
+    # Import en base de la couche vecteur
     tab_cross = 'tab_cross_h_classif'
     importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
@@ -951,7 +957,6 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, thresholds, work
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
-
 
     # Regroupe par localisation et par label (fv) les semgents de végétation herbacés
     tab_crop = 'tab_crops'
@@ -1407,33 +1412,36 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
 ########################################################################
 # FONCTION formStratumCleaning()                                       #
 ########################################################################
-def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermediate_result = False, debug = 1):
+def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, mnh_raster, vector_mnh_clean_tmp, clean_option = False, save_intermediate_result = False, debug = 1):
     """
     Rôle : nettoyer les formes végétales horizontales parfois mal classées
 
     Paramètres :
         connexion : connexion à la base donnée et au schéma correspondant
+        connexion_dic : dictionnaire contenant les paramètres de connexion (pour la sauvegarde en fin de fonction)
         tab_ref : nom de la table contenant les formes végétales à nettoyer
+        tab_ref_clean : nom de la table contenant les formes végétales nettoyées
+        mnh_raster : nom du raster contanant le mnh
+        vector_mnh_clean_tmp : nom du vecteur contanant l'information du mnh moyen
         clean_option : option de nettoyage plus poussé. Par défaut : False
         save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par défaut : False
         debug : paramètre de debugage. Par défaut : 1
+     Retun :
+        tab_ref_clean : nom de la table contenant les formes végétales nettoyées
     """
 
-    # pour l'instant tab_ref = 'vegetation'
-
+    # Pour l'instant tab_ref = 'vegetation' et  tab_ref_clean = 'vegetation_to_clean'
     query = """
-    DROP TABLE IF EXISTS vegetation_to_clean;
-    CREATE TABLE vegetation_to_clean AS (SELECT * FROM %s)
-    """ %(tab_ref)
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS (SELECT * FROM %s)
+    """ %(tab_ref_clean, tab_ref_clean, tab_ref)
 
     if debug >= 3 :
         print(query)
     executeQuery(connexion, query)
 
-    tab_ref = 'vegetation_to_clean'
-
-    addSpatialIndex(connexion, tab_ref)
-    addIndex(connexion, tab_ref, 'fid', 'fid_veg_to_clean')
+    addSpatialIndex(connexion, tab_ref_clean)
+    addIndex(connexion, tab_ref_clean, 'fid', 'fid_veg_to_clean')
 
     # 1# Suppression des FV dont la surface est strictement inférieure à 1m²
     query = """
@@ -1460,7 +1468,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
             SELECT * FROM %s WHERE strate = 'H'
             ) AS t
         WHERE public.ST_AREA(t.geom) < 1;
-    """ %(tab_ref, tab_ref, tab_ref)
+    """ %(tab_ref_clean, tab_ref_clean, tab_ref_clean)
 
     if debug >= 3 :
         print(query)
@@ -1472,7 +1480,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
     DELETE FROM %s AS t1 USING fv_arbu_delete AS t2 WHERE t1.fid = t2.fid;
 
     DELETE FROM %s AS t1 USING fv_herba_delete AS t2 WHERE t1.fid = t2.fid;
-    """ %(tab_ref, tab_ref, tab_ref)
+    """ %(tab_ref_clean, tab_ref_clean, tab_ref_clean)
 
     if debug > 3 :
         print(query)
@@ -1487,7 +1495,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
     query = """
     UPDATE %s SET fv = 'AI' WHERE fv = 'TA';
     UPDATE %s SET fv = 'AuI' WHERE fv = 'TAu';
-    """ %(tab_ref, tab_ref)
+    """ %(tab_ref_clean, tab_ref_clean)
     #UPDATE %s SET fv = 'BOA' WHERE fv = 'TA';
     #UPDATE %s SET fv = 'BOAu' WHERE fv = 'TAu';
 
@@ -1519,7 +1527,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
                     t2.fid AS fid_herba, t2.strate AS strate_herba, t2.fv AS fv_herba, t2.geom AS geom_herba
             FROM (SELECT * FROM %s WHERE strate = 'A') as t1, (SELECT * FROM %s WHERE strate = 'H') AS t2
             WHERE public.ST_INTERSECTS(t1.geom, t2.geom);
-        """ %(tab_ref, tab_ref, tab_ref, tab_ref, tab_ref, tab_ref)
+        """ %(tab_ref_clean, tab_ref_clean, tab_ref_clean, tab_ref_clean, tab_ref_clean, tab_ref_clean)
 
         if debug >= 3 :
             print(query)
@@ -1570,7 +1578,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
                 WHERE t1.ratio_surface < 0.5
                 ) AS t2
             WHERE t1.fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
-        """ %(tab_ref)
+        """ %(tab_ref_clean)
 
         if debug >= 3 :
             print(query)
@@ -1589,14 +1597,13 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
                 WHERE t1.ratio_surface < 0.5
                 ) as t2
             WHERE t1.fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
-        """ %(tab_ref)
+        """ %(tab_ref_clean)
 
         if debug >= 3 :
             print(query)
         executeQuery(connexion, query)
 
         # Les fvs arbustives touchant plus d'une fv arborée
-
         query = """
         DROP TABLE IF EXISTS fv_arbu_touch_more_2_arbo;
         CREATE TABLE fv_arbu_touch_more_2_arbo AS
@@ -1620,7 +1627,6 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
         addSpatialIndex(connexion, 'fv_arbu_touch_more_2_arbo', 'geom_arbu', 'idx_gist_arbu_touch_m_2_arbu')
         addSpatialIndex(connexion, 'fv_arbu_touch_more_2_arbo', 'geom_arbo', 'idx_gist_arbu_touch_m_2_arbo')
 
-
         # Ré-attribution de la strate 'A' pour les fvs arbustifs concernés
         query = """
         UPDATE %s AS t1 SET strate = 'A'
@@ -1633,7 +1639,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
             WHERE t1.ratio_surface < 0.5
             ) AS t2
         WHERE t1.fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
-        """ %(tab_ref)
+        """ %(tab_ref_clean)
 
         if debug >= 3 :
             print(query)
@@ -1660,7 +1666,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
                 WHERE t1.ratio_surface < 0.5
                 ) as t2
             WHERE t1.fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
-        """ %(tab_ref)
+        """ %(tab_ref_clean)
 
         if debug >= 3:
             print(query)
@@ -1704,7 +1710,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
                 WHERE t1.ratio_surface > 2
                 ) AS t2
             WHERE t1.fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
-        """ %(tab_ref)
+        """ %(tab_ref_clean)
 
         if debug >= 3:
             print(query)
@@ -1722,7 +1728,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
                 WHERE t1.ratio_surface > 2
                 ) AS t2
             WHERE t1.fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
-        """ %(tab_ref)
+        """ %(tab_ref_clean)
 
         if debug >= 3:
             print(query)
@@ -1765,7 +1771,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
                 WHERE t1.ratio_surface > 2
                 ) as t2
             WHERE t1.fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
-        """ %(tab_ref)
+        """ %(tab_ref_clean)
 
         if debug >= 3:
             print(query)
@@ -1792,11 +1798,70 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
                 WHERE t1.ratio_surface > 2
             ) AS t2
             WHERE t1.fid = t2.fid_arbo AND t1.fv IN ('AA', 'BOA');
-        """ %(tab_ref)
+        """ %(tab_ref_clean)
 
         if debug >= 3:
             print(query)
         executeQuery(connexion, query)
+
+        ## Traitement des surfaces herbacé < à 20m2 et entouré de polygones de type arboré ou arbustif, si le MNH moyen est < à 1 on ne chanche rien si entre 1m et 3m on passe en arbustif et si > à 3m on passé en arboré
+
+        # Sauvegarde de tab_ref_clean en fichier temporaire
+        vector_mnh_clean_tmp_in = os.path.splitext(vector_mnh_clean_tmp)[0] + "_in" +  os.path.splitext(vector_mnh_clean_tmp)[1]
+        vector_mnh_clean_tmp_out = os.path.splitext(vector_mnh_clean_tmp)[0] + "_out" +  os.path.splitext(vector_mnh_clean_tmp)[1]
+        exportVectorByOgr2ogr(connexion_dic["dbname"], vector_mnh_clean_tmp_in, tab_ref_clean, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], format_type='GPKG')
+
+        # Calcul de la valeur médiane de hauteur pour chaque segment de végétation
+        calc_statMedian(vector_mnh_clean_tmp_in, mnh_raster, vector_mnh_clean_tmp_out)
+
+        # Recharger tab_ref_clean en fonction du fichier vecteur contenant la hauteur moyenne
+        dropTable(connexion, tab_ref_clean)
+        importVectorByOgr2ogr(connexion_dic["dbname"], vector_mnh_clean_tmp_out, tab_ref_clean, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
+
+        # Calcul des surfaces herbacé < à 20m2
+        query = """
+        CREATE TABLE tab_out AS
+            SELECT t1.*
+            FROM (SELECT * FROM %s WHERE public.ST_AREA(geom) > 20) as t1, (SELECT * FROM %s WHERE strate = 'A' OR strate = 'Au') AS t2
+            WHERE public.ST_INTERSECTS(t1.geom, t2.geom);
+
+
+
+
+        UPDATE %s AS t SET strate = 'A'
+        FROM (
+            SELECT t1.fid
+            FROM (
+                SELECT fid
+                FROM %s
+                ) AS t2,
+                WHERE (
+                SELECT fid
+                FROM %s
+                WHERE public.ST_INTERSECTS(t1.geom, t2.geom)
+
+
+public.ST_INTERSECTS(t1.geom, t2.geom);
+                SELECT fid, strate
+                FROM %s WHERE strate = 'A' OR strate = 'Au'
+                ) AS t1,
+                (
+                SELECT fid, strate
+                FROM %s
+                ) AS t2,
+            WHERE public.ST_INTERSECTS(t1.geom, t2.geom)
+            GROUP BY t1.fid;
+            )
+        WHERE public.ST_AREA(geom) < 20) AND strate = 'H';
+
+        """ %(tab_ref_clean, tab_ref_clean)
+
+        if debug >= 3:
+            print(query)
+        executeQuery(connexion, query)
+
+        # Supprimer la colonne "median" inutile
+        dropColumn(connexion, tab_ref_clean, 'median')
 
         # Comme certaines classes de FV ont été ré-attribuée --> risque que deux fvs similaires soient disposées dans deux polygones séparés
         query = """
@@ -1837,7 +1902,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
             SELECT 'Au' AS strate, 'BOAu' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
             FROM %s
             WHERE fv = 'BOAu';
-        """ %(tab_ref,tab_ref,tab_ref,tab_ref,tab_ref, tab_ref, tab_ref, tab_ref)
+        """ %(tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean, tab_ref_clean, tab_ref_clean, tab_ref_clean)
 
         if debug >= 3:
             print(query)
@@ -1854,13 +1919,13 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
             UNION
             SELECT strate, fv, geom
             FROM fveg_au;
-        """ %(tab_ref,tab_ref)
+        """ %(tab_ref_clean,tab_ref_clean)
 
         if debug >= 3:
             print(query)
         executeQuery(connexion, query)
 
-        addUniqId(connexion, tab_ref)
+        addUniqId(connexion, tab_ref_clean)
 
         if not save_intermediate_result :
             dropTable(connexion, 'fv_arbu_touch_arbo')
@@ -1875,5 +1940,7 @@ def formStratumCleaning(connexion, tab_ref, clean_option = False, save_intermedi
         dropTable(connexion, 'fveg_h')
         dropTable(connexion, 'fveg_a')
         dropTable(connexion, 'fveg_au')
+        removeFile(vector_mnh_clean_tmp_in)
+        removeFile(vector_mnh_clean_tmp_out)
 
-    return tab_ref
+    return tab_ref_clean

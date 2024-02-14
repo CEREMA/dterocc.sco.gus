@@ -86,7 +86,7 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     # Implémentation du paysage
     result = True
     if dic_params["ldsc_information"]["img_landscape"] == "":
-        result = landscapeDetection(connexion, connexion_dic, dic_params, repertory = dic_params["ldsc_information"]["dirname"] , save_intermediate_result = save_intermediate_result, debug = debug)
+        result, dic_params = landscapeDetection(connexion, connexion_dic, dic_params, repertory = dic_params["ldsc_information"]["dirname"] , save_intermediate_result = save_intermediate_result, debug = debug)
     if not result :
         print(bold + yellow + "Faute de données paysage, l'attribut 'paysage' ne sera pas implémenté pour l'ensemble des formes végétales." + endC)
     else:
@@ -98,7 +98,7 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
     if output_layer == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur de la cartographie finale de la végétation (détaillée). Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else :
-        # export au format vecteur
+        # Export au format vecteur
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
         # # export au format raster --> pour l'instant l'export au format tif n'est pas opérationnel.

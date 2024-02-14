@@ -590,7 +590,10 @@ if __name__ == "__main__":
     img_mnh = img_mnh_cut
 
     dic_neochannels["mnh"] = img_mnh
-
+    raster_dic = {
+        "MNH" : dic_neochannels["mnh"],
+        "TXT" : dic_neochannels["sfs"]
+    }
 
     # CONCATENATION DES NEOCANAUX
     if config["steps_to_run"]["data_concatenation"]:
@@ -709,11 +712,6 @@ if __name__ == "__main__":
       # Ouverture connexion
       connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
 
-      raster_dic = {
-        "MNH" : dic_neochannels["mnh"],
-        "TXT" : dic_neochannels["sfs"]
-      }
-
       # Nom attribué à la table de référence des segments végétation classés en strates verticales
       tab_ref_stratesv = 'segments_vegetation'
       schem_tab_ref_stratesv = 'data_final.segments_vegetation'
@@ -754,7 +752,7 @@ if __name__ == "__main__":
       # Ouverture connexion
       connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
 
-      tab_ref_fv = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = True,  debug = debug)
+      tab_ref_fv = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, raster_dic, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = True,  debug = debug)
 
       closeConnection(connexion)
       print(bold + green + "\nLa détection des formes végétales horizontales s'est bien déroulée. Le résultat est disponible dans la table %s et dans le(s) fichier(s) %s"%(tab_ref_fv, output_fv_layers) + endC)
