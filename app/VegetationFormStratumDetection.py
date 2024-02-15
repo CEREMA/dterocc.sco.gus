@@ -1820,41 +1820,23 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, mnh_ra
 
         # Calcul des surfaces herbacé < à 20m2
         query = """
-        CREATE TABLE tab_out AS
-            SELECT t1.*
-            FROM (SELECT * FROM %s WHERE public.ST_AREA(geom) > 20) as t1, (SELECT * FROM %s WHERE strate = 'A' OR strate = 'Au') AS t2
-            WHERE public.ST_INTERSECTS(t1.geom, t2.geom);
-
-
-
-
-        UPDATE %s AS t SET strate = 'A'
-        FROM (
-            SELECT t1.fid
-            FROM (
-                SELECT fid
-                FROM %s
-                ) AS t2,
-                WHERE (
-                SELECT fid
-                FROM %s
-                WHERE public.ST_INTERSECTS(t1.geom, t2.geom)
-
-
-public.ST_INTERSECTS(t1.geom, t2.geom);
-                SELECT fid, strate
-                FROM %s WHERE strate = 'A' OR strate = 'Au'
-                ) AS t1,
-                (
-                SELECT fid, strate
-                FROM %s
-                ) AS t2,
-            WHERE public.ST_INTERSECTS(t1.geom, t2.geom)
-            GROUP BY t1.fid;
-            )
-        WHERE public.ST_AREA(geom) < 20) AND strate = 'H';
-
-        """ %(tab_ref_clean, tab_ref_clean)
+        UPDATE %s
+        SET strate =
+            CASE
+                WHEN public.ST_Area(geom) < 20 AND strate = 'H' AND (
+                    (SELECT COUNT(*) FROM %s AS t
+                        WHERE public.ST_Touches(t.geom, %s.geom) AND t.strate IN ('Au', 'A')) > 0
+                )
+                THEN
+                    CASE
+                        WHEN median BETWEEN 1 AND 3 THEN 'Au'
+                        WHEN median > 3 THEN 'A'
+                        ELSE strate
+                    END
+                ELSE strate
+            END
+        WHERE public.ST_Area(geom) < 20 AND strate = 'H';
+        """ %(tab_ref_clean, tab_ref_clean, tab_ref_clean)
 
         if debug >= 3:
             print(query)
