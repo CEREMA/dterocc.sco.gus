@@ -283,7 +283,7 @@ def getGeometryType(vector_input, format_vector='ESRI Shapefile'):
                 return geometry_type
             geom_type_input2 = layer_input.GetGeomType()
             geometry_type2 = ogr.GeometryTypeToName(geom_type_input2).upper().split()[-1]
-            
+
             # Get polygon geometry
             geometry = feature_input.GetGeometryRef()
             print(geometry)
@@ -3458,8 +3458,8 @@ def cutVectorAll(vector_cut, vector_input, vector_output, overwrite=True, format
         overwrite_str = "-overwrite"
 
     # Récuperer la géometry du fichier
-    #geom_type = getGeometryType(vector_input, format_vector)
-    geom_type = 'POLYGON'
+    geom_type = getGeometryType(vector_input, format_vector)
+    #geom_type = 'POLYGON'
     # Fonction de découpage de la bibli OGR
     command = "ogr2ogr -clipsrc %s %s %s -nlt %s %s -f \"%s\" -skipfailures" %(vector_cut, vector_output, vector_input, geom_type, overwrite_str, format_vector)
     if debug >=2:

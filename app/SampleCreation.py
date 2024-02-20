@@ -304,11 +304,13 @@ def createSamples(image_input, vector_to_cut_input, vector_sample_output, raster
     # ETAPE 6 : CREATION DU FICHIER RASTER RESULTAT SI DEMANDE
 
     # Creation d'un masque binaire
-    if raster_sample_output != "" and image_input != "" :
+    if raster_sample_output != "" and image_input != "" and os.path.isfile(vector_sample_output) :
         repertory_output = os.path.dirname(raster_sample_output)
         if not os.path.isdir(repertory_output):
             os.makedirs(repertory_output)
         rasterizeBinaryVector(vector_sample_output, image_input, raster_sample_output, 1, CODAGE)
+    else :
+        print(cyan + "createSamples() : " + bold + yellow + "Attention fichier vecteur est vide il ne sera pas rasterisé : " + endC + vector_sample_output)
 
     # ETAPE 7 : SUPPRESIONS FICHIERS INTERMEDIAIRES INUTILES
 
@@ -330,7 +332,6 @@ def createSamples(image_input, vector_to_cut_input, vector_sample_output, raster
     ending_event = "createSamples() : create samples ending : "
 
     return
-
 
 ###########################################################################################################################################
 # FONCTION prepareAllSamples()                                                                                                            #
@@ -401,21 +402,25 @@ def prepareSamples(image_ref, input_vector_class, output_raster_class, empriseve
     cutoutVectors(emprisevector, [input_vector_class], [cut_file_tmp], overwrite=True, format_vector=format_vector)
 
     # Erosion si option choisit
-    if erosionoption :
+    if erosionoption and os.path.isfile(cut_file_tmp):
         bufferVector(cut_file_tmp, erosion_file_tmp, -1, col_name_buf = "", fact_buf=1.0, quadsecs=10, format_vector=format_vector)
     else :
         erosion_file_tmp = cut_file_tmp
-   # erosion_file_tmp = r'/mnt/RAM_disk/output_vector_erosion.gpkg'
+
+    # Préparation des fichiers temporaires
+    file_cut_suffix = "_cutcut"
+    cutcut_file_tmp = repertory_output + os.sep + file_name + file_cut_suffix + extension_raster
+
     # Creation d'un masque binaire
-    if output_raster_class != "" and image_ref != "" :
+    if output_raster_class != "" and image_ref != "" and erosion_file_tmp  != ""  and os.path.isfile(erosion_file_tmp):
         repertory_output = os.path.dirname(output_raster_class)
         if not os.path.isdir(repertory_output):
             os.makedirs(repertory_output)
-        # Préparation des fichiers temporaires
-        file_cut_suffix = "_cutcut"
-        cutcut_file_tmp = repertory_output + os.sep + file_name + file_cut_suffix + extension_raster
+
         rasterizeBinaryVector(erosion_file_tmp, image_ref, cutcut_file_tmp, 1)
         cutImageByVector(emprisevector ,cutcut_file_tmp, output_raster_class)
+    else :
+        print(cyan + "prepareSamples() : " + bold + yellow + "Attention fichier vecteur est vide il ne sera pas rasterisé : " + endC + erosion_file_tmp)
 
     if debug >= 3:
         print(cyan + "prepareSamples() : " + bold + green + "Fin du traitement." + endC)
@@ -424,7 +429,6 @@ def prepareSamples(image_ref, input_vector_class, output_raster_class, empriseve
         removeFile(cut_file_tmp)
         removeFile(erosion_file_tmp)
         removeFile(cutcut_file_tmp)
-
 
     return
 
@@ -448,7 +452,8 @@ def cleanAllSamples(images_in_output, correction_images_dic, extension_raster = 
     for key in images_in_output.keys():
         image_input = images_in_output[key][0]
         image_output = images_in_output[key][1]
-        #Création du dictionnaire des corrections
+
+        # Création du dictionnaire des corrections
         dic_correct_treat = {}
         for treatment in correction_images_dic[key]:
             print(treatment[0])
@@ -527,25 +532,28 @@ def cleanSamples(image_input, image_output, correction_images_input_dic, extensi
                 # Récupération du masque qui sert au nettoyage
                 file_mask_input = treatment_info_list[0]
 
-                threshold_min = float(treatment_info_list[1])
-                threshold_max = float(treatment_info_list[2])
+                if file_mask_input != "" and file_mask_input != None and os.path.isfile(file_mask_input) :
 
-                if cpt_treat == 0:
-                    sample_raster_file_input_temp = image_input
+                    threshold_min = float(treatment_info_list[1])
+                    threshold_max = float(treatment_info_list[2])
 
-                # Appel de la fonction de traitement
-                processingSample(sample_raster_file_input_temp, sample_raster_file_output, file_mask_input, threshold_min, threshold_max, repertory_temp)
+                    if cpt_treat == 0:
+                        sample_raster_file_input_temp = image_input
 
-                cpt_treat+=1
+                    # Appel de la fonction de traitement
+                    if os.path.isfile(sample_raster_file_input_temp) :
+                        processingSample(sample_raster_file_input_temp, sample_raster_file_output, file_mask_input, threshold_min, threshold_max, repertory_temp)
 
-                if cpt_treat != len(correction_images_input_dic) :
-                    sample_raster_file_input_temp = os.path.splitext(sample_raster_file_output)[0] +str(cpt_treat) + extension_raster
-                    os.rename(sample_raster_file_output, sample_raster_file_input_temp)
+                        cpt_treat+=1
 
-                # Nettoyage du traitement precedent
-                sample_raster_file_input_temp_before = os.path.splitext(sample_raster_file_output)[0] +str(cpt_treat-1) + extension_raster
-                if os.path.isfile(sample_raster_file_input_temp_before) :
-                    removeFile(sample_raster_file_input_temp_before)
+                        if cpt_treat != len(correction_images_input_dic) :
+                            sample_raster_file_input_temp = os.path.splitext(sample_raster_file_output)[0] +str(cpt_treat) + extension_raster
+                            os.rename(sample_raster_file_output, sample_raster_file_input_temp)
+
+                        # Nettoyage du traitement precedent
+                        sample_raster_file_input_temp_before = os.path.splitext(sample_raster_file_output)[0] +str(cpt_treat-1) + extension_raster
+                        if os.path.isfile(sample_raster_file_input_temp_before) :
+                            removeFile(sample_raster_file_input_temp_before)
 
     print(cyan + "cleanSamples() : " + bold + green + "Fin des traitements" + endC)
 
@@ -591,9 +599,6 @@ def processingSample(sample_raster_file_input, sample_raster_file_output, file_m
     print(cyan + "processingSample() : " + bold + green + "Traitement en cours..." + endC)
 
     # Traitement préparation
-
-
-
     file_mask_output_temp = repertory_temp + os.sep + os.path.splitext(os.path.basename(file_mask_input))[0] + "_mask_tmp" + os.path.splitext(file_mask_input)[1]
 
     if os.path.isfile(file_mask_output_temp) :

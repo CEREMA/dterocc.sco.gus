@@ -119,8 +119,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     addSpatialIndex(connexion, tab_name)
 
     # 5# Nettoyage des formes végétales plus poussée ou non, en fonction du choix de l'opérateur (cleanfv)
-    vector_mnh_clean_tmp = os.path.dirname(output_layers["output_fv"]) + os.sep + 'vegetation_tmp.gpkg'
-    tab_name = formStratumCleaning(connexion, connexion_dic, tab_name, tab_name_clean, raster_dic["MNH"], vector_mnh_clean_tmp, cleanfv, save_intermediate_result, debug)
+    tab_name = formStratumCleaning(connexion, connexion_dic, tab_name, tab_name_clean, cleanfv, save_intermediate_result, debug)
 
     # Lissage de la donnée finale
     #query = """
@@ -1421,8 +1420,6 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, mnh_ra
         connexion_dic : dictionnaire contenant les paramètres de connexion (pour la sauvegarde en fin de fonction)
         tab_ref : nom de la table contenant les formes végétales à nettoyer
         tab_ref_clean : nom de la table contenant les formes végétales nettoyées
-        mnh_raster : nom du raster contanant le mnh
-        vector_mnh_clean_tmp : nom du vecteur contanant l'information du mnh moyen
         clean_option : option de nettoyage plus poussé. Par défaut : False
         save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par défaut : False
         debug : paramètre de debugage. Par défaut : 1
@@ -1849,7 +1846,6 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, mnh_ra
             print(query)
         executeQuery(connexion, query)
 
-        tab_ref_temp = 'vegetation_temp'
         query = """
         DROP TABLE IF EXISTS %s;
         CREATE TABLE %s AS
@@ -1861,101 +1857,14 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, mnh_ra
             UNION
             SELECT strate, fv, geom
             FROM fveg_au;
-        """ %(tab_ref_temp, tab_ref_temp)
-
-        if debug >= 3:
-            print(query)
-        executeQuery(connexion, query)
-        addUniqId(connexion, tab_ref_temp)
-
-       ## Traitement des surfaces herbacé < à 20m2 et entouré de polygones de type arboré ou arbustif,
-       ## si le MNH moyen est < à 1 on ne chanche rien si entre 1m et 3m on passe en arbustif et si > à 3m on passé en arboré
-
-        # Sauvegarde de tab_ref_temp en fichier temporaire
-        vector_mnh_clean_tmp_in = os.path.splitext(vector_mnh_clean_tmp)[0] + "_in" +  os.path.splitext(vector_mnh_clean_tmp)[1]
-        vector_mnh_clean_tmp_out = os.path.splitext(vector_mnh_clean_tmp)[0] + "_out" +  os.path.splitext(vector_mnh_clean_tmp)[1]
-        exportVectorByOgr2ogr(connexion_dic["dbname"], vector_mnh_clean_tmp_in, tab_ref_temp, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], format_type='GPKG')
-
-        # Calcul de la valeur médiane de hauteur pour chaque segment de végétation
-        calc_statMedian(vector_mnh_clean_tmp_in, mnh_raster, vector_mnh_clean_tmp_out)
-
-        # Recharger tab_ref_temp en fonction du fichier vecteur contenant la hauteur moyenne
-        dropTable(connexion, tab_ref_temp)
-        importVectorByOgr2ogr(connexion_dic["dbname"], vector_mnh_clean_tmp_out, tab_ref_temp, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
-
-        # Calcul des surfaces herbacé < à 20m2
-        query = """
-        UPDATE %s
-        SET
-            strate =
-                CASE
-                    WHEN median BETWEEN 1 AND 3 THEN 'Au'
-                    WHEN median > 3 THEN 'A'
-                    ELSE strate
-                END,
-            fv =
-                CASE
-                    WHEN median BETWEEN 1 AND 3 THEN 'BOAu'
-                    WHEN median > 3 THEN 'BOA'
-                    ELSE fv
-                END
-        WHERE
-            strate = 'H' AND
-            public.ST_Area(geom) < 20 AND
-            (
-                SELECT COUNT(*) FROM %s AS t
-                WHERE
-                    public.ST_Touches(t.geom, %s.geom) AND
-                    t.strate IN ('Au', 'A')
-            ) = (
-                SELECT COUNT(*) FROM %s AS t
-                WHERE
-                    public.ST_Touches(t.geom, %s.geom)
-            );
-        """ %(tab_ref_temp, tab_ref_temp, tab_ref_temp, tab_ref_temp, tab_ref_temp)
-
-        if debug >= 3:
-            print(query)
-        executeQuery(connexion, query)
-
-        # Supprimer la colonne "median" inutile
-        dropColumn(connexion, tab_ref_temp, 'median')
-        dropColumn(connexion, tab_ref_temp, 'ogc_fid')
-        addUniqId(connexion, tab_ref_temp)
-
-        # Regroupement des polygones de même type de strate
-        query = """
-        DROP TABLE IF EXISTS %s;
-        CREATE TABLE %s AS
-        SELECT t.strate, t.fv, public.ST_Union(t.geom) AS geom
-        FROM %s AS t
-        GROUP BY t.strate, t.fv ;
-        """ %(tab_ref_clean, tab_ref_clean, tab_ref_temp)
-
-        if debug >= 3:
-            print(query)
-        executeQuery(connexion, query)
-
-        # Passer en geometry simple
-        query = """
-        UPDATE %s
-        SET geom = (
-            SELECT public.ST_Collect(geom)
-            FROM (
-                SELECT (public.ST_Dump(geom)).geom AS geom
-                FROM %s
-            ) AS subquery
-        );
         """ %(tab_ref_clean, tab_ref_clean)
 
         if debug >= 3:
             print(query)
-        #executeQuery(connexion, query)
-
+        executeQuery(connexion, query)
         addUniqId(connexion, tab_ref_clean)
 
         if not save_intermediate_result :
-            dropTable(connexion, tab_ref_temp)
             dropTable(connexion, 'fv_arbu_touch_arbo')
             dropTable(connexion, 'fv_arbu_touch_herba')
             dropTable(connexion, 'fv_arbo_touch_herba')
@@ -1964,13 +1873,9 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, mnh_ra
             dropTable(connexion, 'fv_arbo_touch_only_1_arbu')
             dropTable(connexion, 'fv_arbo_touch_more_2_arbu')
 
-    exportVectorByOgr2ogr(connexion_dic["dbname"], vector_mnh_clean_tmp, tab_ref_clean, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], format_type='GPKG')
-
     if not save_intermediate_result :
         dropTable(connexion, 'fveg_h')
         dropTable(connexion, 'fveg_a')
         dropTable(connexion, 'fveg_au')
-        removeFile(vector_mnh_clean_tmp_in)
-        removeFile(vector_mnh_clean_tmp_out)
 
     return tab_ref_clean

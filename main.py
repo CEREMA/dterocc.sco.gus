@@ -15,7 +15,7 @@ from libs.Lib_raster import cutImageByVector
 from libs.Lib_postgis import createDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema
 
 # Applications /apps
-from app.SampleCreation import createAllSamples, prepareAllSamples
+from app.SampleCreation import createAllSamples, cleanAllSamples, prepareAllSamples
 from app.CleanCoverClasses import cleanCoverClasses
 from app.SampleSelectionRaster import selectSamples
 from app.SupervisedClassification import classifySupervised, StructRFParameter
@@ -55,9 +55,6 @@ if __name__ == "__main__":
 
     if img_ref == "" and not config_data["steps_to_run"]["img_assembly"] :
       print(bold + red + "Attention : aucune donnée n'est fournie pour le bon déroulement des étapes de production de la cartographie !!!" + endC)
-
-
-
 
     ########################################
     # RENSEIGNEMENT DES DONNEES EN ENTREE  #

@@ -7,9 +7,9 @@
         "create_DHM" : false,
         "neochannels_computation" : false,
         "data_concatenation" : false,
-        "vegetation_extraction" : false,
+        "vegetation_extraction" : true,
         "vertical_stratum_detection" : false,
-        "vegetation_form_stratum_detection" : true,
+        "vegetation_form_stratum_detection" : false,
         "indicators_computation" : false
     },
     "data_entry": {

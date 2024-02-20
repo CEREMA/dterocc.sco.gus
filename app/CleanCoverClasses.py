@@ -43,11 +43,10 @@ def cleanCoverClasses(img_ref, mask_samples_macro_input_list, image_samples_merg
         samples_image_input = mask_samples_macro_input_list[macroclass_id]
         filename = os.path.splitext(os.path.basename(samples_image_input))[0]
         image_mask_cleaned =  repertory_output + os.sep + filename + "mask_clean" + extension_raster
-        images_mask_cleaned_list.append(image_mask_cleaned)
         image_out = repertory_output + os.sep + filename + "cleaned" + extension_raster
-        images_list_out.append(image_out)
-
-
+        if os.path.isfile(image_out) :
+            images_mask_cleaned_list.append(image_mask_cleaned)
+            images_list_out.append(image_out)
 
     # Suppression des pixels possédant la même valeur binaire sur plusieurs images
     print(mask_samples_macro_input_list)

@@ -12,6 +12,7 @@ import os,sys,glob
 from libs.Lib_display import bold,red,yellow,cyan,endC
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_raster import rasterizeVector
+from libs.Lib_file import removeFile
 from libs.Lib_postgis import readTable, executeQuery, addColumn, addUniqId, addIndex, addSpatialIndex, dropTable, dropColumn, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
 
 ###########################################################################################################################################
@@ -236,7 +237,6 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     if tablename_mnh != '':
         dropTable(connexion, tablename_mnh)
 
-
     ######################################################################
     ## Prétraitements : transformation de l'ensemble des multipolygones ##
     ##                  en simples polygones ET suppression des         ##
@@ -436,6 +436,37 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         print(query)
     executeQuery(connexion, query)
 
+    ## Traitement des surfaces herbacé < à 20m2 et entouré de polygones de type arboré ou arbustif,
+    ## si le MNH moyen est < à 1 on ne chanche rien si entre 1m et 3m on passe en arbustif et si > à 3m on passé en arboré
+
+    # Calcul des surfaces herbacé < à 20m2
+    query = """
+    UPDATE %s
+    SET
+        strate =
+            CASE
+                WHEN mnh BETWEEN 1 AND 3 THEN 'Au'
+                WHEN mnh > 3 THEN 'A'
+                ELSE strate
+            END
+    WHERE
+        strate = 'H' AND
+        public.ST_Area(geom) < 20 AND
+        (
+            SELECT COUNT(*) FROM %s AS t
+            WHERE
+                public.ST_Touches(t.geom, %s.geom) AND
+                t.strate IN ('Au', 'A')
+        ) = (
+            SELECT COUNT(*) FROM %s AS t
+            WHERE
+                public.ST_Touches(t.geom, %s.geom)
+        );
+    """ %(tab_ref, tab_ref, tab_ref, tab_ref, tab_ref)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
 
     #############################################################
     ## Sauvegarde des résultats en tant que couche vectorielle ##
@@ -488,6 +519,7 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         rasterizeVector(output_layers["output_stratesv"], raster_output,  img_ref, 'fv_r', codage="uint8", ram_otb=0)
         # suppression de la colonne non utile "strate_r"
         dropColumn(connexion, tab_ref, 'strate_r')
+
     return tab_ref
 
 ###########################################################################################################################################
