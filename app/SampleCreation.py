@@ -459,7 +459,6 @@ def cleanAllSamples(images_in_output, correction_images_dic, extension_raster = 
             print(treatment[0])
             dic_correct_treat[treatment[0]] =[treatment[1], treatment[2], treatment[3]]
             print(dic_correct_treat)
-
         cleanSamples(image_input, image_output, dic_correct_treat, extension_raster, save_results_intermediate, overwrite)
 
     return
