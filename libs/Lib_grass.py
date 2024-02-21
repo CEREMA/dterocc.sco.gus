@@ -210,11 +210,46 @@ def exportRasterGdal2Grass(input_name, output_raster, format_raster="GTiff", ove
     return
 
 #########################################################################
+# FONCTION simplificationGrass()                                        #
+#########################################################################
+def simplificationGrass(vector_input, vector_output, threshold=1.0, format_vector='ESRI_Shapefile', overwrite=True):
+    """
+    #   Rôle : Permet la simplification d'un fichier vecteur avec GRASS
+    #   Paramètres :
+    #       vector_input : fichier vecteur à simplifier
+    #       vector_output : fichier vecteur en sortie
+    #       threshold : Valeur de tolérance maximale (float)
+    #       format_vector : format du vecteur de sortie (par défaut, 'ESRI_Shapefile')
+    #       overwrite : (option) supprime ou non les fichiers existants ayant le meme nom.
+    """
+
+    # Import de la couche vecteur
+    timeinit = time.time()
+    name_vector_input = os.path.splitext(os.path.basename(vector_input))[0]
+    name_vector_output = name_vector_input + "_Chaiken"
+    importVectorOgr2Grass(vector_input, name_vector_input)
+
+    if debug >= 20:
+        print(cyan + "simplificationGrass() : " + bold + green + "Import vecteur dans Grass : " + str(vector_input)  + endC)
+
+    # Chaiken simplification
+    result = grass.run_command("v.generalize", input = "%s"%(name_vector_input), method="chaiken", threshold="%s"%(threshold), output=name_vector_output, overwrite=overwrite, stderr=subprocess.PIPE)
+
+    # Export vector file
+    exportVectorOgr2Grass(name_vector_output, vector_output, format_vector, overwrite)
+
+    timeend = time.time()
+    if debug >= 2:
+        print(cyan + "simplificationGrass() : " + bold + green + "GSimplification process : " + vector_output +  " delay : "+ str(timeend - timeinit) + " seconds" + endC)
+
+    return
+
+#########################################################################
 # FONCTION vectorisationGrass()                                         #
 #########################################################################
 def vectorisationGrass(raster_input, vector_output, mmu, douglas=None, hermite=None, angle=True, format_vector='ESRI_Shapefile', overwrite=True):
     """
-    #   Rôle : Permet la vectorisation d'un fichicher raster avec GRASS
+    #   Rôle : Permet la vectorisation d'un fichier raster avec GRASS
     #   Paramètres :
     #       raster_input : fichier raster à vectoriser
     #       vector_output : fichier vecteur en sortie
@@ -297,7 +332,6 @@ def vectorisationGrass(raster_input, vector_output, mmu, douglas=None, hermite=N
         print(cyan + "vectorisationGrass() : " + bold + green + "Global Vectorization and Simplification process : " + str(timeend - timeinit) + " seconds" + endC)
 
     return
-
 
 #########################################################################
 # FONCTION convertRGBtoHIS()                                            #
