@@ -14,6 +14,8 @@ from libs.Lib_display import endC, bold, yellow, cyan, red
 from libs.CrossingVectorRaster import statisticsVectorRaster
 from libs.Lib_file import removeFile, removeVectorFile, deleteDir
 from libs.Lib_raster import rasterizeVector
+from libs.Lib_vector import getEmpriseFile
+from libs.Lib_grass import initializeGrass, cleanGrass, simplificationGrass
 # Import des applications de /app
 from app.VerticalStratumDetection import calc_statMedian
 
@@ -56,7 +58,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
         print(cyan + "cartographyVegetation : " + endC + "debug : " + str(debug) + endC)
 
     # Nettoyage en base si ré-écriture
-    if overwrite and False:
+    if overwrite and False: # Attention ce nettoyage est dangeureux on n a plus de donnée d'entrée apres!!! sans doute a supprimer cette étape.
         print(bold + "Choix de remise à zéro du schéma " + str(schem_tab_ref))
         query ="""
         SELECT format('DROP TABLE %s.%s', table_schema, table_name)
@@ -156,10 +158,24 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, dic_threshold
     if output_layers["output_fv"] == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
-        # export au format vecteur
+        # Export au format vecteur
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["output_fv"], tab_name, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-        # export au format raster
-        # creation du chemin de sauvegarde de la donnée raster
+
+        # Lissage de la donnée vecteur avant de rasteriser
+        vector_input_grass = output_layers["output_fv"]
+        vector_output_grass = os.path.splitext(vector_input_grass)[0] + "_lis" + os.path.splitext(vector_input_grass)[1]
+        repository = os.path.dirname(vector_input_grass) + os.sep
+        xmin,xmax,ymin,ymax =  getEmpriseFile(vector_input_grass, format_vector='GPKG')
+        epsg = 2154
+        pixel_size_x = 1
+        pixel_size_y = 1
+        initializeGrass(repository, xmin, xmax, ymin, ymax, pixel_size_x, pixel_size_y, projection=epsg)
+        simplificationGrass(vector_input_grass, vector_output_grass, threshold=1.0, format_vector='GPKG', overwrite=overwrite)
+        cleanGrass(repository)
+        output_layers["output_fv"] = vector_output_grass
+
+        # Export au format raster
+        # Creation du chemin de sauvegarde de la donnée raster
         repertory_output = os.path.dirname(output_layers["output_fv"])
         filename =  os.path.splitext(os.path.basename(output_layers["output_fv"]))[0]
         raster_output = repertory_output + os.sep + filename  + '.tif'

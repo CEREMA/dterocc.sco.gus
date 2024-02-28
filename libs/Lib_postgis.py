@@ -47,10 +47,10 @@ def openConnection(database_name, user_name='postgres', password='postgres', ip_
     connection = None
     try:
         if schema_name == '' :
-            connection = psycopg2.connect(dbname=database_name, user=user_name, password=password, host=ip_host, port=num_port)
+            connection = psycopg2.connect(dbname=database_name, user=user_name, password=password, host=ip_host, port=num_port, connect_timeout=60)
         else :
             option_shema = "--search_path=" + "{}".format(schema_name)
-            connection = psycopg2.connect(dbname=database_name, user=user_name, password=password, host=ip_host, port=num_port, options=option_shema)
+            connection = psycopg2.connect(dbname=database_name, user=user_name, password=password, host=ip_host, port=num_port, connect_timeout=60, options=option_shema)
     except psycopg2.DatabaseError as err:
         if connection:
             connection.rollback()
