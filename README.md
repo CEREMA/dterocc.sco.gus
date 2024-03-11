@@ -2,15 +2,14 @@
 
 # Projet Green Urban Sat (GUS)
 
-Ce projet a pour volonté de produire une méthodologie de cartographie détaillée de la végétation en milieu urbain répondant à plusieurs objectifs :
+Ce projet a pour objectif de produire une méthodologie de cartographie détaillée de la végétation urbaine répondant à plusieurs objectifs :
 - réplicable mondialement
-- fonction de support pour l'évaluation de services écosystémiques
 - indépendant de bases de données locales ou nationales
-- servir de base à l'évaluation de 5 services écosystémiques : sevrice de régulation du climat local, service de régulation de la qualité de l'air, service de support socio- culturels, service de continuité écologique et service d'irrigation.
+- support pour l'évaluation de 5 services écosystémiques : régulation du climat local, régulation de la qualité de l'air, bénéfices socio-culturels, continuités écologiques et irrigation.
 
 ## Principe
 
-Ce dépôt GITHUB présente l'ensemble des scripts python produits afin de générer automatiquement une cartographie détaillée de la végétation, à partir d'une image Pléaides THRS donnée.
+Ce dépôt GITHUB présente l'ensemble des scripts python produits afin de générer automatiquement une cartographie détaillée de la végétation, à partir de deux images Pléaides données.
 
 Cette cartographie se présente sous la forme d'une couche vecteur décrivant la végétation avec une table attributaire se présentant sous la forme suivante :
 
@@ -69,9 +68,7 @@ Version Python 3. 10. 12
 Le lancement du code se décompose en trois étapes :
 1. le téléchargement du repertoire complet
 2. le remplissage du fichier `config.json`
-3. le lancement des scripts en ouvrant une invite de commande à la racine du dossier (là où se situe le fichier main) et en lançant la commande : `python main.py`
-
-NB : il faudra bien vérifier dans le fichier `main.py` que toutes les étapes sont bien décommentées
+3. le lancement des scripts en ouvrant une fenêtre de commande à la racine du dossier (où se situe le fichier main) et en lançant la commande : `python main.py config.json`
 
 ## Utilisation du main
 
@@ -92,8 +89,6 @@ Cette partie est divisée en quatre sous-parties :
 - la création et l'implémentation des variables à partir des données fournies
 - la création de l'environnement : dossier du projet, chemins de sauvegarde, base de données pgsql/postgis
 - le lancement des étapes de production de la cartographie
-
-/!\ ne pas oublier de vérifier le nom du fichier json lu dans le fichier `main.py` à la ligne 33.
 
 #### Pré-traitements
 
@@ -212,8 +207,20 @@ Attention : nous préconisons la vérification du référentiel de projection de
 
 ## Auteur
 
-Cerema Toulouse / DT / OSECC (pôle satellite)
+Mathilde Segaud - Cerema Toulouse / DT / OSECC (pôle satellite)
 
 ## Diagramme de classe
 
 ![Diagramme de structure](https://github.com/CEREMA/dterocc.sco.gus/blob/main/README.md)
+
+-- 
+
+Emma Bousquet
+
+Responsable d'études observation satellitaire
+Direction territoriale Occitanie / DT / OSECC
+
+Tél. : +33 (0)5 62 25 97 03 / Port. : +33 (0)7 64 73 35 20
+
+Complexe scientifique de Rangueil - 1 av. du colonel Roche 31400 TOULOUSE
+

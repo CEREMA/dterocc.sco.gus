@@ -37,8 +37,12 @@ if __name__ == "__main__":
     # RECUPERATION DES VARIABLES #
     ##############################
 
-    with open('config_test_emma.json') as f:
-      config = json.load(f)
+    #with open('config_test_emma.json') as f:
+    #  config = json.load(f)
+    file_conf = sys.argv[1]
+    print('file_conf :', file_conf)
+    f = open(file_conf)
+    config = json.load(f)
 
     img_ref = config["data_entry"]["img_RVBPIR_ref"]
     img_ref_PAN = config["data_entry"]["img_PAN_ref"]
@@ -788,3 +792,4 @@ if __name__ == "__main__":
       print(bold + green + "\nCartographie détaillée de la végétation disponible via le chemin : " + path_datafinal + endC)
 
       closeConnection(connexion)
+    f.close()
