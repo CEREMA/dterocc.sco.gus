@@ -183,14 +183,10 @@ if __name__ == "__main__":
 
     # Fournir les paramètres de connexion à la base de donnée
     connexion_ini_dic = config["database_params"]
-    connexion_0 = connexion_ini_dic
-
-    #connexion_0 = config["database_params"]
-    connexion_0["dbname"] = ""
-    connexion_0["schema"] = ""
-
     if connexion_ini_dic["dbname"] == "":
       connexion_ini_dic["dbname"] = "gus"
+
+    connexion_0 = connexion_ini_dic
 
     # Paramètres de segmentation
     minsize = config["segmentation"]["minsize"]
