@@ -15,7 +15,7 @@ Cette cartographie se présente sous la forme d'une couche vecteur décrivant la
 
 | fid | strate | fv | paysage | surface | h_moy | h_med | h_et | h_min | h_max | perc_persistant | perc_caduc | perc_conifere | perc_feuillu |
 | :------ | :------ | :------ | :------ |:------ | :------ |:------ | :------ |:------ | :------ | :------ | :------ |:------ | :------ |
-| Identifiant unique de la forme végétale (fv) | Strate verticale à laquelle la fv appartient | Label de la fv | Paysage dans lequel s'inscrit la fv | Surface de la fv | Hauteur moyenne | Hauteur médiane | Écart-type de hauteur | Hauteur minimale | Hauteur maximale | Pourcentage de la fv composée de couvert persistant | Pourcentage de la fv composée de couvert caduc | Pourcentage de la fv composée de conifères | Pourcentage de la fv composée de feuillus |
+| Identifiant unique de la forme végétale (fv) | Strate verticale à laquelle la fv appartient | Label de la fv | Paysage dans lequel s'inscrit la fv | Surface de la fv (m²) | Hauteur moyenne (m) | Hauteur médiane (m) | Écart-type de hauteur (m) | Hauteur minimale (m) | Hauteur maximale (m) | Pourcentage de la fv composée de couvert persistant (%) | Pourcentage de la fv composée de couvert caduc (%) | Pourcentage de la fv composée de conifères (%) | Pourcentage de la fv composée de feuillus (%) |
 
 Les indices de confiance :
 | idc_surface | idc_h | idc_prescadu | idc_coniffeuil | idc_typesol |
@@ -213,7 +213,7 @@ Mathilde Segaud - Cerema Toulouse / DT / OSECC (pôle satellite)
 
 ![Diagramme de structure](https://github.com/CEREMA/dterocc.sco.gus/blob/main/README.md)
 
--- 
+--
 
 Emma Bousquet
 
