@@ -12,7 +12,7 @@ from osgeo import ogr ,osr
 # Librairies /libs
 from libs.Lib_display import bold,red,green,cyan,endC
 from libs.Lib_raster import cutImageByVector
-from libs.Lib_postgis import createDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema
+from libs.Lib_postgis import createDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema, importVectorByOgr2ogr, dropColumn, renameColumn
 
 # Applications /apps
 from app.SampleCreation import createAllSamples, cleanAllSamples, prepareAllSamples
@@ -782,11 +782,20 @@ if __name__ == "__main__":
         print("Schéma données finales dont fv: %s" %(connexion_datafinal_dic["schema"]))
         print("Extensions : postgis, postgis_sfcgal")
 
+      # Import en base de la couche vecteur vegetation
+      tab_ref_fv = 'vegetation_to_clean'
+      vector_vegetation_clean = path_fv + os.sep + 'vegetation_fv_lis.gpkg'
+      importVectorByOgr2ogr(connexion_datafinal_dic["dbname"], vector_vegetation_clean, tab_ref_fv, user_name=connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host=connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name=connexion_datafinal_dic["schema"], epsg=str(2154))
+
       # Ouverture connexion
       connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
 
-      dic_params["ldsc_information"]["img_ocs"] = img_classif_filtered
+      # Nettoyage des colonnes (suppression de la colonne cat et renomage de la colonne ogc_fid en fid)
+      dropColumn(connexion, tab_ref_fv, "cat")
+      renameColumn(connexion, tab_ref_fv, "ogc_fid", "fid")
 
+      # Calcul des indices
+      dic_params["ldsc_information"]["img_ocs"] = img_classif_filtered
       createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = save_intermediate_result, debug = debug)
 
       print(bold + green + "\nCartographie détaillée de la végétation disponible via le chemin : " + path_datafinal + endC)

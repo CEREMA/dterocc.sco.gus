@@ -438,6 +438,31 @@ def dropColumn(connexion, tablename, columnname):
     return
 
 ########################################################################
+# FONCTION renameColumn()                                              #
+########################################################################
+def renameColumn(connexion, tablename, columnname, new_columnname):
+    """
+    Rôle : renameColumn une colonne d'une table
+
+    Paramètres :
+        connexion : connexion à la base donnée et au schéma correspondant
+        tablename : nom de la table correspondant aux segments de végétation
+        columnname : nom de la colonne à renomer
+        new_columnname : nouveau nom de la colonne
+    """
+
+    query = """
+    ALTER TABLE %s RENAME COLUMN %s TO %s;
+    """ %(tablename, columnname, new_columnname)
+
+    # Exécution de la requête SQL
+    if debug >= 1:
+        print(query)
+    executeQuery(connexion, query)
+
+    return
+
+########################################################################
 # FONCTION addUniqId()                                                 #
 ########################################################################
 def addUniqId(connexion, tablename):
