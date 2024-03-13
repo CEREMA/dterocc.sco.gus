@@ -5,17 +5,17 @@
     "steps_to_run":{
         "img_assembly" : false,
         "create_DHM" : false,
-        "neochannels_computation" : false,
+        "neochannels_computation" : true,
         "data_concatenation" : false,
-        "vegetation_extraction" : true,
-        "vertical_stratum_detection" : false,
-        "vegetation_form_stratum_detection" : false,
-        "indicators_computation" : false
+        "vegetation_extraction" : false,
+        "vertical_stratum_detection" : true,
+        "vegetation_form_stratum_detection" : true,
+        "indicators_computation" : true
     },
     "data_entry": {
         "img_RVBPIR_ref": "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/0-IMAGES_SATELLITES/2022/NANCY/2022_06_14/16Bits/Assemblage_zone_etude_MGN/ORT_20220614_NADIR_16B_MGN_v2.tif",
         "img_PAN_ref":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/0-IMAGES_SATELLITES/2022/NANCY/2022_06_14/16Bits/Assemblage_zone_etude_MGN/ORT_20220614_P1AP_MGN.tif",
-        "studyzone_shp":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/0-EMPRISES_ETUDE/NANCY/Zone_Test_Emma.shp",
+        "studyzone_shp":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/0-EMPRISES_ETUDE/NANCY/MGN_contours.shp",
         "img_winter":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/0-IMAGES_SATELLITES/2021/NANCY/2021_12_21/16Bits/Assemblage_zone_etude_MGN/ORT_20211221_NADIR_16B_MGN.tif",
         "img_dtm":  "/mnt/Data/20_Etudes_Encours/ENVIRONNEMENT/2022_GreenUrbanSat/1-DATAS/1-DONNEES_ELEVATION/MNT/2021/NANCY/MNT_RGEALTI/",
         "img_dsm":  "/mnt/RAM_disk/ProjetGUS/0-Data/00-DonneesEntrees/1-DATAS/1-DONNEES_ELEVATION/MNS/2022/NANCY/2022_06_14/MNSCARS/DSM_PRODUITS_BRUTS.tif",
@@ -274,48 +274,48 @@
     "indicators_computation": {
         "area": {
           "area_feature": "surface",
-          "area_type": "float",
+          "area_type": "numeric(10,2)",
           "trust_area_feature": "idc_surface",
-          "trust_area_type": "float"
+          "trust_area_type": "numeric(10,2)"
         },
         "height": {
           "mean_height_feature": "h_moy",
-          "mean_height_type": "float",
+          "mean_height_type": "numeric(10,2)",
           "median_height_feature": "h_med",
-          "median_height_type": "float",
+          "median_height_type": "numeric(10,2)",
           "std_height_feature": "h_et",
-          "std_height_type": "float",
+          "std_height_type": "numeric(10,2)",
           "max_height_feature": "h_max",
-          "max_height_type": "float",
+          "max_height_type": "numeric(10,2)",
           "min_height_feature": "h_min",
-          "min_height_type": "float",
+          "min_height_type": "numeric(10,2)",
           "trust_height_feature": "idc_h",
-          "trust_height_type": "float"
+          "trust_height_type": "numeric(10,2)"
         },
         "evergreen_deciduous": {
           "evergreen_feature": "perc_persistant",
-          "evergreen_type": "float",
+          "evergreen_type": "numeric(10,2)",
           "deciduous_feature": "perc_caduc",
-          "deciduous_type": "float",
+          "deciduous_type": "numeric(10,2)",
           "ndvi_difference_thr": 0.10,
           "trust_everdecid_feature": "idc_perscadu",
-          "trust_everdecid_type": "float"
+          "trust_everdecid_type": "numeric(10,2)"
         },
         "coniferous_deciduous": {
           "coniferous_feature": "perc_conifere",
-          "coniferous_type": "float",
+          "coniferous_type": "numeric(10,2)",
           "deciduous_feature": "perc_feuillu",
-          "deciduous_type": "float",
+          "deciduous_type": "numeric(10,2)",
           "pir_difference_thr": 1300,
           "trust_conifdecid_feature": "idc_coniffeuil",
-          "trust_conifdecid_type": "float"
+          "trust_conifdecid_type": "numeric(10,2)"
         },
         "ground_type": {
           "groundtype_feature": "type_sol",
           "groundtype_type": "varchar(100)",
           "ndvi_difference_thr": 0.3,
           "trust_groundtype_feature": "idc_typesol",
-          "trust_groundtype_type": "float"
+          "trust_groundtype_type": "numeric(10,2)"
         },
         "landscape" :{
             "landscape_feature" : "paysage",
