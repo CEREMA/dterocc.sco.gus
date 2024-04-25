@@ -672,7 +672,7 @@ if __name__ == "__main__":
       # 7.Application du filtre majoritaire
       if debug >= 1:
         print(cyan + "\nApplication du filtre majoritaire" + endC)
-      print("DEGUG")
+      print("DEBUG")
       exit()
       filterImageMajority(img_classif, img_classif_filtered, umc_pixels = 8, save_results_intermediate = save_intermediate_result)
 
