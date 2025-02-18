@@ -43,38 +43,19 @@ def neochannelComputation(image_input, image_pan_input, dic_neochannels, emprise
     # Utilisation de fichiers temporaires pour produire les indices radiométriques
     repertory = os.path.dirname(dic_neochannels["ndvi"])
     file_name_ndvi = os.path.splitext(os.path.basename(dic_neochannels["ndvi"]))[0]
-    file_name_ndwi = os.path.splitext(os.path.basename(dic_neochannels["ndwi"]))[0]
-    file_name_msavi = os.path.splitext(os.path.basename(dic_neochannels["msavi"]))[0]
     file_name_sfs = os.path.splitext(os.path.basename(dic_neochannels["sfs"]))[0]
-    file_name_teinte = os.path.splitext(os.path.basename(dic_neochannels["teinte"]))[0]
 
     extension = os.path.splitext(dic_neochannels["ndvi"])[1]
 
-    # Nettoyage des Fichiers de sortis
+    # Nettoyage des Fichiers de sortie
     if overwrite:
         if os.path.exists(dic_neochannels["ndvi"]):
             os.remove(dic_neochannels["ndvi"])
-        if os.path.exists(dic_neochannels["msavi"]):
-            os.remove(dic_neochannels["msavi"])
-        if os.path.exists(dic_neochannels["ndwi"]):
-            os.remove(dic_neochannels["ndwi"])
-        if os.path.exists(dic_neochannels["teinte"]):
-            os.remove(dic_neochannels["teinte"])
         if os.path.exists(dic_neochannels["sfs"]):
             os.remove(dic_neochannels["sfs"])
 
     # Calcul du NDVI
     createNDVI(image_input, dic_neochannels["ndvi"], debug=debug)
-
-    # Calcul du MSAVI2
-    createMSAVI2(image_input, dic_neochannels["msavi"], debug=debug)
-
-    # Calcul du NDWI2
-    createNDWI2(image_input, dic_neochannels["ndwi"], debug=debug)
-
-    # Calcul de la teinte
-    createHIS(image_input, dic_neochannels["teinte"], li_choice = ["H"], debug=debug)
-    dic_neochannels["teinte"] = os.path.splitext(dic_neochannels["teinte"])[0]  + "_H" + os.path.splitext(dic_neochannels["teinte"])[1]
 
     # Calcul de la texture SFS
     createSFS(image_pan_input, dic_neochannels["sfs"], debug=debug)
@@ -125,176 +106,6 @@ def createNDVI(image_input, image_NDVI_output, channel_order = ["Red","Green","B
 
     return
 
-#########################################################################
-# FONCTION createNDWI2()                                                #
-#########################################################################
-def createNDWI2(image_input, image_NDWI2_output, channel_order = ["Red","Green","Blue","NIR"], codage="float", debug = 0):
-    """
-    Rôle : Créé une image NDWI2 (indice d'eau) à partir d'une image ortho multi bande
-
-    Paramètres :
-           image_input : fichier image d'entrée multi bandes
-           image_NDWI2_output : fichier NDWI2 de sortie (une bande)
-           channel_order : liste d'ordre des bandes de l'image, par défaut : ["Red","Green","Blue","NIR"]
-           codage : type de codage du fichier de sortie
-           debug : niveau de debug pour l'affichage des commentaires
-    """
-
-    # Variables
-    Green = ""
-    NIR = ""
-
-    # Selection des bandes pour le calcul du NDWI2
-    if "Green" in channel_order:
-        num_channel = channel_order.index("Green")+1
-        Green = "im1b"+str(num_channel)
-    if "NIR" in channel_order:
-        num_channel = channel_order.index("NIR")+1
-        NIR = "im1b"+str(num_channel)
-    if (Green == "" or NIR == ""):
-        raise NameError(cyan + "createNDWI2() : " + bold + red + "NDWI2 needs Green and NIR channels to be computed"+ endC)
-
-    # Creer l'expression
-    expression = "\"(" + NIR + "==" + Green + ")?(" + NIR + "== 0)?0:" + str(PRECISION) + ":" + "(" + Green + "-" + NIR + ")/(" + Green + "+" + NIR + "+" + str(PRECISION) + ")\""
-
-    # Bandmath pour creer l'indice NDWI2
-    command = "otbcli_BandMath -il %s -out %s %s -exp %s" %(image_input, image_NDWI2_output,codage,expression)
-    if debug >= 2:
-        print(command)
-    exitCode = os.system(command)
-    if exitCode != 0:
-        print(command)
-        raise NameError(bold + red + "createNDWI2() : An error occured during otbcli_BandMath command. See error message above." + endC)
-
-    print(cyan + "createNDWI2() : " + bold + green + "Create NDWI2 file %s complete!" %(image_NDWI2_output) + endC)
-
-    return
-
-#########################################################################
-# FONCTION createMSAVI2()                                               #
-#########################################################################
-def createMSAVI2(image_input, image_MSAVI2_output, channel_order = ["Red","Green","Blue","NIR"], codage="float", debug = 0):
-    """
-    Rôle : calcul l'image MSAVI2 (indice de végétation) à partir d'une image ortho multi bande
-
-    Paramètres :
-           image_input : fichier image d'entrée multi bandes
-           image_MSAVI2_output : fichier MSAVI de sortie une bande
-           channel_order : liste d'ordre des bandes de l'image, par défaut ["Red","Green","Blue","NIR"]
-           codage : type de codage du fichier de sortie
-           debug : niveau de debug pour l'affichage des commentaires
-    """
-
-    # Variables
-    Red = ""
-    NIR = ""
-
-    # Selection des bandes pour le calcul du MSAVI2
-    if "Red" in channel_order:
-        num_channel = channel_order.index("Red")+1
-        Red = "im1b"+str(num_channel)
-    if "NIR" in channel_order:
-        num_channel = channel_order.index("NIR")+1
-        NIR = "im1b"+str(num_channel)
-    if (Red == "" or NIR == ""):
-        raise NameError(cyan + "createMSAVI2() : " + bold + red + "MSAVI2 needs Red and NIR channels to be computed"+ endC)
-
-    # Creer l'expression
-    expression = "\"("+ NIR + " == " + Red + ")and(" + NIR + " == 0)?" + str(PRECISION) +" : (2 * " + NIR + " + 1 - sqrt(( 2 * " + NIR + " + 1 )^2 - 8 *(" + NIR + " - " + Red +"))+" +  str(PRECISION)+")/2 \""
-
-
-    # Bandmath pour creer l'indice MSAVI2
-    command = "otbcli_BandMath -il %s -out %s %s -exp %s" %(image_input, image_MSAVI2_output,codage,expression)
-    if debug >= 2:
-        print(command)
-    exitCode = os.system(command)
-    if exitCode != 0:
-        print(command)
-        raise NameError(bold + red + "createMSAVI2() : An error occured during otbcli_BandMath command. See error message above." + endC)
-
-    print(cyan + "createMSAVI2() : " + bold + green + "Create MSAVI2 file %s complete!" %(image_MSAVI2_output) + endC)
-
-    return
-
-#########################################################################
-# FONCTION createHIS()                                                  #
-#########################################################################
-def createHIS(image_input, image_HIS_output, li_choice = ["H","I","S"], channel_order = ["Red","Green","Blue","NIR"], codage="float", debug = 0):
-    """
-    Rôle : converti l'image RVBPIR en image H(teinte)I(intensite)S(saturation). Il y a possibilité de choisir la(es)quelle(s) des trois on garde.
-
-    Paramètres :
-           image_input : fichier image d'entrée multi bandes
-           image_HIS_output : fichier HIS permettant de localiser le dossier ou les donnees HIS vont etre sauvegardees
-           li_choice : liste des images que l'on souhaite garder, par défaut ["H","I","S"]
-           channel_order : liste d'ordre des bandes de l'image, par défaut : ["Red","Green","Blue","NIR"]
-           codage : type de codage du fichier de sortie
-           debug : niveau de debug pour l'affichage des commentaires
-    """
-
-    cont = 0
-    # Variables
-    Red = ""
-    Green = ""
-    Blue = ""
-    NIR = ""
-
-    # Selection des bandes pour le calcul de ISI
-    if "Red" in channel_order:
-        num_channel = channel_order.index("Red")+1
-        Red = "im1b"+str(num_channel)
-    if "Green" in channel_order:
-        num_channel = channel_order.index("Green")+1
-        Green = "im1b"+str(num_channel)
-    if "Blue" in channel_order:
-        num_channel = channel_order.index("Blue")+1
-        Blue = "im1b"+str(num_channel)
-    if "NIR" in channel_order:
-        num_channel = channel_order.index("NIR")+1
-        NIR = "im1b"+str(num_channel)
-    if (Red == "" or Green == "" or Blue == "" or NIR == ""):
-        raise NameError(cyan + "createHIS() : " + bold + red + "HIS needs Red and Green and Blue and NIR channels to be computed"+ endC)
-
-    # Repository qui sera a supprimer
-    repository = os.path.dirname(image_HIS_output)
-    filename = os.path.splitext(os.path.basename(image_input))[0]
-
-    # Creer les images Rouge, Vert, Bleu
-    fp_red = repository + os.sep + filename + "_R.tif"
-    fp_green =  repository + os.sep + filename + "_V.tif"
-    fp_blue = repository + os.sep + filename + "_B.tif"
-    # Rouge
-    command_red = "gdal_translate -b 1 %s %s" %(image_input, fp_red)
-    os.system(command_red)
-    # Vert
-    command_green = "gdal_translate -b 2 %s %s" %(image_input, fp_green)
-    os.system(command_green)
-    # Bleu
-    command_blue = "gdal_translate -b 3 %s %s" %(image_input, fp_blue)
-    os.system(command_blue)
-
-    # Bandmath pour creer l'indice ISI
-    img_H, img_I, img_S = convertRGBtoHIS(image_input, image_HIS_output, fp_red, fp_green, fp_blue)
-
-    l = [img_H, img_I, img_S]
-    # une ligne est à rajouter pour produire l'image HIS contenant les 3 bandes H, I et S (concatenation de bandes)
-    # suppression de une ou plusieurs images produites suivant le choix de sortie li_choice
-    if "H" not in li_choice:
-        if os.path.exists(img_H):
-            removeFile(img_H)
-        l.remove(img_H)
-    if "I" not in li_choice:
-        if os.path.exists(img_I):
-            removeFile(img_I)
-        l.remove(img_I)
-    if "S" not in li_choice:
-        if os.path.exists(img_S):
-            removeFile(img_S)
-        l.remove(img_S)
-
-    print(cyan + "createHIS() : " + bold + green + "Create HIS file %s complete!" %(image_HIS_output) + endC)
-
-    return l
 
 #########################################################################
 # FONCTION createSFS()                                                  #
