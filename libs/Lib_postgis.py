@@ -817,12 +817,13 @@ def exportShape(database_name, vector_name, table_name, user_name='postgres', pa
 ########################################################################
 # FONCTION importRaster()                                              #
 ########################################################################
-def importRaster(database_name, file_name, table_name, user_name='postgres', password='postgres', ip_host='localhost', num_port='5432', schema_name='public', epsg='2154', nodata_value='0', tile_size='200x200', overview_factor='2,4,8'):
+def importRaster(database_name, file_name, band_number, table_name, user_name='postgres', password='postgres', ip_host='localhost', num_port='5432', schema_name='public', epsg='2154', nodata_value='0', tile_size='auto', overview_factor='2,4,8'):
     """
     # Rôle : importer un raster dans une base de données (via raster2pgsql : http://postgis.net/docs/manual-dev/using_raster_dataman.html#RT_Raster_Loader)
     # Paramètres en entrée :
     #   database_name : nom de la base de données
     #   file_name : nom du fichier raster à importer
+    #   band_number : Numero de bande du fichier image d'entree à utiliser
     #   table_name : nom à donner à la table où le raster sera importé
     #   user_name : nom d'utilisateur du serveur PostgreSQL (par défaut : 'postgres')
     #   password : mot de passe du serveur PostgreSQL (par défaut : 'postgres')
@@ -831,7 +832,7 @@ def importRaster(database_name, file_name, table_name, user_name='postgres', pas
     #   epsg : code EPSG du système de coordonnées du fichier raster à importer (par défaut : '2154')
     #   nodata_value : valeur NoData du fichier raster à importer (par défaut : '0')
     #   schema_name : nom du schema à utiliser (par défaut : 'public')
-    #   tile_size : taille des tuiles générés lors de l'import, au format "LARGEURxHAUTEUR" sans espace (par défaut : '200x200')
+    #   tile_size : taille des tuiles générés lors de l'import, au format "LARGEURxHAUTEUR" sans espace (par défaut : 'auto')
     #   overview_factor : valeurs des miniatures/pyramides générées lors de l'import (par défaut : '2,4,8')
     # Paramètre de retour :
     #   le nom de la table dans laquelle le fichier a été importé (modifié si ne respecte pas le regexp)
@@ -846,11 +847,11 @@ def importRaster(database_name, file_name, table_name, user_name='postgres', pas
         table_name = 't' + table_name
 
     # Commande
-    command = "raster2pgsql -d -C -s %s -t %s -l %s -N %s %s %s.%s" % (epsg, tile_size, overview_factor, nodata_value, file_name, schema_name, table_name)
-    command += " | psql -d %s -h %s -p %s -U %s" % (database_name, ip_host, num_port, user_name)
-
+    #command = "raster2pgsql -d -C -s %s -t %s -l %s -N %s %s %s.%s" % (epsg, tile_size, overview_factor, nodata_value, file_name, schema_name, table_name)
+    command = "raster2pgsql -R -d -M -I -Y -b %s -s %s -t %s -N %s %s %s.%s" % (str(band_number), str(epsg), tile_size, str(nodata_value), file_name, schema_name, table_name)
+    command += " | psql -X -d %s -h %s -p %s -U %s" % (database_name, ip_host, str(num_port), user_name)
     try:
-        if debug>=3:
+        if debug>=1:
             print(command)
         os.system(command)
     except Exception as err:
@@ -1097,6 +1098,86 @@ def versionPostgreSQL(database_name='postgres', user_name='postgres', password='
         print(bold + "Version de PostgreSQL : " + endC + str(postgresql_version))
     return postgresql_version
 
+
+########################################################################
+# FONCTION cutPolygonesByLines()                                       #
+########################################################################
+def cutPolygonesByLines(connection, input_polygones_table, input_lines_table, output_polygones_table, geom_field='geom'):
+    """
+    # Rôle : découpage de (multi)polygones par des (multi)lignes
+    # Paramètres en entrée :
+    #   connection : récupère les informations de connexion à la base de données
+    #   input_polygones_table : nom de la table polygones à découper
+    #   input_lines_table : nom de la table lignes de découpe
+    #   output_polygones_table : nom de la table polygones découpés
+    #   geom_field : nom du champ de géométrie (par défaut, 'geom')
+    """
+
+    # Récupération des champs de la table polygones
+    fields_list = getAllColumns(connection, input_polygones_table, print_result=False)
+    fields_txt = ""
+    for field in fields_list:
+        field = field[0]
+        if field != geom_field:
+            fields_txt += "g.%s, " % field
+    fields_txt = fields_txt[:-2]
+
+    try:
+        query = "DROP TABLE IF EXISTS %s;\n" % output_polygones_table
+        query += "CREATE TABLE %s AS\n" % output_polygones_table
+        query += "    SELECT %s, (ST_DUMP(ST_CollectionExtract(ST_Split(g.%s, ST_LineMerge(ST_Collect(l.%s)))))).geom AS %s\n" % (fields_txt, geom_field, geom_field, geom_field)
+        query += "    FROM %s AS g, %s AS l\n" % (input_polygones_table, input_lines_table)
+        query += "    GROUP BY %s;\n" % fields_txt
+        print(query)
+        executeQuery(connection, query)
+    except psycopg2.DatabaseError as err:
+        if connection:
+            connection.rollback()
+        e = "OS error: {0}".format(err)
+        print(bold + red + "cutPolygonesByLines() : Error %s - Impossible de découper la table '%s' par la table '%s'" % (e, input_polygones_table, input_lines_table) + endC, file=sys.stderr)
+        return -1
+    return 0
+
+########################################################################
+# FONCTION cutPolygonesByPolygones()                                   #
+########################################################################
+def cutPolygonesByPolygones(connection, input_polygones_table, input_polygones_cutting_table, output_polygones_table, geom_field='geom'):
+    """
+    # Rôle : découpage de (multi)polygones par des (multi)polygones
+    # Paramètres en entrée :
+    #   connection : récupère les informations de connexion à la base de données
+    #   input_polygones_table : nom de la table polygones à découper
+    #   input_polygones_cutting_table : nom de la table de polygones de découpe
+    #   output_polygones_table : nom de la table polygones découpés
+    #   geom_field : nom du champ de géométrie (par défaut, 'geom')
+    """
+
+    # Récupération des champs de la table polygones
+    fields_list = getAllColumns(connection, input_polygones_table, print_result=False)
+    fields_txt = ""
+    for field in fields_list:
+        field = field[0]
+        if field != geom_field:
+            fields_txt += "p.%s, " % field
+    fields_txt = fields_txt[:-2]
+
+    try:
+        query = "DROP TABLE IF EXISTS %s;\n" % output_polygones_table
+        query += "CREATE TABLE %s AS\n" % output_polygones_table
+        query += "    SELECT %s, ST_Intersection(p.%s, p2.%s) AS %s\n" % (fields_txt, geom_field, geom_field, geom_field)
+        query += "    FROM %s AS p, %s AS p2\n" % (input_polygones_table, input_polygones_cutting_table)
+        query += "    WHERE ST_Intersects(p.%s, p2.%s);\n" % (geom_field, geom_field)
+        print(query)
+        executeQuery(connection, query)
+
+    except psycopg2.DatabaseError as err:
+        if connection:
+            connection.rollback()
+        e = "OS error: {0}".format(err)
+        print(bold + red + "cutPolygonesByPolygones() : Error %s - Impossible de découper la table '%s' par la table '%s'" % (e, input_polygones_table, input_polygones_cutting_table) + endC, file=sys.stderr)
+        return -1
+    return 0
+
 ########################################################################
 # FONCTION versionPostGIS()                                            #
 ########################################################################
@@ -1124,7 +1205,7 @@ def versionPostGIS(database_name='template_postgis', user_name='postgres', passw
     return postgis_version
 
 ########################################################################
-# FONCTION versionPostGIS()                                            #
+# FONCTION createExtension()                                           #
 ########################################################################
 def createExtension(connexion, extension_name, debug = 0):
     """
@@ -1144,6 +1225,9 @@ def createExtension(connexion, extension_name, debug = 0):
 
     return
 
+########################################################################
+# FONCTION dataBaseExist()                                             #
+########################################################################
 def dataBaseExist(connexion, dbname):
     """
     Rôle : renvoie si la base de données existe déjà
@@ -1168,6 +1252,9 @@ def dataBaseExist(connexion, dbname):
 
     return exist
 
+########################################################################
+# FONCTION schemaExist()                                               #
+########################################################################
 def schemaExist(connexion, schema_name):
     """
     Rôle : renvoie si le schema existe déjà
