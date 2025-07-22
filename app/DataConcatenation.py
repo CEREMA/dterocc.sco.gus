@@ -6,8 +6,9 @@
 #############################################################################
 
 import os, sys, glob
-from libs.Lib_display import bold,red,green,yellow,cyan,endC
-from libs.Lib_file import removeFile
+from Lib_display import bold,red,green,yellow,cyan,endC
+from Lib_file import removeFile
+from Lib_raster import cutImageByVector
 
 ###########################################################################################################################################
 # FONCTION concatenateData()                                                                                                              #

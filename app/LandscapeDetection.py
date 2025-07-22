@@ -9,12 +9,12 @@
 import math,os
 
 # Import des librairies de /libs
-from libs.Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
-from libs.Lib_display import endC, bold, yellow, cyan, red
-from libs.CrossingVectorRaster import statisticsVectorRaster
-from libs.Lib_file import removeFile, removeVectorFile
-from libs.Lib_raster import rasterizeVector, polygonizeRaster
-from libs.Lib_vector import cutoutVectors
+from Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
+from Lib_display import endC, bold, yellow, cyan, red
+from CrossingVectorRaster import statisticsVectorRaster
+from Lib_file import removeFile, removeVectorFile
+from Lib_raster import rasterizeVector, polygonizeRaster
+from Lib_vector import cutoutVectors
 
 ###########################################################################################################################################
 # FONCTION landscapeDetection()                                                                                                           #
@@ -156,21 +156,108 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
         print(query)
     executeQuery(connexion, query)
 
+    buffer_route = 5
+    buffer_eau = 5
+
+    tab_route = "lcz_road"
+    tab_eau = "lcz_water"
+    tab_int = "lcz_inter"
+    tab_buff = "paysage_lcz_buffer"
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT public.ST_BUFFER(geom, %s) AS geom, dn
+        FROM %s WHERE dn = 2 ;
+    """ %(tab_route, tab_route, buffer_route, tab_pay)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    addSpatialIndex(connexion, tab_route)
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT public.ST_BUFFER(geom, %s) AS geom, dn
+        FROM %s WHERE dn = 3 ;
+    """ %(tab_eau, tab_eau, buffer_eau, tab_pay)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    addSpatialIndex(connexion, tab_route)
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT public.ST_Difference(lcz.geom, route.geom) as geom, lcz.dn FROM %s AS route, %s AS lcz WHERE lcz.dn = 1 OR lcz.dn = 4
+        UNION
+        SELECT geom, dn FROM %s ;
+    """ %(tab_int, tab_int, tab_route, tab_pay, tab_route)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    addSpatialIndex(connexion, tab_int)
+
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT public.ST_Difference(int.geom, eau.geom) as geom, int.dn FROM %s AS eau, %s AS int
+        UNION
+        SELECT geom, dn FROM %s ;
+    """ %(tab_buff, tab_buff, tab_eau, tab_int, tab_eau)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+
+
+    query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_buff, 'geom', 'geom', 'geom')
+    #query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_int, 'geom', 'geom', 'geom')
+    executeQuery(connexion, query)
+
     # Création du chemin d'accès pour la sauvegarde de la couche paysage
+    landscape_gpkg_file_buff = repertory + os.sep + 'paysages_buff.gpkg'
     landscape_gpkg_file = repertory + os.sep + 'paysages.gpkg'
     landscape_tif_file = repertory + os.sep + 'paysages.tif'
 
     # 6# Export du résultat au format GPKG
-    exportVectorByOgr2ogr(connexion_dic["dbname"], landscape_gpkg_file, tab_pay, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+    #exportVectorByOgr2ogr(connexion_dic["dbname"], landscape_gpkg_file_buff, tab_int, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+
+    exportVectorByOgr2ogr(connexion_dic["dbname"], landscape_gpkg_file_buff, tab_buff, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+
+    # Préparation des noms de fichiers intermédiaires
+
+    # 1# Découper la couche vecteur LCZ selon l'emprise de la zone d'étude
+    command = "ogr2ogr -clipsrc %s %s %s  -nlt POLYGONE -overwrite -f GPKG" %(dic_params["shp_zone"], landscape_gpkg_file, landscape_gpkg_file_buff)
+    if debug >=2:
+        print(command)
+    exit_code = os.system(command)
+    if exit_code != 0:
+        print(cyan + "Découpage des paysages sur la zone de travail : " + bold + red + "!!! Une erreur c'est produite au cours du découpage du vecteur : " + landscape_gpkg_file_buff + endC, file=sys.stderr)
+    if debug >=2:
+        print(cyan + "Découpage des paysages sur la zone de travail : " + endC + "Le fichier vecteur " + landscape_gpkg_file_buff + " a ete decoupe resultat : " + landscape_gpkg_file + " type geom = POLYGONE")
+
 
     # 7# Conversion au format raster
-    rasterizeVector(landscape_gpkg_file, landscape_tif_file, dic_params["ldsc_information"]["img_ocs"], 'dn', codage="uint8", ram_otb=10000)
+    rasterizeVector(landscape_gpkg_file, landscape_tif_file, dic_params["img_ref"], 'dn', codage="uint8", ram_otb=10000)
 
     # Suppression des fichiers et tables inutiles
     if not save_intermediate_result :
-        removeVectorFile(lcz_cut)
         dropTable(connexion, tab_lcz)
         dropTable(connexion, tab_pay)
+        dropTable(connexion, tab_route)
+        dropTable(connexion, tab_eau)
+        dropTable(connexion, tab_int)
+        dropTable(connexion, tab_buff)
+        removeFile(landscape_gpkg_file_buff)
 
     return landscape_tif_file
 
@@ -407,3 +494,125 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
         dropTable(connexion, 'paysage_level1')
 
     return landscape_tif_file
+
+
+###########################################################################################################################################
+# FONCTION urbanLandscapeDetection()                                                                                                           #
+###########################################################################################################################################
+def urbanLandscapeDetection(connexion, connexion_dic ,dic_params, repertory, save_intermediate_result = False,debug = 0):
+    """
+    Rôle :
+
+    Paramètres :
+        connexion : correspond à la variable de connexion à la base de données
+        connexion_dic : ictionnaire des paramètres de connexion selon le modèle : {"dbname" : '', "user_db" : '', "password_db" : '', "server_db" : '', "port_number" : '', "schema" : ''}
+        dic_params : dictionnaire des paramètres pour calculer les attributs descriptifs des formes végétales
+        repertory : repertoire pour sauvegarder les fichiers temporaires produits
+        save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par défaut : False
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
+    """
+
+    if dic_params["ldsc_information"]["lcz_information"]["lcz_data"] != "":
+
+        lcz_data = dic_params["ldsc_information"]["lcz_information"]["lcz_data"]
+        extension = os.path.splitext(lcz_data)[1]
+        lcz_cut = repertory + os.sep + "lcz_cut_etude" + extension
+        if extension == '.shp':
+            format_vector = 'ESRI Shapefile'
+        else:
+            format_vector = 'GPKG'
+
+        # 1# Découper la couche vecteur LCZ selon l'emprise de la zone d'étude
+        if not os.path.exists(dic_params["ldsc_information"]["img_ocs"]):
+            cutoutVectors(dic_params["shp_zone"] , [lcz_data], [lcz_cut] , overwrite=True, format_vector=format_vector)
+
+        # 2# Import du fichier vecteur LCZ en base
+        tab_lcz = 'tab_lcz'
+        importVectorByOgr2ogr(connexion_dic["dbname"], lcz_cut, tab_lcz, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+
+        # 3# Création de la table paysage
+        tab_urbain = "paysages_urbain"
+
+        query = """
+        DROP TABLE IF EXISTS %s;
+        CREATE TABLE %s AS
+        """  %(tab_urbain, tab_urbain)
+
+        # Regroupement de tous les LCZ appartennant au milieu urbanisé
+        if len(dic_params["ldsc_information"]["lcz_information"]["1"]) > 1:
+            query += """
+            SELECT geom, 1 AS dn
+            FROM %s
+            WHERE %s in %s
+            """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], tuple(dic_params["ldsc_information"]["lcz_information"]["1"]))
+        else :
+            query += """
+            SELECT geom, 1 AS dn
+            FROM %s
+            WHERE %s = '%s'
+            """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], dic_params["ldsc_information"]["lcz_information"]["1"][0])
+
+        if debug >= 3:
+            print(query)
+        executeQuery(connexion, query)
+
+        boundaryLandscapeDetection(connexion, tab_lcz, debug)
+
+        # Création du chemin d'accès pour la sauvegarde de la couche paysage
+        urban_gpkg_file = repertory + os.sep + 'paysages_urbains.gpkg'
+
+        # 6# Export du résultat au format GPKG
+        exportVectorByOgr2ogr(connexion_dic["dbname"], urban_gpkg_file, tab_urbain, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+
+        dic_params["ldsc_information"]["lcz_urbain"]  = urban_gpkg_file
+
+        if not save_intermediate_result :
+            #removeFile(lcz_cut)
+            dropTable(connexion, tab_lcz)
+            dropTable(connexion, tab_urbain)
+
+    else :
+        print(bold + red + "Le fichier LCZ n'a pas été fourni. Il n'est pas possible de créé la couche des paysages urbains." + endC)
+
+
+
+    return dic_params
+
+
+###########################################################################################################################################
+# FONCTION boundaryLandscapeDetection()                                                                                                           #
+###########################################################################################################################################
+def boundaryLandscapeDetection(connexion, tab_lcz,debug = 0):
+
+    """
+    Rôle :
+
+    Paramètres :
+        connexion : correspond à la variable de connexion à la base de données
+        connexion_dic : ictionnaire des paramètres de connexion selon le modèle : {"dbname" : '', "user_db" : '', "password_db" : '', "server_db" : '', "port_number" : '', "schema" : ''}
+        dic_params : dictionnaire des paramètres pour calculer les attributs descriptifs des formes végétales
+        repertory : repertoire pour sauvegarder les fichiers temporaires produits
+        save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par défaut : False
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
+    """
+
+
+    # Récupération des contours urbains pour le découpage des différentes strates
+
+    tab_cut = 'contours_lcz'
+
+    query = """
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS
+        SELECT public.ST_UNION(public.ST_Boundary(geom)) as geom
+        FROM %s
+    """ %(tab_cut, tab_cut, tab_lcz)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    addSpatialIndex(connexion, tab_cut)
+
+
+

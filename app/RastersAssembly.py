@@ -19,9 +19,8 @@ from osgeo.gdalconst import *
 from libs.Lib_display import bold,black,red,cyan,endC
 from libs.Lib_vector import getEmpriseFile, createEmpriseShapeReduced
 from libs.Lib_raster import getPixelWidthXYImage, getProjectionImage, updateReferenceProjection, cutImageByVector, getNodataValueImage, getDataTypeImage
-from libs.Lib_file import removeFile, cleanTempData
+from libs.Lib_file import removeFile
 from libs.Lib_text import appendTextFileCR
-from libs.Lib_operator import getExtensionApplication
 
 #########################################################################
 # FONCTION assembleRasters()                                            #
@@ -41,10 +40,6 @@ def assemblyRasters(empriseVector, repRasterAssemblyList, output_rasterAssembly,
         rewrite                  : Ré-écriture ou pas, par défaut True ie ré-ecriture
         save_result_intermediate : True si on sauvegarde les résultats intermédiaire, sinon False, par défaut : False
     """
-
-    image_output = ""
-    FOLDER_ASSEMBLY_TEMP = ""
-
     # Emprise de la zone selectionnée
     empr_xmin,empr_xmax,empr_ymin,empr_ymax = getEmpriseFile(empriseVector, format_vector=format_vector)
 
@@ -56,17 +51,16 @@ def assemblyRasters(empriseVector, repRasterAssemblyList, output_rasterAssembly,
         repRasterAssembly_str += str(repertory) + "  "
 
     # Création d'un dossier temporaire où on va stocker tous les fichiers temporaires
-    repertory_assembly_output = os.path.dirname(image_output)
+    FOLDER_ASSEMBLY_TEMP = "tmp"
+    repertory_assembly_output = os.path.dirname(output_rasterAssembly)
     repertory_temp = repertory_assembly_output + os.sep + FOLDER_ASSEMBLY_TEMP
-
-    repertory_temp = "/mnt/RAM_disk"
 
     # Création du répertoire temporaire si il n'existe pas
     if not os.path.isdir(repertory_temp):
         os.makedirs(repertory_temp)
 
     # Nettoyage du répertoire temporaire si il n'est pas vide
-    #cleanTempData(repertory_temp)
+    cleanTempData(repertory_temp)
 
     # Utilisation d'un fichier temporaire pour  l'assemblage
     file_name = os.path.splitext(os.path.basename(output_rasterAssembly))[0]
@@ -88,7 +82,6 @@ def assemblyRasters(empriseVector, repRasterAssemblyList, output_rasterAssembly,
     if os.path.exists(merge_file_tmp):
         os.remove(merge_file_tmp)
 
-    print(len(images_find_list))
     if len(images_find_list) > 0 and os.path.isfile(images_find_list[0]) :
         epsg = getProjectionImage(images_find_list[0])[0]
         no_data_value = getNodataValueImage(images_find_list[0])
@@ -139,7 +132,6 @@ def findImagesFile(repertory, extension_list, empr_xmin, empr_xmax, empr_ymin, e
         La liste des images en erreur
 
     """
-    debug = 1
 
     images_find_list = []
     images_error_list = []
@@ -209,8 +201,6 @@ def assemblyImages(repertory, images_list, output_file, no_data_value, epsg, sav
         L'image fusionnée et découpée
 
     """
-    debug = 3
-    repertory_temp = "/mnt/RAM_disk"
 
     if debug >= 3:
         print(cyan + "assemblyImages() : Début de l'assemblage des images" + endC)

@@ -12,9 +12,10 @@ from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 # Import des librairies de /libs
 from Lib_display import bold,red,green,blue,cyan,endC
-from Lib_vector import getEmpriseFile, createEmpriseShapeReduced
+from Lib_vector import getEmpriseVector, createEmpriseShapeReduced
 from Lib_file import removeFile
 from Lib_grass import convertRGBtoHIS
+from Lib_raster import cutImageByVector
 
 # debug = 2
 PRECISION = 0.0000001
@@ -161,3 +162,14 @@ def createSFS(image_pan_input, image_SFS_output, li_choice = [4], codage="float"
     print(cyan + "createSFS() : " + bold + green + "Calcul de la texture SFS est terminé"  + endC)
 
     return
+
+
+
+
+
+
+
+
+
+
+

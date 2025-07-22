@@ -9,10 +9,10 @@
 import os,sys, shutil
 
 # Import des librairies de /libs
-from libs.Lib_display import bold, yellow, red, green,endC
-from libs.Lib_file import removeFile
-from libs.CrossingVectorRaster import statisticsVectorRaster
-from libs.Lib_postgis import addColumn, dropColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, addSpatialIndex, addUniqId
+from Lib_display import bold, yellow, red, green,endC
+from Lib_file import removeFile
+from CrossingVectorRaster import statisticsVectorRaster
+from Lib_postgis import addColumn, dropColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, addSpatialIndex, addUniqId
 
 # Import des applications de /app
 from app.LandscapeDetection import landscapeDetection
@@ -63,7 +63,7 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
         os.makedirs(repertory_tmp)
 
     # Calcul des images temporaires de NDVI
-    dic_params["img_ndvi_spg"],dic_params["img_ndvi_wtr"] = calculateSpringAndWinterNdviImage(dic_params["img_ref"], dic_params["img_wtr"], repertory = repertory_tmp)
+    # dic_params["img_ndvi_spg"],dic_params["img_ndvi_wtr"] = calculateSpringAndWinterNdviImage(dic_params["img_ref"], dic_params["img_wtr"], repertory = repertory_tmp)
 
     # Ajout des attributs descriptifs à la table principale + création d'un dictionnaire de nom des colonnes par indicateur
     dic_columname = createFeatures(connexion, connexion_dic, tab_ref, dic_attributs)
@@ -185,23 +185,23 @@ def heightIndicators(connexion, connexion_dic, tab_ref, columnnamelist, img_mnh,
     for id in range(len(columnnamelist)):
         if "h_max" in columnnamelist[id] :
             query = """
-            UPDATE %s as t1 SET %s = t2.max FROM %s AS t2 WHERE t2.ogc_fid = t1.fid;
+            UPDATE %s as t1 SET %s = t2.max FROM %s AS t2 WHERE t2.fid = t1.fid;
             """ %(tab_ref, columnnamelist[id], tab_refout)
         elif "h_min" in columnnamelist[id] :
             query = """
-            UPDATE %s as t1 SET %s = t2.min FROM %s AS t2 WHERE t2.ogc_fid = t1.fid;
+            UPDATE %s as t1 SET %s = t2.min FROM %s AS t2 WHERE t2.fid = t1.fid;
             """ %(tab_ref,columnnamelist[id], tab_refout)
         elif "h_moy" in columnnamelist[id] :
             query = """
-            UPDATE %s as t1 SET %s = t2.mean FROM %s AS t2 WHERE t2.ogc_fid = t1.fid;
+            UPDATE %s as t1 SET %s = t2.mean FROM %s AS t2 WHERE t2.fid = t1.fid;
             """ %(tab_ref,columnnamelist[id], tab_refout)
         elif "h_med" in columnnamelist[id] :
             query = """
-            UPDATE %s as t1 SET %s = t2.median FROM %s AS t2 WHERE t2.ogc_fid = t1.fid;
+            UPDATE %s as t1 SET %s = t2.median FROM %s AS t2 WHERE t2.fid = t1.fid;
             """ %(tab_ref,columnnamelist[id], tab_refout)
         elif "h_et" in columnnamelist[id] :
             query = """
-            UPDATE %s as t1 SET %s = t2.std FROM %s AS t2 WHERE t2.ogc_fid = t1.fid;
+            UPDATE %s as t1 SET %s = t2.std FROM %s AS t2 WHERE t2.fid = t1.fid;
             """ %(tab_ref,columnnamelist[id], tab_refout)
 
         # Exécution de la requête SQL
@@ -278,10 +278,10 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
     # Création des fichiers temporaires
     extension = os.path.splitext(img_ref)[1]
     image_pers_out = repertory + os.sep + 'img_mask_persistants' + extension
-    image_cadu_out = repertory + os.sep + 'img_mask_caduques' + extension
+    #image_cadu_out = repertory + os.sep + 'img_mask_caduques' + extension
 
     vect_fv_pers_out = repertory + os.sep + 'vect_fv_stats_pers.gpkg'
-    vect_fv_cadu_out = repertory + os.sep + 'vect_fv_stats_cadu.gpkg'
+    #vect_fv_cadu_out = repertory + os.sep + 'vect_fv_stats_cadu.gpkg'
 
     filetablevegin = repertory + os.sep + 'couche_vegetation_bis.gpkg'
 
@@ -298,30 +298,35 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
         except :
             raise Exception("La fonction Superimpose s'est mal déroulée.")
 
+
+
     # Calcul du masque de caduques
-    cmd_mask_cadu = "otbcli_BandMath -il %s %s -out '%s?&nodata=-99' uint8 -exp '(abs(im2b1-im1b1)>%s)?1:0'" %(img_ndvi_spg, img_ndvi_wtr, image_cadu_out, seuil)
-    try:
-        os.system(cmd_mask_cadu)
-    except :
-        raise Exception("Les deux images NDVI n'ont pas la même emprise. Veuillez relancer le programme en sélectionnant l'option de Superimpose")
+
+    #exp = '"(abs(im2b1-im1b1)>' + str(seuil) + '?1:0)"'
+    #cmd_mask_cadu = "otbcli_BandMath -il %s %s -out '%s?&nodata=-99' uint8 -exp %s" %(img_ndvi_spg, img_ndvi_wtr, image_cadu_out, exp)
+    #try:
+        #os.system(cmd_mask_cadu)
+    #except :
+        #raise Exception("Les deux images NDVI n'ont pas la même emprise. Veuillez relancer le programme en sélectionnant l'option de Superimpose")
 
     # Calcul du masque de persistants
-    cmd_mask_pers = "otbcli_BandMath -il %s %s -out '%s?&nodata=-99' uint8 -exp '(abs(im2b1-im1b1)<=%s)?1:0'" %(img_ndvi_spg, img_ndvi_wtr, image_pers_out, seuil)
+    exp = '"(abs(im2b1-im1b1)<=' + str(seuil) + '?1:0)"'
+    cmd_mask_pers = "otbcli_BandMath -il %s %s -out '%s?&nodata=-99' uint8 -exp %s" %(img_ndvi_spg, img_ndvi_wtr, image_pers_out, exp)
     os.system(cmd_mask_pers)
 
 
     # Statistiques zonales sur les polygones de formes végétales concernées : tous les segments appartennant à la strate arborée et arbustive
-    col_to_add_list = ["count"]
-    col_to_delete_list = ["unique", "range", "max", "median", "mean","std", "sum"]
+    col_to_add_list = []
+    col_to_delete_list = []
     class_label_dico = {0:'non', 1:'oui'}
-    statisticsVectorRaster(image_cadu_out, filetablevegin, vect_fv_cadu_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    #statisticsVectorRaster(image_cadu_out, filetablevegin, vect_fv_cadu_out, band_number=1,enable_stats_all_count = True, enable_stats_columns_str = False, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
-    statisticsVectorRaster(image_pers_out, filetablevegin, vect_fv_pers_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    statisticsVectorRaster(image_pers_out, filetablevegin, vect_fv_pers_out, band_number=1,enable_stats_all_count = True, enable_stats_columns_str = False, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
     # Import des données dans la BD et concaténation des colonnes
 
-    table_cadu = 'tab_fv_cadu'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_cadu_out, table_cadu, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg = str(2154))
+    #table_cadu = 'tab_fv_cadu'
+    #importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_cadu_out, table_cadu, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg = str(2154))
 
     table_pers = 'tab_fv_pers'
     importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_pers_out, table_pers, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg = str(2154))
@@ -329,15 +334,15 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
     query = """
     DROP TABLE IF EXISTS tab_indic_pers_cadu;
     CREATE TABLE tab_indic_pers_cadu AS
-        SELECT t1.ogc_fid AS fid, t1.oui AS pers_count, t2.oui AS cadu_count
-        FROM %s AS t1, %s AS t2
-        WHERE t1.ogc_fid = t2.ogc_fid;
-    """ %(table_pers,table_cadu)
+        SELECT t1.fid AS fid, t1.oui AS pers_count, t1.non AS cadu_count
+        FROM %s AS t1;
+    """ %(table_pers)
 
     # Exécution de la requête SQL
     if debug >= 1:
         print(query)
     executeQuery(connexion, query)
+
 
     # Update de l'attribut perc_caduque et perc_persistant
 
@@ -358,21 +363,21 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
     if not save_intermediate_result:
         if os.path.exists(image_pers_out):
             removeFile(image_pers_out)
-        if os.path.exists(image_cadu_out):
-            removeFile(image_cadu_out)
+        #if os.path.exists(image_cadu_out):
+            #removeFile(image_cadu_out)
         if os.path.exists(vect_fv_pers_out):
             removeFile(vect_fv_pers_out)
-        if os.path.exists(vect_fv_cadu_out):
-            removeFile(vect_fv_cadu_out)
+        #if os.path.exists(vect_fv_cadu_out):
+            #removeFile(vect_fv_cadu_out)
         if os.path.exists(filetablevegin):
             removeFile(filetablevegin)
-        if os.path.exists(img_ndvi_si_wtr):
-            removeFile(img_ndvi_si_wtr)
+        if superimpose_choice :
+            if os.path.exists(img_ndvi_si_wtr):
+                removeFile(img_ndvi_si_wtr)
 
-    # Suppression des tables intermédiaires
-    dropTable(connexion,table_cadu)
-    dropTable(connexion,table_pers)
-    dropTable(connexion, 'tab_indic_pers_cadu')
+        # Suppression des tables intermédiaires
+        dropTable(connexion,table_pers)
+        dropTable(connexion, 'tab_indic_pers_cadu')
 
     return
 
@@ -403,18 +408,18 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
     extension = os.path.splitext(img_ref)[1]
 
     image_conif_out = repertory + os.sep + 'img_mask_coniferous' + extension
-    image_feuill_out = repertory + os.sep + 'img_mask_feuillus' + extension
+    #image_feuill_out = repertory + os.sep + 'img_mask_feuillus' + extension
 
     vect_fv_conif_out = repertory + os.sep + 'vect_fv_stats_conif.gpkg'
-    vect_fv_feuill_out = repertory + os.sep + 'vect_fv_stats_feuil.gpkg'
+    #vect_fv_feuill_out = repertory + os.sep + 'vect_fv_stats_feuil.gpkg'
 
     # Calcul du masque de conifères
     cmd_mask_conif = "otbcli_BandMath -il %s -out %s -exp '(im1b4<%s)?1:0'" %(img_ref, image_conif_out, seuil)
     os.system(cmd_mask_conif)
 
     # Calcul du masque de feuillus
-    cmd_mask_decid = "otbcli_BandMath -il %s -out %s -exp '(im1b4>=%s)?1:0'" %(img_ref, image_feuill_out, seuil)
-    os.system(cmd_mask_decid)
+    #cmd_mask_decid = "otbcli_BandMath -il %s -out %s -exp '(im1b4>=%s)?1:0'" %(img_ref, image_feuill_out, seuil)
+    #os.system(cmd_mask_decid)
 
     # Export de la table vegetation en couche vecteur
     filetablevegin = repertory + os.sep + 'couche_vegetation_bis.gpkg'
@@ -422,28 +427,27 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
     exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
 
     # Statistiques zonales sur les polygones de formes végétales concernées : tous les segments appartennant à la strate arborée et arbustive
-    col_to_add_list = ["count"]
-    col_to_delete_list = ["unique", "range", "max", "median", "mean","std", "sum"]
+    col_to_add_list = []
+    col_to_delete_list = []
     class_label_dico = {0:'non', 1:'oui'}
-    statisticsVectorRaster(image_conif_out, filetablevegin, vect_fv_conif_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    statisticsVectorRaster(image_conif_out, filetablevegin, vect_fv_conif_out, band_number=1,enable_stats_all_count = True, enable_stats_columns_str = False, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
-    statisticsVectorRaster(image_feuill_out, filetablevegin, vect_fv_feuill_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    #statisticsVectorRaster(image_feuill_out, filetablevegin, vect_fv_feuill_out, band_number=1,enable_stats_all_count = True, enable_stats_columns_str = False, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
     # Import des données dans la BD et concaténation des colonnes
 
     table_conif = 'tab_fv_conif'
     importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_conif_out, table_conif, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
-    table_feuill = 'tab_fv_feuill'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_feuill_out, table_feuill, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    #table_feuill = 'tab_fv_feuill'
+    #importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_feuill_out, table_feuill, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     query = """
     DROP TABLE IF EXISTS tab_indic_conif_decid;
     CREATE TABLE tab_indic_conif_decid AS
-        SELECT t1.ogc_fid as fid, t1.oui AS conif_perc, t2.oui AS decid_perc
-        FROM %s AS t1, %s AS t2
-        WHERE t1.ogc_fid = t2.ogc_fid;
-    """ %(table_conif, table_feuill)
+        SELECT t1.fid as fid, t1.oui AS conif_perc, t1.non AS decid_perc
+        FROM %s AS t1;
+    """ %(table_conif)
 
     # Exécution de la requête SQL
     if debug >= 1:
@@ -469,18 +473,17 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
     if not save_intermediate_result:
         if os.path.exists(image_conif_out):
             removeFile(image_conif_out)
-        if os.path.exists(image_feuill_out):
-            removeFile(image_feuill_out)
+        #if os.path.exists(image_feuill_out):
+            #removeFile(image_feuill_out)
         if os.path.exists(vect_fv_conif_out):
             removeFile(vect_fv_conif_out)
-        if os.path.exists(vect_fv_feuill_out):
-            removeFile(vect_fv_feuill_out)
+        #if os.path.exists(vect_fv_feuill_out):
+            #removeFile(vect_fv_feuill_out)
         if os.path.exists(filetablevegin):
             removeFile(filetablevegin)
 
     # Suppression des tables intermédiaires
     dropTable(connexion, table_conif)
-    dropTable(connexion, table_feuill)
     dropTable(connexion, 'tab_indic_conif_decid')
 
     return
@@ -530,12 +533,12 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     os.system(cmd_mask_surfnonveg)
 
     # Statistiques zonales sur les polygones de formes végétales concernées : tous les segments appartennant à la strate arborée et arbustive
-    col_to_add_list = ["count"]
-    col_to_delete_list = ["unique", "range", "max", "median", "mean","std", "sum"]
+    col_to_add_list = []
+    col_to_delete_list = []
     class_label_dico = {0:'non', 1:'oui'}
-    statisticsVectorRaster(img_surf_veg, filetablevegin, vect_fv_surfveg_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    statisticsVectorRaster(img_surf_veg, filetablevegin, vect_fv_surfveg_out, band_number=1,enable_stats_all_count = True, enable_stats_columns_str = False, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
-    statisticsVectorRaster(img_surf_nonveg, filetablevegin, vect_fv_surfnonveg_out, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    statisticsVectorRaster(img_surf_nonveg, filetablevegin, vect_fv_surfnonveg_out, band_number=1,enable_stats_all_count = True, enable_stats_columns_str = False, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
     # Import des données dans la BD et concaténation des colonnes
     table_surfveg = 'tab_fv_surfveg'
@@ -547,9 +550,9 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     query = """
     DROP TABLE IF EXISTS tab_indic_surfveg_nonveg;
     CREATE TABLE tab_indic_surfveg_nonveg AS
-        SELECT t1.ogc_fid AS fid, t1.oui AS surfveg_count, t2.oui AS surfnonveg_count
+        SELECT t1.fid AS fid, t1.oui AS surfveg_count, t2.oui AS surfnonveg_count
         FROM %s AS t1, %s AS t2
-        WHERE t1.ogc_fid = t2.ogc_fid;
+        WHERE t1.fid = t2.fid;
     """ %(table_surfveg,table_surfnonveg)
 
     # Exécution de la requête SQL
@@ -574,7 +577,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     # Correction pour les boisements et la strate herbacée --> hypothèse que ce n'est que du sol végétalisé sous-jacent
     # La détection des boisements n'est pas encore optimisée étant donné que les tâches arborées et arbustives sont pour l'instant classées en "boisement"
     query = """
-    UPDATE %s AS t SET %s = 'surface vegetalisee' WHERE t.fv in ('BOA', 'BOAu', 'PR', 'C');
+    UPDATE %s AS t SET %s = 'surface vegetalisee' WHERE t.fv in ('BOA', 'BOAu', 'PR', 'C', 'PE');
     """ %(tab_ref, column_indic_name)
 
     #query = """
@@ -588,7 +591,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
 
     # Correction pour les couverts persistants --> on ne fournit aucune information
     query = """
-    UPDATE %s AS t SET %s = '' WHERE t.%s >= 80.0;
+    UPDATE %s SET %s = '' WHERE %s >= 80;
     """ %(tab_ref, column_indic_name, column_indic_persistant)
 
     # Exécution de la requête SQL
@@ -646,25 +649,25 @@ def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, column_i
     class_label_dico = {}
     statisticsVectorRaster(img_landscape, filetablevegin, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
-    # Import en base de la ocuche vecteur
+    # Import en base de la couche vecteur
     tab_cross = 'tab_cross_land'
     importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
     # Attribution du label 'PR' (prairie) ou 'C' (culture)
     query = """
-    UPDATE %s AS t1 SET paysage = '1' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    UPDATE %s AS t1 SET paysage = '1' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.fid;
     """  %(tab_fv, tab_cross, dic_ldsc_class["milieu_urbanise"])
 
     query += """
-    UPDATE %s AS t1 SET paysage = '2' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    UPDATE %s AS t1 SET paysage = '2' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.fid;
     """  %(tab_fv, tab_cross, dic_ldsc_class["voirie_et_infrastructure"])
 
     query += """
-    UPDATE %s AS t1 SET paysage = '3' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    UPDATE %s AS t1 SET paysage = '3' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.fid;
     """  %(tab_fv, tab_cross, dic_ldsc_class["etendue_et_cours_eau"])
 
     query += """
-    UPDATE %s AS t1 SET paysage = '4' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.ogc_fid;
+    UPDATE %s AS t1 SET paysage = '4' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.fid;
     """  %(tab_fv, tab_cross, dic_ldsc_class["milieu_agricole_et_forestier"])
 
     if debug >= 3:

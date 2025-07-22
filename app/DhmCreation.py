@@ -12,9 +12,9 @@ from osgeo import gdal, ogr
 from osgeo.gdalconst import *
 
 # Import des librairies de /libs
-from libs.Lib_display import bold,red,cyan,endC
-from libs.Lib_raster import  getProjectionImage, cutImageByVector, getNodataValueImage
-from libs.Lib_file import removeFile
+from Lib_display import bold,red,cyan,endC
+from Lib_raster import  getProjectionImage, cutImageByVector, getNodataValueImage
+from Lib_file import removeFile
 
 #debug = 3 pour afficher les états de debug
 

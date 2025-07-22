@@ -10,22 +10,19 @@ from osgeo import ogr ,osr
 #############################################################################
 
 # Librairies /libs
-from libs.Lib_display import bold,red,green,cyan,endC
-from libs.Lib_raster import cutImageByVector
-from libs.Lib_postgis import createDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema, importVectorByOgr2ogr, dropColumn, renameColumn
+from Lib_display import bold,red,green,cyan,endC
+from Lib_raster import cutImageByVector
+from Lib_postgis import createDatabase, dropDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema, importVectorByOgr2ogr, dropColumn, renameColumn
 
 # Applications /apps
-from app.SampleCreation import createAllSamples, cleanAllSamples, prepareAllSamples
-from app.CleanCoverClasses import cleanCoverClasses
-from app.SampleSelectionRaster import selectSamples
-from app.SupervisedClassification import classifySupervised, StructRFParameter
-from app.MajorityFilter import filterImageMajority
-from app.VerticalStratumDetection import classificationVerticalStratum, segmentationImageVegetetation
+
+
+from app.VerticalStratumDetectionNdvi import classificationVerticalStratum, segmentationImageVegetetationNdvi
 from app.VegetationFormStratumDetection import cartographyVegetation
 from app.DhmCreation import mnhCreation
-from app.NeochannelComputation import neochannelComputation
+from app.ChannelComputation import neochannelComputation, createNDVI
 from app.DataConcatenation import concatenateData
-from app.ImagesAssembly import assemblyRasters, assemblyImages
+from app.GUSRastersAssembly import assemblyRasters, assemblyImages
 from app.IndicatorsComputation import createAndImplementFeatures
 
 if __name__ == "__main__":
@@ -44,12 +41,14 @@ if __name__ == "__main__":
     f = open(file_conf)
     config = json.load(f)
 
-    img_ref = config["data_entry"]["img_RVBPIR_ref"]
-    img_ref_PAN = config["data_entry"]["img_PAN_ref"]
+    rep_img_ref = config["data_entry"]["img_RVBPIR_ref"]
+    rep_img_ref_PAN = config["data_entry"]["img_PAN_ref"]
     shp_zone = config["data_entry"]["studyzone_shp"]
-    img_winter = config["data_entry"]["img_winter"]
+    rep_img_winter = config["data_entry"]["img_winter"]
     img_mnt = config["data_entry"]["img_dtm"]
     img_mns = config["data_entry"]["img_dsm"]
+    img_ref = ""
+    img_winter = ""
 
     if config["save_intermediate_result"] :
       save_intermediate_result = config["save_intermediate_result"]
@@ -57,7 +56,7 @@ if __name__ == "__main__":
     if config["display_comments"]:
       debug = 3
 
-    if img_ref == "" and not config_data["steps_to_run"]["img_assembly"] :
+    if rep_img_ref == "" and not config_data["steps_to_run"]["img_assembly"] :
       print(bold + red + "Attention : aucune donnée n'est fournie pour le bon déroulement des étapes de production de la cartographie !!!" + endC)
 
     ########################################
@@ -69,17 +68,6 @@ if __name__ == "__main__":
     # mnh
     if config["data_entry"]["entry_options"]["img_dhm"] != None :
       img_mnh = config["data_entry"]["entry_options"]["img_dhm"]
-
-    #polygones d'échantillons d'apprentissage
-    if config["data_entry"]["entry_options"]["data_classes"]["createsamples"] == 'False' :
-      create_samples = False
-      bati = config["data_entry"]["entry_options"]["data_classes"]["build"]
-      route =  config["data_entry"]["entry_options"]["data_classes"]["road"]
-      solnu =  config["data_entry"]["entry_options"]["data_classes"]["baresoil"]
-      eau =  config["data_entry"]["entry_options"]["data_classes"]["water"]
-      vegetation = config["data_entry"]["entry_options"]["data_classes"]["vegetation"]
-    else :
-      create_samples = True
 
     # data paysages
     if config["indicators_computation"]["landscape"] != None :
@@ -101,15 +89,11 @@ if __name__ == "__main__":
     path_data_prod = path_data + os.sep + '01-DonneesProduites'
 
     path_tmp_neochannels = path_data_prod + os.sep + 'TMP_NEOCHANNELS'
+    path_image_assemble = path_data_prod + os.sep + 'TMP_IMG_ASSEMBLE'
+    path_img_cut = path_data_prod + os.sep + 'TMP_IMG_CUT'
 
     # Dossier de sauvegarde des résultats d'extraction de la végétation
     path_extractveg = path_prj + os.sep + '1-ExtractionVegetation'
-
-    path_tmp_preparesamples = path_extractveg + os.sep + 'TMP_PREPARE_SAMPLE'
-
-    path_tmp_cleansamples = path_extractveg + os.sep + 'TMP_CLEAN_SAMPLE'
-
-    path_tmp_selectsamples = path_extractveg + os.sep + 'TMP_SELECT_SAMPLE'
 
     # Dossier de sauvegarde des résultats de distinction des strates verticales végétales
     path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'
@@ -140,17 +124,14 @@ if __name__ == "__main__":
     if not os.path.exists(path_tmp_neochannels):
       os.makedirs(path_tmp_neochannels)
 
+    if not os.path.exists(path_image_assemble):
+      os.makedirs(path_image_assemble)
+
+    if not os.path.exists(path_img_cut):
+      os.makedirs(path_img_cut)
+
     if not os.path.exists(path_extractveg):
       os.makedirs(path_extractveg)
-
-    if not os.path.exists(path_tmp_preparesamples):
-      os.makedirs(path_tmp_preparesamples)
-
-    if not os.path.exists(path_tmp_cleansamples):
-      os.makedirs(path_tmp_cleansamples)
-
-    if not os.path.exists(path_tmp_selectsamples):
-      os.makedirs(path_tmp_selectsamples)
 
     if not os.path.exists(path_stratesveg):
       os.makedirs(path_stratesveg)
@@ -169,22 +150,6 @@ if __name__ == "__main__":
     #            VALEURS SEUILS            #
     ########################################
 
-    # Paramètres nettoyage des échantillons d'apprentissage à partir d'un seuil appliqué sur indices radiométriques
-
-
-
-    # Paramètres de sélection des échantillons d'apprentissage. Par défaut, classe bati : 1, route :2, sol nu : 3, eau : 4 et végétation : 5
-    samples_selection = {
-      1 : config["vegetation_extraction"]["samples_selection"]["build_ratio"],
-      2 : config["vegetation_extraction"]["samples_selection"]["road_ratio"],
-      3 : config["vegetation_extraction"]["samples_selection"]["baresoil_ratio"],
-      4 : config["vegetation_extraction"]["samples_selection"]["water_ratio"],
-      5 : config["vegetation_extraction"]["samples_selection"]["vegetation_ratio"]
-    }
-
-    # Paramètres de l'algorithme de classification supervisée RF
-    params_RF = config["vegetation_extraction"]["rf_params"]
-
     # Fournir les paramètres de connexion à la base de donnée
     connexion_ini_dic = config["database_params"]
     if connexion_ini_dic["dbname"] == "":
@@ -194,23 +159,9 @@ if __name__ == "__main__":
 
     # Paramètres de segmentation
     minsize = config["segmentation"]["minsize"]
-    if not config["steps_to_run"]["vegetation_extraction"] and config["data_entry"]["entry_options"]["img_ocs"] != "":
-      num_class = {
-      "bati" : config["vegetation_extraction"]["classes_numbers"]["build"],
-      "route" : config["vegetation_extraction"]["classes_numbers"]["road"],
-      "sol nu" : config["vegetation_extraction"]["classes_numbers"]["baresoil"],
-      "eau" : config["vegetation_extraction"]["classes_numbers"]["water"],
-      "vegetation" : config["vegetation_extraction"]["classes_numbers"]["vegetation"]
-      }
 
-    else :
-      num_class = {
-      "bati" : 1,
-      "route" : 2,
-      "sol nu" : 3,
-      "eau" : 4,
-      "vegetation" : 5
-      }
+    # Paremètres de seuil de végétation avec le NDVI
+    ndvi_threshold = config["ndvi"]["threshold"]
 
     # Seuils pour la distinction des strates verticales
     dic_seuils_stratesV = config["vertical_stratum_detection"]
@@ -262,7 +213,6 @@ if __name__ == "__main__":
         "img_landscape" : config["indicators_computation"]["landscape"]["landscape_data"],
         "lcz_information" : config["data_entry"]["entry_options"]["lcz_information"]   ,
         "img_ocs" : "",
-        "ocs_classes" : config["vegetation_extraction"]["classes_numbers"],
         "ldsc_class" : config["indicators_computation"]["landscape"]["landscape_dic_classes"]
         },
       "ndvi_difference_everdecid_thr" : config["indicators_computation"]["evergreen_deciduous"]["ndvi_difference_thr"],
@@ -276,7 +226,7 @@ if __name__ == "__main__":
     #                 AUX FICHIERS CRÉÉS                  #
     #######################################################
 
-    if img_ref == "" and config_data["steps_to_run"]["img_assembly"]:
+    if img_ref == "" and config["steps_to_run"]["img_assembly"]:
       img_ref = path_data_entry + os.sep + 'img_ref.tif'
 
     img_stack = path_data_prod + os.sep + 'img_stack.tif'
@@ -285,185 +235,31 @@ if __name__ == "__main__":
       img_mnh = path_data_prod + os.sep + 'mnh.tif'
 
     img_ndvi = path_tmp_neochannels + os.sep + 'img_ref_NDVI.tif'
-    img_ndwi = path_tmp_neochannels + os.sep + 'img_ref_NDWI.tif'
-    img_msavi = path_tmp_neochannels+ os.sep + 'img_ref_MSAVI.tif'
     img_sfs = path_tmp_neochannels + os.sep + 'img_ref_SFS.tif'
-    img_teinte = path_tmp_neochannels + os.sep + 'img_ref_teinte.tif'
+    img_ndvi_winter = path_tmp_neochannels + os.sep + 'img_winter_NDVI.tif'
+
+    img_ref_assemble = path_image_assemble + os.sep + 'img_ref.tif'
+    img_ref_pan_assemble = path_image_assemble + os.sep + 'img_ref_pan.tif'
+    img_winter_assemble = path_image_assemble + os.sep + 'img_winter.tif'
+    img_pan_assemble_SI =  path_image_assemble + os.sep + 'img_pan_SI.tif'
+    img_winter_assemble_SI = path_image_assemble + os.sep + 'img_winter_SI.tif'
+
+    img_ref = path_img_cut + os.sep + 'img_ref_cut.tif'
+    img_ref_PAN = path_img_cut + os.sep + 'img_ref_pan_cut.tif'
+    img_winter = path_img_cut + os.sep + 'img_winter_cut.tif'
+
+    dic_ndvi = {
+        "ndvi_summer" : img_ndvi,
+        "ndvi_winter" : img_ndvi_winter
+    }
+
 
     dic_neochannels = {
       "ndvi" : img_ndvi,
-      "ndwi": img_ndwi,
-      "msavi" : img_msavi,
       "sfs" : img_sfs,
-      "teinte" : img_teinte
     }
 
     img_neocanaux = path_data_prod + os.sep + 'img_neocanaux.tif'
-
-    # Création des chemins d'accès aux couches d'échantillons d'apprentissage si elles n'ont pas été indiquée
-    if create_samples == True :
-      bati = path_data_entry + os.sep + 'bati_vector.shp'
-      bati_img = path_data_entry + os.sep + 'bati_raster.tif'
-
-      route =  path_data_entry + os.sep + 'route_vector.shp'
-      route_img = path_data_entry + os.sep + 'route_raster.tif'
-
-      solnu =  path_data_entry + os.sep + 'solnu_vector.shp'
-      solnu_img = path_data_entry + os.sep + 'solnu_raster.tif'
-
-      eau =  path_data_entry + os.sep + 'eau_vector.shp'
-      eau_img = path_data_entry + os.sep + 'eau_raster.tif'
-
-      vegetation =  path_data_entry + os.sep + 'vegetation_vector.shp'
-      vegetation_img = path_data_entry + os.sep + 'vegetation_raster.tif'
-
-      rasters_samples_output ={
-        "bati" : bati_img,
-        "route" : route_img,
-        "solnu" : solnu_img,
-        "eau" : eau_img,
-        "vegetation" : vegetation_img
-      }
-
-      # Paramètres création des échantillons d'apprentissage
-
-      if create_samples ==  True:
-        li_data_bati = []
-        li_data_route = []
-        li_data_solnu = []
-        li_data_eau = []
-        li_data_vegetation = []
-
-        for data in config["vegetation_extraction"]["samples_creation"]["build"]:
-          dic = config["vegetation_extraction"]["samples_creation"]["build"].get(data)
-          li_data_bati.append([dic["source"], dic["buffer"], dic["exp"]])
-
-        for data in config["vegetation_extraction"]["samples_creation"]["road"]:
-          dic = config["vegetation_extraction"]["samples_creation"]["road"].get(data)
-          li_data_route.append([dic["source"], dic["buffer"], dic["exp"]])
-
-        for data in config["vegetation_extraction"]["samples_creation"]["baresoil"]:
-          dic = config["vegetation_extraction"]["samples_creation"]["baresoil"].get(data)
-          li_data_solnu.append([dic["source"], dic["buffer"], dic["exp"]])
-
-        for data in config["vegetation_extraction"]["samples_creation"]["water"]:
-          dic = config["vegetation_extraction"]["samples_creation"]["water"].get(data)
-          li_data_eau.append([dic["source"], dic["buffer"], dic["exp"]])
-
-        for data in config["vegetation_extraction"]["samples_creation"]["vegetation"]:
-          dic = config["vegetation_extraction"]["samples_creation"]["vegetation"].get(data)
-          li_data_vegetation.append([dic["source"], dic["buffer"], dic["exp"]])
-
-        params_to_find_samples = {
-          "bati" : li_data_bati,
-          "route" : li_data_route,
-          "solnu" : li_data_solnu,
-          "eau" : li_data_eau,
-          "vegetation" : li_data_vegetation
-        }
-
-    vectors_samples_output = {
-        "bati" : bati,
-        "route" : route,
-        "solnu" : solnu,
-        "eau" : eau,
-        "vegetation" : vegetation
-    }
-
-    # Chemins d'accès vers le pré-nettoyage des couches d'échantillons d'apprentissage
-    bati_prepare = path_tmp_preparesamples + os.sep + 'bati_vector_prepare.tif'
-    route_prepare = path_tmp_preparesamples + os.sep + 'route_vector_prepare.tif'
-    solnu_prepare = path_tmp_preparesamples + os.sep + 'solnu_vector_prepare.tif'
-    eau_prepare = path_tmp_preparesamples + os.sep + 'eau_vector_prepare.tif'
-    vegetation_prepare = path_tmp_preparesamples + os.sep + 'vegetation_vector_prepare.tif'
-
-    # Dictionnaire des paramètres de préparation des échantillons d'apprentissage
-    dic_img_preparesamples ={
-      "bati" :[bati, bati_prepare, True],
-      "route" : [route, route_prepare, False],
-      "sol nu" : [solnu, solnu_prepare, True],
-      "eau" : [eau, eau_prepare, True],
-      "vegetation" : [vegetation, vegetation_prepare, True]
-    }
-
-    # Chemins d'accès vers le nettoyage des couches d'échantillons d'apprentissage
-    bati_clean = path_tmp_cleansamples + os.sep + 'bati_vector_clean.tif'
-    route_clean = path_tmp_cleansamples + os.sep + 'route_vector_clean.tif'
-    solnu_clean = path_tmp_cleansamples + os.sep + 'solnu_vector_clean.tif'
-    eau_clean = path_tmp_cleansamples + os.sep + 'eau_vector_clean.tif'
-    vegetation_clean = path_tmp_cleansamples + os.sep + 'vegetation_vector_clean.tif'
-
-    dic_img_cleansamples = {
-        "bati" : [bati_prepare, bati_clean],
-        "route" : [route_prepare, route_clean],
-        "solnu" : [solnu_prepare, solnu_clean],
-        "eau" : [eau_prepare, eau_clean],
-        "vegetation" : [vegetation_prepare, vegetation_clean]
-    }
-
-    li_data_bati = []
-    li_data_route = []
-    li_data_solnu = []
-    li_data_eau = []
-    li_data_vegetation = []
-
-    for data in config["vegetation_extraction"]["samples_cleaning"]["build"]:
-      dic = config["vegetation_extraction"]["samples_cleaning"]["build"].get(data)
-      if dic["name"] in dic_neochannels :
-        name = str(dic["name"])
-        dic["source"] = dic_neochannels[name]
-      li_data_bati.append([dic["name"], dic["source"], dic["min"], dic["max"]])
-
-
-    for data in config["vegetation_extraction"]["samples_cleaning"]["road"]:
-      dic = config["vegetation_extraction"]["samples_cleaning"]["road"].get(data)
-      if dic["name"] in dic_neochannels :
-        name = str(dic["name"])
-        dic["source"] = dic_neochannels[name]
-      li_data_route.append([dic["name"], dic["source"], dic["min"], dic["max"]])
-
-    for data in config["vegetation_extraction"]["samples_cleaning"]["baresoil"]:
-      dic = config["vegetation_extraction"]["samples_cleaning"]["baresoil"].get(data)
-      if dic["name"] in dic_neochannels :
-        name = str(dic["name"])
-        dic["source"] = dic_neochannels[name]
-      li_data_solnu.append([dic["name"], dic["source"], dic["min"], dic["max"]])
-
-    for data in config["vegetation_extraction"]["samples_cleaning"]["water"]:
-      dic = config["vegetation_extraction"]["samples_cleaning"]["water"].get(data)
-      if dic["name"] in dic_neochannels :
-        name = str(dic["name"])
-        dic["source"] = dic_neochannels[name]
-      li_data_eau.append([dic["name"], dic["source"], dic["min"], dic["max"]])
-
-    for data in config["vegetation_extraction"]["samples_cleaning"]["vegetation"]:
-      dic = config["vegetation_extraction"]["samples_cleaning"]["vegetation"].get(data)
-      if dic["name"] in dic_neochannels :
-        name = str(dic["name"])
-        dic["source"] = dic_neochannels[name]
-      li_data_vegetation.append([dic["name"], dic["source"], dic["min"], dic["max"]])
-
-    correction_images_dic = {
-        "bati" : li_data_bati,
-        "route" : li_data_route,
-        "solnu" : li_data_solnu,
-        "eau" : li_data_eau,
-        "vegetation" : li_data_vegetation
-    }
-
-    # Chemin d'accès vers la couche unique des échantillons d'apprentissage
-    mask_samples_input_list = [bati_clean, route_clean, solnu_clean, eau_clean, vegetation_clean]
-
-    image_samples_merged_output = path_tmp_cleansamples + os.sep + 'img_samples_merged.tif'
-
-    # Chemin d'accès vers la couche et le fichier statistique des échantillons d'apprentissage sélectionnés
-    samplevector = path_tmp_selectsamples + os.sep + 'sample_vector_selected.shp'
-    table_statistics_output = path_tmp_selectsamples + os.sep + 'statistics_sample_vector_selected.csv'
-
-    # Chemin d'accès vers l'image ocs
-    img_classif = path_extractveg + os.sep + 'img_classification.tif'
-    img_classif_confid = path_extractveg + os.sep + 'img_classification_confidence.tif'
-    img_classif_filtered = path_extractveg + os.sep + 'img_classification_filtered.tif'
 
     # Chemin d'accès vers la couche de segments végétation
     sgts_veg = path_stratesveg + os.sep + 'vect_sgt_vegetation.gpkg'
@@ -513,12 +309,18 @@ if __name__ == "__main__":
     connexion_datafinal_dic["schema"] = 'data_final'
 
     # Création de la DB si elle n'est pas encore créée
+    ###### -------- effacer la DB si elle existe ! -------- ######
     try :
         connexion = openConnection(connexion_0["dbname"], user_name=connexion_0["user_db"], password=connexion_0["password_db"], ip_host=connexion_0["server_db"], num_port=connexion_0["port_number"], schema_name=connexion_0["schema"])
     except:
         print("La BD " + connexion_0["dbname"]  +" n'existe pas, nous la créons.")
         createDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
-        closeConnection(connexion_ini_dic)
+    else :
+        print("La BD " + connexion_0["dbname"]  +" existe. Nous en supprimons le contenu.")
+        closeConnection(connexion)
+        dropDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
+        createDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
+
     # Connexion à la base de données
     connexion = openConnection(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
 
@@ -549,7 +351,27 @@ if __name__ == "__main__":
     # 0# PRE-TRAITEMENTS #0#
     if debug >= 1:
       print(bold + cyan + "\n*0* PRÉ-TRAITEMENTS" + endC)
+
+
     # IMAGES ASSEMBLY
+
+    img_ref_assemble = assemblyRasters(shp_zone, rep_img_ref, img_ref_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
+    img_ref_pan_assemble = assemblyRasters(shp_zone, rep_img_ref_PAN, img_ref_pan_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
+    img_winter_assemble = assemblyRasters(shp_zone, rep_img_winter, img_winter_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
+
+    # Alignement de l'image d'hiver et de l'image pan sur l'image d'été
+    cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_ref_assemble, img_winter_assemble, img_winter_assemble_SI)
+    os.system(cmd_superimpose)
+
+    cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_ref_assemble, img_ref_pan_assemble, img_pan_assemble_SI)
+    os.system(cmd_superimpose)
+
+    # Découpage des images sur l'emprise
+    cutImageByVector(shp_zone ,img_ref_assemble, img_ref)
+    cutImageByVector(shp_zone ,img_pan_assemble_SI, img_ref_PAN)
+    cutImageByVector(shp_zone,img_winter_assemble_SI, img_winter)
+
+    '''
     if config["steps_to_run"]["img_assembly"]:
       if debug >= 1:
         print(cyan + "\nAssemblage des imagettes" + endC)
@@ -566,6 +388,10 @@ if __name__ == "__main__":
     img_ref_PAN_cut = os.path.splitext(img_ref_PAN)[0] + SUFFIX_CUT + os.path.splitext(img_ref_PAN)[1]
     cutImageByVector(shp_zone ,img_ref_PAN, img_ref_PAN_cut)
     img_ref_PAN = img_ref_PAN_cut
+    img_winter_cut = os.path.splitext(img_winter)[0] + SUFFIX_CUT + os.path.splitext(img_ref)[1]
+    cutImageByVector(shp_zone ,img_winter, img_winter_cut)
+    img_winter = img_winter_cut
+    '''
 
 
     # MNH CREATION
@@ -582,15 +408,25 @@ if __name__ == "__main__":
 
       neochannelComputation(img_ref, img_ref_PAN, dic_neochannels, shp_zone, save_intermediate_result=save_intermediate_result, overwrite = True, debug=debug)
 
+    else :
+        createNDVI(img_ref, img_ndvi, channel_order = ["Red","Green","Blue","NIR"], codage="float", debug = debug)
+
+    SUFFIX_CUT = "_CUT"
     img_mnh_cut = os.path.splitext(img_mnh)[0] + SUFFIX_CUT + os.path.splitext(img_mnh)[1]
     cutImageByVector(shp_zone, img_mnh, img_mnh_cut)
     img_mnh = img_mnh_cut
+
 
     dic_neochannels["mnh"] = img_mnh
     raster_dic = {
         "MNH" : dic_neochannels["mnh"],
         "TXT" : dic_neochannels["sfs"]
     }
+
+    # CALCUL NDVI
+
+    createNDVI(img_winter, img_ndvi_winter, channel_order = ["Red","Green","Blue","NIR"], codage="float", debug = debug)
+
 
     # CONCATENATION DES NEOCANAUX
     if config["steps_to_run"]["data_concatenation"]:
@@ -605,77 +441,6 @@ if __name__ == "__main__":
 
     #ATTENTION : il se peut que, le mnh dusse subir un ré-échantillonnage et recalage par rapport à la donnée de base si il a a été fournit directement par l'opérateur
     # nous avons donc créé un nouveau fichier mnh superimposé par rapport à l'image de référence (normalement situé dans le dossier temporaire des néochannels)
-
-    # 1# EXTRACTION DE LA VEGETATION PAR CLASSIFICATION SUPERVISEE #1#
-
-    if debug >= 1:
-        print(bold + cyan + "\n*1* EXTRACTION DE LA VÉGÉTATION" + endC)
-    if not config["steps_to_run"]["vegetation_extraction"]:
-      if config["data_entry"]["entry_options"]["img_ocs"] != "":
-        img_classif_filtered = config["data_entry"]["entry_options"]["img_ocs"]
-        print(cyan + "\nLe fichier image classifié est fourni et disponible via le chemin " + img_classif_filtered + endC)
-
-        img_classif_filtered_cut = os.path.splitext(img_classif_filtered)[0] + SUFFIX_CUT + os.path.splitext(img_classif_filtered)[1]
-        cutImageByVector(shp_zone, img_classif_filtered, img_classif_filtered_cut)
-        img_classif_filtered = img_classif_filtered_cut
-
-    else :
-      if debug >= 1:
-        print(bold + cyan + "\nTraitements pour la production de l'OCS" + endC)
-
-      # 1.Création des échantillons d'apprentissage
-      if create_samples == True:
-        if debug >= 1:
-          print(cyan + "\nCréation des échantillons d'apprentissage" + endC)
-            # #createAllSamples(img_ref, shp_zone, vectors_samples_output, rasters_samples_output, params_to_find_samples, simplify_vector_param=10.0, format_vector='ESRI Shapefile', extension_vector=".shp", save_results_intermediate=False, overwrite=True)
-        createAllSamples(img_ref, shp_zone, vectors_samples_output, rasters_samples_output, params_to_find_samples, simplify_vector_param=10.0, format_vector='ESRI Shapefile', extension_vector=".shp", save_results_intermediate=save_intermediate_result, overwrite=True)
-
-      # 2.Préparation des échantillons d'apprentissage
-      if debug >= 1:
-        print(cyan + "\nPréparation des échantillons d'apprentissage" + endC)
-
-      prepareAllSamples(img_ref, dic_img_preparesamples, shp_zone, format_vector = 'ESRI Shapefile', save_intermediate_result = save_intermediate_result)
-
-      # 3.Nettoyage des échantillons d'apprentissage : érosion + filtrage avec les néocanaux
-      if debug >= 1:
-        print(cyan + "\nNettoyage des échantillons d'apprentissage" + endC)
-
-      cleanAllSamples(dic_img_cleansamples, correction_images_dic, extension_raster = ".tif", save_results_intermediate = save_intermediate_result, overwrite = True)
-
-      # 4.Nettoyage recouvrement des échantillons d'apprentissage
-      if debug >= 1:
-        print(cyan + "\nCorrection du recouvrement des échantillons d'apprentissage" + endC)
-
-      cleanCoverClasses(img_ref, mask_samples_input_list, image_samples_merged_output)
-
-      # 5.Sélection des échantillons
-      if debug >= 1:
-        print(cyan + "\nSélection des échantillons d'apprentissage" + endC)
-
-      selectSamples([img_stack], image_samples_merged_output, samplevector, table_statistics_output, sampler_strategy="percent", select_ratio_floor = 10, ratio_per_class_dico = samples_selection, name_column = 'ROI', no_data_value = 0, save_results_intermediate = save_intermediate_result)
-
-      # 6.Classification supervisée RF
-      if debug >= 1:
-        print(cyan + "\nClassification supervisée RF" + endC)
-
-      rf_parametres_struct = StructRFParameter()
-      rf_parametres_struct.max_depth_tree = params_RF["depth_tree"]
-      rf_parametres_struct.min_sample = params_RF["sample_min"]
-      rf_parametres_struct.ra_termin_criteria = params_RF["termin_criteria"]
-      rf_parametres_struct.cat_clusters = params_RF["cluster"]
-      rf_parametres_struct.var_size_features = params_RF["size_features"]
-      rf_parametres_struct.nbtrees_max =  params_RF["num_tree"]
-      rf_parametres_struct.acc_obb_erreur = params_RF["obb_erreur"]
-
-      classifySupervised([img_stack], samplevector, img_classif, '', model_output = '', model_input = '', field_class = 'ROI', classifier_mode = "rf", rf_parametres_struct = rf_parametres_struct,no_data_value = 0, ram_otb=0,  format_raster='GTiff', extension_vector=".shp", save_results_intermediate = save_intermediate_result)
-
-      # 7.Application du filtre majoritaire
-      if debug >= 1:
-        print(cyan + "\nApplication du filtre majoritaire" + endC)
-      print("DEBUG")
-      exit()
-      filterImageMajority(img_classif, img_classif_filtered, umc_pixels = 8, save_results_intermediate = save_intermediate_result)
-
 
     # 2# DISTINCTION DES STRATES VERTICALES VEGETALES #2#
     if debug >= 1:
@@ -700,7 +465,7 @@ if __name__ == "__main__":
       if debug >= 1:
         print(cyan + "\nSegmentation de l'image de végétation " + endC)
 
-      segmentationImageVegetetation(img_ref, img_classif_filtered, sgts_veg, param_minsize = minsize, num_class = num_class, format_vector='GPKG', save_intermediate_result = save_intermediate_result, overwrite = True)
+      segmentationImageVegetetationNdvi(img_ref, dic_ndvi, sgts_veg, param_minsize = minsize, ndvi_threshold = ndvi_threshold, format_vector='GPKG', save_intermediate_result = save_intermediate_result, overwrite = True)
 
       # 2.Classification en strates verticales
       if debug >= 1:
@@ -749,7 +514,7 @@ if __name__ == "__main__":
       # Ouverture connexion
       connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
 
-      tab_ref_fv = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, dic_thresholds, raster_dic, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = True,  debug = debug)
+      tab_ref_fv = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, shp_zone, dic_thresholds, raster_dic, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = True,  debug = debug)
 
       closeConnection(connexion)
       print(bold + green + "\nLa détection des formes végétales horizontales s'est bien déroulée. Le résultat est disponible dans la table %s et dans le(s) fichier(s) %s"%(tab_ref_fv, output_fv_layers) + endC)
@@ -795,7 +560,7 @@ if __name__ == "__main__":
       renameColumn(connexion, tab_ref_fv, "ogc_fid", "fid")
 
       # Calcul des indices
-      dic_params["ldsc_information"]["img_ocs"] = img_classif_filtered
+      #dic_params["ldsc_information"]["img_ocs"] = img_classif_filtered
       createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = save_intermediate_result, debug = debug)
 
       print(bold + green + "\nCartographie détaillée de la végétation disponible via le chemin : " + path_datafinal + endC)
