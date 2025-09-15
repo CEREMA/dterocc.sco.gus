@@ -2,7 +2,6 @@
 # Librairies Python
 import sys,os, json, re
 from osgeo import ogr ,osr
-import time
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -17,12 +16,12 @@ from Lib_postgis import createDatabase, dropDatabase, openConnection, createExte
 
 # Applications /apps
 
-from app.VerticalStratumDetectionNdvi import classificationVerticalStratum, segmentationImageVegetetation
+from app.VerticalStratumDetection import classificationVerticalStratum, segmentationImageVegetetation
 from app.VegetationFormStratumDetection import cartographyVegetation
 from app.DhmCreation import mnhCreation
 from app.ChannelComputation import neochannelComputation, createNDVI
 from app.DataConcatenation import concatenateData
-from app.GUSRastersAssembly import assemblyRasters, assemblyImages
+from app.GUSRastersAssembly import assemblyRasters
 from app.IndicatorsComputation import createAndImplementFeatures
 from app.LandscapeDetection import landscapeDetection, urbanLandscapeDetection
 
@@ -239,6 +238,11 @@ if __name__ == "__main__":
       "pir_difference_thr" : config["indicators_computation"]["coniferous_deciduous"]["pir_difference_thr"],
       "ndvi_difference_groundtype_thr" : config["indicators_computation"]["ground_type"]["ndvi_difference_thr"]
     }
+
+    dic_vegetation_detection = {
+          "vegetation_detection_step" : config["steps_to_run"]["vegetation_extraction"]
+          "vegetation_mask" : config["data_entry"]["entry_options"]["mask_vegetation"]
+      }
 
     #######################################################
     # CRÉATION DES CHEMINS D'ACCES DANS LE DOSSIER PROJET #
@@ -536,9 +540,10 @@ if __name__ == "__main__":
       # 1.Segmentation de l'image
       if debug >= 1:
         print(cyan + "\nSegmentation de l'image de végétation " + endC)
-      start_time = time.time()
-      segmentationImageVegetetation(img_stack, dic_ndvi, sgts_veg, sgts_tree, dic_ndvi_threshold, param_minsize = minsize, format_vector='GPKG', save_intermediate_result = save_intermediate_result, overwrite = True)
-      tps_segmentation = time.time() - start_time
+
+
+      segmentationImageVegetetation(img_stack, dic_ndvi, sgts_veg, sgts_tree, dic_ndvi_threshold, dic_vegetation_detection, param_minsize = minsize, format_vector='GPKG', save_intermediate_result = save_intermediate_result, overwrite = True)
+
 
       # 2.Classification en strates verticales
       if debug >= 1:
@@ -551,10 +556,7 @@ if __name__ == "__main__":
       tab_ref_stratesv = 'segments_vegetation'
       schem_tab_ref_stratesv = 'data_final.segments_vegetation'
 
-      start_time_stratesv = time.time()
       tab_ref_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, img_ref, output_stratesv_layers, sgts_veg, sgts_tree, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = save_intermediate_result, overwrite = True, debug = debug)
-      print("----- La segmentation a pris : %s secondes -----" %(tps_segmentation))
-      print("----- La classification des strates verticales a pris : %s secondes -----" %(time.time() - start_time_stratesv))
 
       closeConnection(connexion)
 
@@ -588,9 +590,9 @@ if __name__ == "__main__":
 
       # Ouverture connexion
       connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
-      start_time_carto = time.time()
+
       tab_ref_fv = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, shp_zone, dic_roads, dic_thresholds, raster_dic, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = True,  debug = debug)
-      print("----- La détection des formes horizontales : %s secondes -----" %(time.time() - start_time_carto))
+
       closeConnection(connexion)
       print(bold + green + "\nLa détection des formes végétales horizontales s'est bien déroulée. Le résultat est disponible dans la table %s et dans le(s) fichier(s) %s"%(tab_ref_fv, output_fv_layers) + endC)
 
@@ -632,19 +634,11 @@ if __name__ == "__main__":
 
       # Nettoyage des colonnes (suppression de la colonne cat et renomage de la colonne ogc_fid en fid)
       dropColumn(connexion, tab_ref_fv, "cat")
-      #renameColumn(connexion, tab_ref_fv, "ogc_fid", "fid")
 
       # Calcul des indices
-      #dic_params["ldsc_information"]["img_ocs"] = img_classif_filtered
 
-      print(dic_params["img_ref"])
-      start_time_features = time.time()
       createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = save_intermediate_result, debug = debug)
-      print("----- Le calcul des attributs a pris : %s secondes -----" %(time.time() - start_time_features))
-      print(bold + green + "\nCartographie détaillée de la végétation disponible via le chemin : " + path_datafinal + endC)
 
       closeConnection(connexion)
-
-      print("----- Le code GUS a pris : %s secondes -----" %(time.time() - start_time_gus))
 
     f.close()

@@ -516,7 +516,7 @@ def landscapeDetectionSatelliteEdition(connexion, connexion_dic, dic_params, rep
 ###########################################################################################################################################
 def urbanLandscapeDetection(connexion, connexion_dic ,dic_params, repertory, save_intermediate_result = False,debug = 0):
     """
-    Rôle :
+    Rôle : création d'une couche contenant l'information sur l'urbain (en prévision de la classification de l'herbacé en pelouse)
 
     Paramètres :
         connexion : correspond à la variable de connexion à la base de données
@@ -557,43 +557,15 @@ def urbanLandscapeDetection(connexion, connexion_dic ,dic_params, repertory, sav
 
     elif dic_params["ldsc_information"]["lcz_information"]["lcz_data"] != "":
 
-        lcz_data = dic_params["ldsc_information"]["lcz_information"]["lcz_data"]
-        extension = os.path.splitext(lcz_data)[1]
-        lcz_cut = repertory + os.sep + "lcz_cut_etude" + extension
-        if extension == '.shp':
-            format_vector = 'ESRI Shapefile'
-        else:
-            format_vector = 'GPKG'
-
-        # 1# Découper la couche vecteur LCZ selon l'emprise de la zone d'étude
-        if not os.path.exists(dic_params["ldsc_information"]["img_ocs"]):
-            cutoutVectors(dic_params["shp_zone"] , [lcz_data], [lcz_cut] , overwrite=True, format_vector=format_vector)
-
-        # 2# Import du fichier vecteur LCZ en base
-        tab_lcz = 'tab_lcz'
-        importVectorByOgr2ogr(connexion_dic["dbname"], lcz_cut, tab_lcz, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
-
-        # 3# Création de la table paysage
+        tab_pay_final = "paysages_buffer"
         tab_urbain = "paysages_urbain"
 
         query = """
         DROP TABLE IF EXISTS %s;
         CREATE TABLE %s AS
-        """  %(tab_urbain, tab_urbain)
-
-        # Regroupement de tous les LCZ appartennant au milieu urbanisé
-        if len(dic_params["ldsc_information"]["lcz_information"]["1"]) > 1:
-            query += """
-            SELECT geom, 1 AS dn
-            FROM %s
-            WHERE %s in %s
-            """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], tuple(dic_params["ldsc_information"]["lcz_information"]["1"]))
-        else :
-            query += """
-            SELECT geom, 1 AS dn
-            FROM %s
-            WHERE %s = '%s'
-            """ %(tab_lcz, dic_params["ldsc_information"]["lcz_information"]["field"], dic_params["ldsc_information"]["lcz_information"]["1"][0])
+            SELECT * FROM %s
+            WHERE dn = 1 ;
+        """ %(tab_urbain, tab_urbain,tab_pay_final)
 
         if debug >= 3:
             print(query)
@@ -608,8 +580,6 @@ def urbanLandscapeDetection(connexion, connexion_dic ,dic_params, repertory, sav
         dic_params["ldsc_information"]["lcz_urbain"]  = urban_gpkg_file
 
         if not save_intermediate_result :
-            removeVectorFile(lcz_cut)
-            dropTable(connexion, tab_lcz)
             dropTable(connexion, tab_urbain)
 
     else :
@@ -639,14 +609,22 @@ def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
 
-
+    # Condition pour que le paysage soit de l'eau
     eau = "CS1.2.2"
+
+    # Conditions pour que le paysage soit le milieu agricole et forestier
     aef1 =  ["US1.1", "US1.2"]
     aef2 = ["US2", "US3", "US5", "US6.1" ] # ET 'CS2%' ET seuil > 10000
     aef3 = ["US6.2" , "US6.3", "US6.6"] #ET 'CS2%'
+
+    # Conditions pour que le paysage soit autres milieux naturels
     amn1 = [ "US1.3", "US1.4", "US1.5"]
     amn2 = ["US6.2", "US6.3", "US6.6"] # ET PAS 'CS2%'
+
+    # Condition pour que le paysage soit de l'urbain
     urbain = ["US2", "US3", "US5", "US6.1"] # ET PAS 'CS2%' ET seuil <= 10000
+
+    # Condition pour que le paysage soit de la voirie et infrastructure
     voirie = "US4%"
 
     field_cs = "CODE_CS"
@@ -829,6 +807,8 @@ def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img
     executeQuery(connexion, query)
 
 
+    # Table contenant l'union des paysages regroupés par paysages
+
     tab_pay_union = "paysage_lev1_union"
 
     query = """
@@ -842,6 +822,8 @@ def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
+
+    # Buffer sur les routes et l'eau
 
     buffer_route = 5
     buffer_eau = 5
@@ -910,6 +892,8 @@ def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img
         print(query)
     executeQuery(connexion, query)
 
+    # Table finale des paysages
+
     tab_pay_final = "paysage_lev1"
 
     query = """
@@ -923,7 +907,7 @@ def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img
         print(query)
     executeQuery(connexion, query)
 
-
+    # Correction topologique
     query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_pay_final, 'geom', 'geom', 'geom')
     executeQuery(connexion, query)
 

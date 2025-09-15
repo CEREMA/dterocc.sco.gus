@@ -24,7 +24,7 @@ from Lib_text import appendTextFileCR
 from Lib_operator import getExtensionApplication
 
 #########################################################################
-# FONCTION assembleRasters()                                            #
+# FONCTION assemblyRasters()                                            #
 #########################################################################
 def assemblyRasters(empriseVector, repRasterAssemblyList, output_rasterAssembly, format_raster = 'GTiff', format_vector = 'GPKG', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = False):
     """

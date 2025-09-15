@@ -6,7 +6,7 @@
 #############################################################################
 
 # Import des librairie Python
-import math,os, sys, time
+import math,os, sys
 import geopandas as gpd
 
 # Import des librairies de /libs
@@ -19,8 +19,6 @@ from Lib_vector import getEmpriseVector, differenceVector
 from Lib_grass import initializeGrass, cleanGrass, simplificationGrass
 from Lib_vector import cutVector
 from ScriptsSegmentationMorphologique.PolygonsMerging import mergeSmallPolygons, findAdjacentPolygons
-# Import des applications de /app
-from app.VerticalStratumDetection import calc_statMedian
 
 #################################################
 ## Concaténation des trois tables pour obtenir ##
@@ -108,23 +106,17 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
     tab_arbore = ''
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate arborée" + endC)
-    start_tree = time.time()
     tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, tab_roads, dic_thresholds["tree"], output_layers["tree"], save_intermediate_result = save_intermediate_result, debug = debug)
-    tps_tree = time.time() - start_tree
     # 2# Formes végétales arbustives
     tab_arbustive = ''
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate arbustive" + endC)
-    start_arbu = time.time()
     tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, tab_roads, dic_thresholds["shrub"], output_layers["shrub"], save_intermediate_result = save_intermediate_result, debug = debug)
-    tps_arbu = time.time() - start_arbu
     # 3# Formes végétales herbacées
     tab_herbace = ''
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate herbacée" + endC)
-    start_herb = time.time()
     tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, empriseVector, tab_roads, dic_thresholds["herbaceous"], output_layers["herbaceous"], save_intermediate_result = save_intermediate_result, debug = debug)
-    tps_herb = time.time() - start_herb
     # 4# Concaténation des données en une seule table 'végétation'
     tab_name = 'vegetation'
     tab_name_clean = 'vegetation_to_clean'
@@ -198,7 +190,6 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
     if output_layers["output_fv"] == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
-        start_smooth = time.time()
         # Export au format vecteur
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["output_fv"], tab_name, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
@@ -224,7 +215,6 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
 
         # suppression de la colonne non utile "strate_r"
         dropColumn(connexion, tab_name, 'strate_r')
-        tps_smooth = time.time() - start_smooth
 
     print("La classification de la strate arborée a duré : %s secondes." %(tps_tree))
     print("La classification de la strate arbustive a duré : %s secondes." %(tps_arbu))
@@ -1178,7 +1168,6 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, rpg_layer, ldsc_
     executeQuery(connexion, query)
 
     # Création de la table contenant les zones herbacées classifiées
-    #tab_out = 'strate_herbace_tmp'
     tab_out = 'strate_herbace_1'
 
     if ldsc_urban != "" :
@@ -1232,32 +1221,27 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, rpg_layer, ldsc_
     return tab_out
 
 ########################################################################
-# FONCTION prepareRPG()                                #
+# FONCTION prepareRPG()                                                #
 ########################################################################
 
 def prepareRPG(connexion, connexion_dic, rpg_dic, empriseVector, output_layer, working_rep, save_intermediate_result = False, debug = 0) :
     '''
+    Rôle : retire les parcelles qui ne sont pas de la culture dans le RPG et le RPG complété
+
+    Paramètres :
+        connexion : connexion à la base donnée et au schéma correspondant
+        connexion_dic : informations de connexion
+        rpg_dic : contient les chemins des fichiers de RPG et RPG complété
+        empriseVector : emprise de la zone d'étude
+        output_layer : fichier vecteur des cultures
+        working_rep : répertoire de travail
+        save_intermediate_result : si les fichiers intermédiaires doivent être conservés ou non. Par défaut : False
+        debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     '''
 
     rpg = rpg_dic["rpg"]
     rpg_complete = rpg_dic["rpg_complete"]
 
-    '''
-    rpg_cut = working_rep + os.sep + "rpg_cut.gpkg"
-    rpg_complete_cut = working_rep + os.sep + "rpg_complete_cut.gpkg"
-    '''
-
-    # Découpage du RPG sur l'emprise
-    '''
-    command = "ogr2ogr -clipsrc %s %s %s  -nlt POLYGONE -overwrite -f GPKG" %(empriseVector, rpg_cut, rpg)
-    if debug >=2:
-        print(command)
-    exit_code = os.system(command)
-    if exit_code != 0:
-        print(cyan + "Découpage du RPG sur la zone d'étude : " + bold + red + "!!! Une erreur c'est produite au cours du découpage du vecteur : " + rpg + endC, file=sys.stderr)
-    if debug >=2:
-        print(cyan + "Découpage du RPG sur la zone d'étude : " + endC + "Le fichier vecteur " + rpg  + " a ete decoupe resultat : " + rpg_cut + " type geom = POLYGONE")
-    '''
 
     # Création de la table RPG
 
@@ -1268,16 +1252,7 @@ def prepareRPG(connexion, connexion_dic, rpg_dic, empriseVector, output_layer, w
     # Découpage du RPG complété et création de la table du RPG complété sur l'emprise s'il a été donné
 
     if rpg_complete != "" and rpg_complete != None :
-        '''
-        command = "ogr2ogr -clipsrc %s %s %s  -nlt POLYGONE -overwrite -f GPKG" %(empriseVector, rpg_complete_cut, rpg_complete)
-        if debug >=2:
-            print(command)
-        exit_code = os.system(command)
-        if exit_code != 0:
-            print(cyan + "Découpage du RPG sur la zone d'étude : " + bold + red + "!!! Une erreur c'est produite au cours du découpage du vecteur : " + rpg_complete + endC, file=sys.stderr)
-        if debug >=2:
-            print(cyan + "Découpage du RPG sur la zone d'étude : " + endC + "Le fichier vecteur " + rpg_complete  + " a ete decoupe resultat : " + rpg_complete_cut + " type geom = POLYGONE")
-        '''
+
         tab_rpg_complete = 'rpg_complete'
         importVectorByOgr2ogr(connexion_dic["dbname"], rpg_complete, tab_rpg_complete, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"])
 
@@ -2667,17 +2642,25 @@ def reclassPolygonsMerging(connexion, connexion_dic, table, table_out, repertory
 
     return table_out
 
-repertory = '/mnt/RAM_disk/mergePoly'
-connexion_datafinal_dic =  {
-        "dbname": "gustest",
-        "user_db": "postgres",
-        "password_db": "postgres",
-        "server_db": "localhost",
-        "port_number": 5433,
-        "schema" : "data_final"
-    }
+###########################################################################################################################################
+# FONCTION calc_statMedian()                                                                                                              #
+###########################################################################################################################################
+def calc_statMedian(vector_input, image_input, vector_output):
+    """
+    Rôle : croisement raster/vecteur où on va calculer la médiane du raster sur l'emprise des entités vecteurs
 
+    Paramètres :
+        vector_input : fichier vecteur des segments végétation
+        image_input : fichier raster
+        vector_output : fichier vecteur en sortie pour lequelle on a calculé les statistiques
+    """
 
+    col_to_add_list = ["median"]
+    col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range"]
+    class_label_dico = { }
+    statisticsVectorRaster(image_input, vector_input, vector_output, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+
+    return
 
 
 

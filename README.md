@@ -94,25 +94,12 @@ Cette partie est divisée en quatre sous-parties :
 
 | Fonction | Usage | Optionnel |
 | :------- | :----| :---------|
-| *assemblyImages()* | Assemblage des imagettes Pléiades |  Oui |
+| *GUSRasterAssembly()* | Assemblage des imagettes Pléiades |  Oui |
 | *mnhCreation()* | Création d'un Modèle Numérique de Hauteur à partir d'un MNS et d'un MNT | Oui |
-| *neochannelComputation()* | Calcul des images d'indices radiométriques dérivés de l'image Pléaides de référence| Oui |
+| *channelComputation()* | Calcul des images d'indices radiométriques dérivés de l'image Pléaides de référence| Oui |
 | *concatenateData()* | Concaténation des données une seule couche raster | Non |
 
 Certaines fonctions sont optionnelles lorsqu'il y a possibilité que l'opérateur apporte lui-même la donnée produite par cette fonction.
-
-#### Extraction de la végétation
-
-| Fonction | Usage | Optionnel |
-| :------- | :---- | :--------- |
-| *createAllSamples()* | Création des couches d'échantillons d'apprentissage | Oui |
-| *prepareAllSamples()* | Découpe des couches d'échantillons d'apprentissage selon l'emprise de la zone d'étude et une potentielle érosion | Non |
-| *cleanAllSamples()* | Nettoyage des échantillons d'apprentissage à partir de filtres sur les indices radiométriques | Non |
-| *cleanCoverClasses()* | Nettoyage des échantillons d'apprentissage pour éviter les recouvrements de classes | Non |
-| *selectSamples()* | Sélection de pourcentages d'échantillons d'apprentissage parmi ceux créés et nettoyés | Non |
-| *classifySupervised()* | Classification supervisée à partir de l'algorithme Random Forest | Non |
-| *filterImageMajority()* | Homogénéisation de l'image de classification | Non |
-
 
 #### Distinction des strates verticales de la végétation
 
@@ -143,7 +130,7 @@ NB : particularités pour le calcul de l'image "paysages" qui n'est pas directem
 
 En ne renseignant pas l'image des paysages détectés dans la balise `indicators_computation > landscape > landscape_data`. Le script va se lancer dans la production de cette même donnée via la fonction *landscapeDetection()* qui aura la possbilité d'utiliser deux méthodes en fonction des informations renseignés au niveau des balises :
 1. `data_entry > entry_options > lcz_information > lcz_data`  : si la donnée LCZ est renseignée, la donnée paysages sera dérivée de cette donnée LCZ.
-2. `data_entry > entry_options > img_ocs` ou s'il existe déjà un fichier img_ocs dans le dossier du projet : la donnée paysages sera dérivée de la donnée satellitaire.
+2. `data_entry > entry_options > img_ocs` : la donnée paysages sera dérivée de la donnée satellitaire.
 
 ## Fichier de configuration
 
@@ -166,8 +153,6 @@ Via la balise `steps_to_run`, l'opérateur choisit quelles étapes il veut faire
 
 Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'opérateur peut très bien apporter lui-même certaines données via la balise `data_entry > entry_options`. En gardant bien les mêmes formats que la donnée produite (nom des champs, extension, etc.)
 
-De plus, il existe une particularité pour le renseignement des informations en balise `vegetation_extraction > samples_cleaning` : si les indices radiométriques servants à nettoyer et filtrer les échantillons d'apprentissage ont été produits dans une étape précédente au script, nous retrouverons l'information `source` via l'arborescence du dossier de projet créé (à condition de bien respecter les noms des indices attribués dans le code : ndvi, msavi, ndwi, hue, mnh, etc.). Cette balise permet à l'opérateur d'ajouter une autre donnée de filtrage qui n'est pas produite via les scripts.
-
 Enfin, il existe la balise `vertical_stratum_detection > height_or_texture` qui permet à l'opérateur de prioriser la hauteur ou la texture dans la classification des segments en strates verticales. Deux possibilités s'offrent donc :
 - priorisation de la hauteur (valeur "height") où seule la donnée de hauteur est utilisée pour la première étape de la classification en strates verticales. NB : nous privilégions ce choix lorsque la donnée d'élévation est précise (ex : LiDAR).
 - priorisation de la texture (valeur "texture") où une sueil appliqué sur la texture assure la distinction végétation herbacée vs végétation arborée et arbustive. La distinction de l'arboré et de l'arbustif se réalisant classiquement avec la donnée de hauteur. NB : nous privilégions ce choix lorsque la donnée d'élévation est peu précise (ex : MNH dérivé de la donnée satellitaire).
@@ -177,33 +162,9 @@ Ensuite, une seconde étape de classification de la strate arbustive permet de n
 ### Attention
 Attention, si vous ne voulez pas faire tourner toutes les étapes (`steps_to_run`), des informations sont à fournir si vous n'avez pas utilisé les scripts dédiés pour les produire :
 - `steps_to_run > data_concatenation` = False -> fournir l'image concaténée via la balise `data_entry > entry_options > img_data_concatenation`
-- `steps_to_run > vegetation_extraction` = False -> fournir l'image classifiée via la balise `data_entry > entry_options > img_ocs`
+- `steps_to_run > vegetation_extraction` = False -> fournir le masque de végétation via la balise `data_entry > entry_options > mask_vegetation`
 - `steps_to_run > vertical_stratum_detection` = False -> fournir le schema et la table de la donnée via la balise `vertical_stratum_detection > db_table`
 - `steps_to_run > vegetation_form_stratum_detection` = False -> fournir le schema et la table de la donnée via la balise `vegetation_form_stratum_detection > db_table`
-
-## Dossier configuration chaîne iota2
-
-Pour la distinction des formes végétales "prairie" et "culture" au sein de la strate herbacée, nous avons besoins d'une image classifiée "prairie/culture" sur la zone d'étude. L'opérateur fournit cette donnée via la variable `vegetation_form_stratum_detection > herbaceous > img_grasscrops`.
-
-Nous mettons à disposition une méthode de production de cette classification à partir de la chaîne iota2 développée par le Cesbio et disponible en gratuitement via ce [lien](https://framagit.org/iota2-project/iota2).
-
-La méthode se déroule en quatre grandes étapes :
-1. Télécharger 12 images Sentinel-2 (une image par mois) sur la zone d'étude.
-
-NB : en France, nous disposons d'images Sentinel-2 L3 correspondant aux synthèses mensuelles.
-
-2. Préparer les données d'entrée :
-- orthorectifier et ré-échantillonner les images les unes par rapport aux autres
-- calculer les néocanaux dérivés des bandes de chaque image : NDVI,NDWI et BI
-- concaténer l'ensemble des données en une unique image multi-bande
-- préparer les données d'apprentissage en allant chercher dans le RPG les classes correspondant aux "prairies" et "cultures".
-- nettoyer les échantillons d'apprentissage afin d'éviter un recouvrement de classes
-
-3. Remplir le fichier de configuration de la chaîne iota2 dont un exemple est disponible dans le dossier `config_iota\GusConfigIota2.cfg`
-
-4. Lancer la chaîne
-
-Attention : nous préconisons la vérification du référentiel de projection de l'image classifiée finale. Si elle n'est pas dans le même référentiel que le projet, il faudra reprojeter l'image via, par exemple, l'application d'un gdalwarp.
 
 ## Auteur
 

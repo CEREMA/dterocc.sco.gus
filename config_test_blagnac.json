@@ -7,7 +7,7 @@
         "create_DHM" : false,
         "neochannels_computation" : true,
         "data_concatenation" : true,
-        "vegetation_extraction" : false,
+        "vegetation_extraction" : true,
         "vertical_stratum_detection" : true,
         "vegetation_form_stratum_detection" : true,
         "indicators_computation" : true
@@ -24,6 +24,7 @@
             "img_dhm": "/mnt/Data/30_Stages_Encours/2025/2025_GUS_Maelle/02_Donnees/1-DATAS/1-DONNEES_ELEVATION/MNH/LiDAR_HD/MNH_LiDAR_HD_Blagnac.tif",
             "img_data_concatenation" : "",
             "img_ocs": "",
+            "mask_vegetation" : "",
             "ocsge" : "/mnt/RAM_disk/donnees/ocsge_cut_etude.shp",
             "lcz_information" : {
                 "lcz_data" : "",
