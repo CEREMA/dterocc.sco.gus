@@ -6,18 +6,19 @@
 #############################################################################
 
 # Import des librairie Python
-import math,os
+import math,os, sys, time
 import geopandas as gpd
 
 # Import des librairies de /libs
-from Lib_postgis import topologyCorrections, addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
+from Lib_postgis import topologyCorrections, addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, getAllColumns
 from Lib_display import endC, bold, yellow, cyan, red
 from CrossingVectorRaster import statisticsVectorRaster
 from Lib_file import removeFile, removeVectorFile, deleteDir
 from Lib_raster import rasterizeVector, cutImageByVector
 from Lib_vector import getEmpriseVector, differenceVector
 from Lib_grass import initializeGrass, cleanGrass, simplificationGrass
-from ScriptsSegmentationMorphologique.PolygonsMerging import mergeSmallPolygons
+from Lib_vector import cutVector
+from ScriptsSegmentationMorphologique.PolygonsMerging import mergeSmallPolygons, findAdjacentPolygons
 # Import des applications de /app
 from app.VerticalStratumDetection import calc_statMedian
 
@@ -26,7 +27,7 @@ from app.VerticalStratumDetection import calc_statMedian
 ## une unique cartographie                     ##
 #################################################
 
-def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector, dic_thresholds, raster_dic, output_layers, cleanfv = False, save_intermediate_result = False, overwrite = False, debug = 0):
+def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector, dic_roads, dic_thresholds, raster_dic, output_layers, cleanfv = False, save_intermediate_result = False, overwrite = False, debug = 0):
     """
     Rôle : concatène les trois tables arboré, arbustive et herbacée en un unique
            correspondant à la carotgraphie de la végétation
@@ -73,24 +74,57 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
         for el in tables_schema:
             executeQuery(connexion, el[0])
 
+    # Préparation des routes
+
+    repository = os.path.dirname(output_layers["output_fv"])
+    clean_roads = repository + os.sep+ "clean_roads.shp"
+    roads_vector = dic_roads["roads_file"]
+    fields_roads = dic_roads["fields_to_sort_roads"]
+    list_fields_roads = dic_roads["list_for_fields_to_sort_roads"]
+    cleanRoads(roads_vector, clean_roads, fields_roads, list_fields_roads)
+    roads_cut = repository + os.sep+ "roads_cut.shp"
+    #cutVector(empriseVector, clean_roads, roads_cut)
+    table_clean_roads = "roads_to_cut"
+    importVectorByOgr2ogr(connexion_dic["dbname"], clean_roads, table_clean_roads, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
+    addSpatialIndex(connexion, table_clean_roads)
+
+    tab_roads_union = "roads_clean_union_for_cut"
+    geom_field = "geom"
+
+
+    query_roads = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT public.ST_LineMerge(public.ST_Collect(l.%s)) as %s FROM %s AS l;
+    """%(tab_roads_union, tab_roads_union, geom_field, geom_field, table_clean_roads)
+    executeQuery(connexion, query_roads)
+
+    addSpatialIndex(connexion, tab_roads_union)
+
+    tab_roads = tab_roads_union
+
+
     # 1# Formes végétales arborées
     tab_arbore = ''
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate arborée" + endC)
-    tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["tree"], output_layers["tree"], save_intermediate_result = save_intermediate_result, debug = debug)
-
+    start_tree = time.time()
+    tab_arbore = detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, tab_roads, dic_thresholds["tree"], output_layers["tree"], save_intermediate_result = save_intermediate_result, debug = debug)
+    tps_tree = time.time() - start_tree
     # 2# Formes végétales arbustives
     tab_arbustive = ''
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate arbustive" + endC)
-    tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, dic_thresholds["shrub"], output_layers["shrub"], save_intermediate_result = save_intermediate_result, debug = debug)
-
+    start_arbu = time.time()
+    tab_arbustive = detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, tab_roads, dic_thresholds["shrub"], output_layers["shrub"], save_intermediate_result = save_intermediate_result, debug = debug)
+    tps_arbu = time.time() - start_arbu
     # 3# Formes végétales herbacées
     tab_herbace = ''
     if debug >= 2:
         print(bold + "Détection des formes végétales au sein de la strate herbacée" + endC)
-    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, empriseVector,  dic_thresholds["herbaceous"], output_layers["herbaceous"], save_intermediate_result = save_intermediate_result, debug = debug)
-
+    start_herb = time.time()
+    tab_herbace = detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, empriseVector, tab_roads, dic_thresholds["herbaceous"], output_layers["herbaceous"], save_intermediate_result = save_intermediate_result, debug = debug)
+    tps_herb = time.time() - start_herb
     # 4# Concaténation des données en une seule table 'végétation'
     tab_name = 'vegetation'
     tab_name_clean = 'vegetation_to_clean'
@@ -123,7 +157,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
     addSpatialIndex(connexion, tab_name)
 
     # 5# Nettoyage des formes végétales plus poussée ou non, en fonction du choix de l'opérateur (cleanfv)
-    tab_name = formStratumCleaning(connexion, connexion_dic, tab_name, tab_name_clean, dic_thresholds, cleanfv, save_intermediate_result, debug)
+    tab_name = formStratumCleaning(connexion, connexion_dic, tab_name, tab_name_clean, dic_thresholds, tab_roads, repository, cleanfv, save_intermediate_result, debug)
 
     # Lissage de la donnée finale
     #query = """
@@ -156,10 +190,15 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
+    start_smooth = 0
+
+    if not save_intermediate_result :
+        removeVectorFile(clean_roads)
 
     if output_layers["output_fv"] == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
+        start_smooth = time.time()
         # Export au format vecteur
         exportVectorByOgr2ogr(connexion_dic["dbname"], output_layers["output_fv"], tab_name, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
@@ -185,6 +224,12 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
 
         # suppression de la colonne non utile "strate_r"
         dropColumn(connexion, tab_name, 'strate_r')
+        tps_smooth = time.time() - start_smooth
+
+    print("La classification de la strate arborée a duré : %s secondes." %(tps_tree))
+    print("La classification de la strate arbustive a duré : %s secondes." %(tps_arbu))
+    print("La classification de la strate herbacé a duré : %s secondes." %(tps_herb))
+    print("Le lissage a duré : %s secondes." %(tps_smooth))
 
     return tab_name
 
@@ -195,7 +240,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
 ###########################################################################################################################################
 # FONCTION detectInTreeStratum()                                                                                                          #
 ###########################################################################################################################################
-def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0, output_layer = '', save_intermediate_result = False, debug = 0):
+def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, table_roads, thresholds = 0, output_layer = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : détecté les formes végétales horizontales au sein de la strate arborée
 
@@ -255,7 +300,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     if debug >= 3:
         print(bold + "Regroupement et lissage des segments arborés" + endC)
 
-    tab_arb = 'arbore'
+    tab_arb_temp = 'arbore_temp'
 
 
     query = """
@@ -263,7 +308,7 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     CREATE TABLE %s AS
         SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom AS geom
         FROM %s;
-    """ %(tab_arb,tab_arb, tab_arb_ini)
+    """ %(tab_arb_temp,tab_arb_temp, tab_arb_ini)
     #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom) AS geom
 
     # Exécution de la requête SQL
@@ -273,10 +318,14 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
 
 
     # Correction topologique
-    query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_arb, 'geom', 'geom', 'geom')
+    query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_arb_temp, 'geom', 'geom', 'geom')
     executeQuery(connexion, query)
 
+    # Création d'un index spatial
+    addSpatialIndex(connexion, tab_arb_temp)
 
+    tab_arb = "arbore"
+    cutPolygonesByLines(connexion, tab_arb_temp, table_roads, tab_arb)
 
     # Création d'un identifiant unique
     addUniqId(connexion, tab_arb)
@@ -323,8 +372,12 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
     if debug >= 3:
         print(bold + "Regroupement de l'ensemble des entités de la strate arborée en une seule couche" + endC)
 
-    tab_arbore = ''
-    tab_arbore = createLayerTree(connexion, fst_class, sec_class, debug = debug)
+    tab_arbore_tmp = 'strate_arboree_withlittlepolygons'
+    tab_arbore_tmp = createLayerTree(connexion, tab_arbore_tmp, fst_class, sec_class, debug = debug)
+
+    tab_arbore = 'strate_arboree'
+    repository = os.path.dirname(output_layer) + os.sep
+    smallPolygonsMerging(connexion, connexion_dic, tab_arbore_tmp, tab_arbore, repository, THRESHOLD_SMALL_AREA_POLY = 150, save_intermediate_result = save_intermediate_result, debug = debug)
 
     if tab_arbore == '':
         tab_arbore = 'strate_arboree'
@@ -334,6 +387,8 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0,
         dropTable(connexion, tab_arb_ini)
         dropTable(connexion, fst_class)
         dropTable(connexion, sec_class)
+        dropTable(connexion, tab_arbore_tmp)
+        dropTable(connexion, tab_arb_temp)
 
     ## SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
     if output_layer == '':
@@ -465,7 +520,7 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, save_intermediate
 
     query = """
     CREATE TABLE %s AS
-        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom  AS geom
+        SELECT geom  AS geom
         FROM  %s
         WHERE fv LIKE '%s';
     """ %(tab_out, tab_ref, '%RGPT%')
@@ -547,9 +602,9 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, save_intermediate
     return tab_out
 
 ###########################################################################################################################################
-# FONCTION classTreeWoodStrict()                                                                                                          #
+# FONCTION createLayerTree()                                                                                                          #
 ###########################################################################################################################################
-def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
+def createLayerTree(connexion, tab_out, tab_firstclass, tab_secclass, debug = 0):
     """
     Rôle : création de la table/couche contenant les formes végétales arborées
 
@@ -565,19 +620,17 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
     """
 
     query = """
-    DROP TABLE IF EXISTS strate_arboree;
-    CREATE TABLE strate_arboree AS
-        SELECT strate_arboree.fv as fv, public.ST_MAKEVALID((public.ST_DUMP(public.ST_UNION(strate_arboree.geom))).geom::public.geometry(POLYGON,2154)) as geom
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS
+        SELECT strate_arboree.fv as fv, public.ST_MAKEVALID(strate_arboree.geom::public.geometry(POLYGON,2154)) as geom
         FROM ((SELECT ab2.geom, ab2.fv
             FROM (SELECT geom, fv
                     FROM %s
                     WHERE fv in ('AI', 'TA')) as ab2)
                     UNION
                     (SELECT geom, fv
-                    FROM %s)) AS strate_arboree
-        WHERE public.ST_INTERSECTS(strate_arboree.geom, strate_arboree.geom)
-        GROUP BY strate_arboree.fv;
-    """ %(tab_firstclass, tab_secclass)
+                    FROM %s)) AS strate_arboree;
+    """ %(tab_out, tab_out, tab_firstclass, tab_secclass)
 
     # Exécution de la requête SQL
     if debug >= 3:
@@ -585,24 +638,24 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
     executeQuery(connexion, query)
 
     # Création d'un identifiant unique
-    addUniqId(connexion, 'strate_arboree')
+    addUniqId(connexion, tab_out)
 
     # Création d'un index spatial
-    addSpatialIndex(connexion, 'strate_arboree')
+    addSpatialIndex(connexion, tab_out)
 
     # Création de la colonne strate qui correspond à 'A' pour tous les polygones
-    addColumn(connexion, 'strate_arboree', 'strate', 'varchar(100)')
+    addColumn(connexion, tab_out, 'strate', 'varchar(100)')
 
     query = """
-    UPDATE strate_arboree SET strate='A';
-    """
+    UPDATE %s SET strate='A';
+    """%(tab_out)
 
     # Exécution de la requête SQL
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
-    return 'strate_arboree'
+    return tab_out
 
 ##################################################
 ## Classification des FV de la strate arbustive ##
@@ -611,7 +664,7 @@ def createLayerTree(connexion, tab_firstclass, tab_secclass, debug = 0):
 ###########################################################################################################################################
 # FONCTION detectInShrubStratum()                                                                                                         #
 ###########################################################################################################################################
-def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0, output_layer = '', save_intermediate_result = False, debug = 0):
+def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, table_roads, thresholds = 0, output_layer = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : détecté les formes végétales horizontales au sein de la strate arbustive
 
@@ -669,14 +722,14 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0
     if debug >= 3:
         print(bold + "Regroupement et lissage des segments arbustifs" + endC)
 
-    tab_arbu = 'arbustif'
+    tab_arbu_temp = 'arbustif_temp'
 
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
         SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom AS geom
         FROM %s AS t;
-    """ %(tab_arbu, tab_arbu, tab_arbu_ini)
+    """ %(tab_arbu_temp, tab_arbu_temp, tab_arbu_ini)
     #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
 
     # Exécution de la requête SQL
@@ -686,10 +739,11 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0
 
     # Correction topologique
 
-    query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_arbu, 'geom', 'geom', 'geom')
+    query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_arbu_temp, 'geom', 'geom', 'geom')
     executeQuery(connexion, query)
 
-
+    tab_arbu = 'arbustif'
+    cutPolygonesByLines(connexion, tab_arbu_temp, table_roads, tab_arbu)
 
     # Création d'un identifiant unique
     addUniqId(connexion, tab_arbu)
@@ -736,30 +790,36 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, thresholds = 0
         print(bold + "Regroupement de l'ensemble des entités de la strate arbustive en une seule couche" + endC)
 
 
-    tab_arbustif = ''
-    tab_arbustif = createLayerShrub(connexion, fst_class, sec_class, debug = debug)
+    tab_arbustive_tmp = 'strate_arbustive_withsmallpoly'
+    tab_arbustive_tmp = createLayerShrub(connexion, tab_arbustive_tmp, fst_class, sec_class, debug = debug)
 
-    if tab_arbustif == '':
-        tab_arbustif = 'strate_arbustive'
+    tab_arbustive = 'strate_arbustive'
+    repository = os.path.dirname(output_layer) + os.sep
+    smallPolygonsMerging(connexion, connexion_dic, tab_arbustive_tmp, tab_arbustive, repository, THRESHOLD_SMALL_AREA_POLY = 150, save_intermediate_result = save_intermediate_result, debug = debug)
+
+    if tab_arbustive == '':
+        tab_arbustive = 'strate_arbustive'
 
     # SUPPRESSION DES TABLES QUI NE SONT PLUS UTILES ##
     if not save_intermediate_result :
         dropTable(connexion, tab_arbu_ini)
         dropTable(connexion, fst_class)
         dropTable(connexion, sec_class)
+        dropTable(connexion, tab_arbu_temp)
+        dropTable(connexion, tab_arbustive_tmp)
 
     # SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
     if output_layer == '':
         print(yellow + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification des FV arbustives. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else:
-        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_arbustif, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_arbustive, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
-    return tab_arbustif
+    return tab_arbustive
 
 ###########################################################################################################################################
 # FONCTION createLayerShrub()                                                                                                             #
 ###########################################################################################################################################
-def createLayerShrub(connexion, tab_firstclass, tab_secclass, debug = 0):
+def createLayerShrub(connexion, tab_out, tab_firstclass, tab_secclass, debug = 0):
     """
     Rôle : créer une table 'strate_arbustive' qui contient toutes les FV de la strate arbustive
 
@@ -774,19 +834,17 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass, debug = 0):
     """
 
     query = """
-    DROP TABLE IF EXISTS strate_arbustive;
-    CREATE TABLE strate_arbustive AS
-        SELECT strate_arbustive.fv as fv, public.ST_MAKEVALID((public.ST_DUMP(public.ST_UNION(strate_arbustive.geom))).geom::public.geometry(POLYGON,2154)) as geom
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS
+        SELECT strate_arbustive.fv as fv, public.ST_MAKEVALID(strate_arbustive.geom::public.geometry(POLYGON,2154)) as geom
         FROM ((SELECT ab2.geom, ab2.fv
             FROM (SELECT geom, fv
                     FROM %s
                     WHERE fv in ('AuI', 'TAu')) as ab2)
             UNION
            (SELECT geom, fv
-            FROM %s)) AS strate_arbustive
-    WHERE public.ST_INTERSECTS(strate_arbustive.geom, strate_arbustive.geom)
-    GROUP BY strate_arbustive.fv;
-    """ %(tab_firstclass, tab_secclass)
+            FROM %s)) AS strate_arbustive;
+    """ %(tab_out, tab_out, tab_firstclass, tab_secclass)
 
     # Exécution de la requête SQL
     if debug >= 3:
@@ -794,24 +852,24 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass, debug = 0):
     executeQuery(connexion, query)
 
     # Création d'un identifiant unique
-    addUniqId(connexion, 'strate_arbustive')
+    addUniqId(connexion, tab_out)
 
     # Création d'un index spatial
-    addSpatialIndex(connexion, 'strate_arbustive')
+    addSpatialIndex(connexion, tab_out)
 
     # Création de la colonne strate qui correspond à 'Au' pour tous les polygones
-    addColumn(connexion, 'strate_arbustive', 'strate', 'varchar(100)')
+    addColumn(connexion, tab_out, 'strate', 'varchar(100)')
 
     query = """
-    UPDATE strate_arbustive SET strate='Au';
-    """
+    UPDATE %s SET strate='Au';
+    """%(tab_out)
 
     # Exécution de la requête SQL
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
-    return 'strate_arbustive'
+    return tab_out
 
 
 ##################################################
@@ -822,7 +880,7 @@ def createLayerShrub(connexion, tab_firstclass, tab_secclass, debug = 0):
 # FONCTION detectInHerbaceousStratum()                                                                                                    #
 ###########################################################################################################################################
 
-def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, empriseVector, thresholds,  output_layer = '', save_intermediate_result = False, debug = 0):
+def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, empriseVector, table_roads, thresholds,  output_layer = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : détecter les formes végétales horizontales au sein de la strate herbacée
 
@@ -922,17 +980,38 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, empriseVe
         # Classification de l'herbacé avec le RPG
         tab_herbace_tmp = classificationGrassOrCrop(connexion, connexion_dic, tab_in, rpg_layer, ldsc_urban, working_rep, save_intermediate_result = save_intermediate_result, debug = debug)
 
+        tab_herbace_cut = "herbace_cut_by_roads"
+        cutPolygonesByLines(connexion, tab_herbace_tmp, table_roads, tab_herbace_cut)
+
+        dropColumn(connexion, tab_herbace_cut, 'fid')
+        addUniqId(connexion, tab_herbace_cut)
+
         #mergeSmallPolygons
-        tab_herbace = smallPolygonsMerging(connexion, connexion_dic, tab_herbace_tmp, working_rep, save_intermediate_result = save_intermediate_result, debug = debug)
+        table_out = 'strate_herbace'
+        tab_herbace = smallPolygonsMerging(connexion, connexion_dic, tab_herbace_cut, table_out, working_rep, THRESHOLD_SMALL_AREA_POLY = 55, save_intermediate_result = save_intermediate_result, debug = debug)
+
+        if not save_intermediate_result :
+            dropTable(connexion, tab_herbace_tmp)
+            dropTable(connexion, tab_herbace_cut)
     else :
         tab_herbace = 'strate_herbace'
+        tab_herbace_tmp = "herbace_to_cut"
+        tab_herbace_cut = "herbace_cut_by_roads"
+
         query = """
         DROP TABLE IF EXISTS %s;
         CREATE TABLE %s AS
             SELECT *
-            FROM %s;
-        """ %(tab_herbace, tab_herbace, schem_tab_ref)
+            FROM %s
+            WHERE strate = 'H';
+        """ %(tab_herbace_tmp, tab_herbace_tmp, schem_tab_ref)
 
+        cutPolygonesByLines(connexion, tab_herbace_tmp, table_roads, tab_herbace_cut)
+
+        dropColumn(connexion, tab_herbace_cut, 'fid')
+        addUniqId(connexion, tab_herbace_cut)
+
+        tab_herbace = smallPolygonsMerging(connexion, connexion_dic, tab_herbace_cut, tab_herbace, working_rep, THRESHOLD_SMALL_AREA_POLY = 55, save_intermediate_result = save_intermediate_result, debug = debug)
 
         if debug >= 3:
             print(query)
@@ -958,6 +1037,8 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, empriseVe
         dropTable(connexion, tab_in)
         #removeFile(rpg_layer)
         deleteDir(working_rep)
+        dropTable(connexion, tab_herbace_tmp)
+        dropTable(connexion, tab_herbace_cut)
 
     ## SAUVEGARDE DU RESULTAT EN UNE COUCHE VECTEUR
     if output_layer == '' :
@@ -1161,12 +1242,13 @@ def prepareRPG(connexion, connexion_dic, rpg_dic, empriseVector, output_layer, w
     rpg = rpg_dic["rpg"]
     rpg_complete = rpg_dic["rpg_complete"]
 
+    '''
     rpg_cut = working_rep + os.sep + "rpg_cut.gpkg"
     rpg_complete_cut = working_rep + os.sep + "rpg_complete_cut.gpkg"
-
+    '''
 
     # Découpage du RPG sur l'emprise
-
+    '''
     command = "ogr2ogr -clipsrc %s %s %s  -nlt POLYGONE -overwrite -f GPKG" %(empriseVector, rpg_cut, rpg)
     if debug >=2:
         print(command)
@@ -1175,17 +1257,18 @@ def prepareRPG(connexion, connexion_dic, rpg_dic, empriseVector, output_layer, w
         print(cyan + "Découpage du RPG sur la zone d'étude : " + bold + red + "!!! Une erreur c'est produite au cours du découpage du vecteur : " + rpg + endC, file=sys.stderr)
     if debug >=2:
         print(cyan + "Découpage du RPG sur la zone d'étude : " + endC + "Le fichier vecteur " + rpg  + " a ete decoupe resultat : " + rpg_cut + " type geom = POLYGONE")
-
+    '''
 
     # Création de la table RPG
 
     tab_rpg = 'rpg'
-    importVectorByOgr2ogr(connexion_dic["dbname"], rpg_cut, tab_rpg, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"])
+    importVectorByOgr2ogr(connexion_dic["dbname"], rpg, tab_rpg, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"])
 
 
     # Découpage du RPG complété et création de la table du RPG complété sur l'emprise s'il a été donné
 
     if rpg_complete != "" and rpg_complete != None :
+        '''
         command = "ogr2ogr -clipsrc %s %s %s  -nlt POLYGONE -overwrite -f GPKG" %(empriseVector, rpg_complete_cut, rpg_complete)
         if debug >=2:
             print(command)
@@ -1194,10 +1277,9 @@ def prepareRPG(connexion, connexion_dic, rpg_dic, empriseVector, output_layer, w
             print(cyan + "Découpage du RPG sur la zone d'étude : " + bold + red + "!!! Une erreur c'est produite au cours du découpage du vecteur : " + rpg_complete + endC, file=sys.stderr)
         if debug >=2:
             print(cyan + "Découpage du RPG sur la zone d'étude : " + endC + "Le fichier vecteur " + rpg_complete  + " a ete decoupe resultat : " + rpg_complete_cut + " type geom = POLYGONE")
-
+        '''
         tab_rpg_complete = 'rpg_complete'
-        if rpg_complete != "" and rpg_complete != None:
-            importVectorByOgr2ogr(connexion_dic["dbname"], rpg_complete_cut, tab_rpg_complete, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"])
+        importVectorByOgr2ogr(connexion_dic["dbname"], rpg_complete, tab_rpg_complete, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"])
 
 
     # Sélection des parcelles qui ne sont pas des prairies
@@ -1215,7 +1297,7 @@ def prepareRPG(connexion, connexion_dic, rpg_dic, empriseVector, output_layer, w
             FROM (SELECT public.ST_MakeValid(geom) as geom FROM %s WHERE code_group NOT LIKE '18')
             UNION
             SELECT geom AS geom
-            FROM (SELECT public.ST_MakeValid(geom) as geom FROM %s WHERE gc_rpg NOT LIKE '18' AND gc_rpg NOT LIKE '29')
+            FROM (SELECT public.ST_MakeValid(geom) as geom FROM %s WHERE gc_rpg NOT LIKE '17' AND gc_rpg NOT LIKE '18' AND gc_rpg NOT LIKE '19' AND gc_rpg NOT LIKE '29')
         """ %(tab_tmp, tab_tmp, tab_rpg, tab_rpg_complete)
 
         if debug >= 3:
@@ -1262,9 +1344,6 @@ def prepareRPG(connexion, connexion_dic, rpg_dic, empriseVector, output_layer, w
         dropTable(connexion, tab_rpg_sort)
         if tab_tmp != "" :
             dropTable(connexion, tab_tmp)
-        removeFile(rpg_cut)
-        if rpg_complete != "" and rpg_complete != None:
-            removeFile(rpg_complete_cut)
 
 
     return
@@ -1660,7 +1739,7 @@ def distinctForestLineTreeShrub(connexion, tab_rgpt, seuil_larg, save_intermedia
 ########################################################################
 # FONCTION formStratumCleaning()                                       #
 ########################################################################
-def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, dic_thresholds, clean_option = False, save_intermediate_result = False, debug = 1):
+def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, dic_thresholds, tab_roads, repertory, clean_option = False, save_intermediate_result = False, debug = 1):
     """
     Rôle : nettoyer les formes végétales horizontales parfois mal classées
 
@@ -1677,6 +1756,10 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, dic_th
     """
 
     # Pour l'instant tab_ref = 'vegetation' et  tab_ref_clean = 'vegetation_to_clean'
+
+    tab_ref_final = tab_ref_clean
+    tab_ref_clean = 'vegetation_to_clean_tmp'
+
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS (SELECT * FROM %s)
@@ -1829,6 +1912,13 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, dic_th
             WHERE t1.fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
         """ %(tab_ref_clean)
 
+        '''
+        query = """
+        UPDATE %s AS t1 SET strate = 'A'
+            FROM fv_arbu_touch_only_1_arbo AS t2
+            WHERE t1.fid = t2.fid AND t1.fv IN ('AAu', 'BOAu');
+        """ %(tab_ref_clean)
+        '''
         if debug >= 3 :
             print(query)
         executeQuery(connexion, query)
@@ -2055,103 +2145,85 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, dic_th
 
         # Comme certaines classes de FV ont été ré-attribuée --> risque que deux fvs similaires soient disposées dans deux polygones séparés
 
-        query = ""
+        touch_road = 'touch_road'
 
-        if False : #or dic_thresholds["lcz"] != "" or dic_thresholds["lcz"] != None :
+        addSpatialIndex(connexion, tab_ref_clean)
+        addColumn(connexion, tab_ref_clean, touch_road, 'integer')
 
-            query = """
-            DROP TABLE IF EXISTS fveg_h;
-            CREATE TABLE fveg_h AS
-                SELECT 'H' AS strate, 'PR' AS fv, (public.ST_Dump(public.ST_CollectionExtract(public.ST_MakeValid(public.ST_SPLIT((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom, public.ST_UNION(lcz.geom)))))).geom AS geom
-                FROM %s as t, contours_lcz AS lcz
-                WHERE fv = 'PR'
-                UNION
-                SELECT 'H' AS strate, 'C' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'C'
-                UNION
-                SELECT 'H' AS strate, 'PE' AS fv, (public.ST_Dump(public.ST_CollectionExtract(public.ST_MakeValid(public.ST_SPLIT((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom, public.ST_UNION(lcz.geom)))))).geom AS geom
-                FROM %s as t, contours_lcz AS lcz
-                WHERE fv = 'PE'
+        roads_buff = 'roads_buffer'
+        query = """
+        DROP TABLE IF EXISTS %s ;
+        CREATE TABLE %s AS
+            SELECT public.ST_BUFFER(geom, 0.01) AS geom
+            FROM %s ;
+        """%(roads_buff, roads_buff, tab_roads)
 
-                ;
+        if debug >= 3:
+            print(query)
+        executeQuery(connexion, query)
 
-            DROP TABLE IF EXISTS fveg_a;
-            CREATE TABLE fveg_a AS
-                SELECT 'A' AS strate, 'AI' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'AI'
-                UNION
-                SELECT 'A' AS strate, 'AA' AS fv, (public.ST_Dump(public.ST_CollectionExtract(public.ST_MakeValid(public.ST_SPLIT((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom, public.ST_UNION(lcz.geom)))))).geom AS geom
-                FROM %s as t, contours_lcz AS lcz
-                WHERE fv = 'AA'
-                UNION
-                SELECT 'A' AS strate, 'BOA' AS fv, (public.ST_Dump(public.ST_CollectionExtract(public.ST_MakeValid(public.ST_SPLIT((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom, public.ST_UNION(lcz.geom)))))).geom AS geom
-                FROM %s as t, contours_lcz AS lcz
-                WHERE fv = 'BOA';
+        addSpatialIndex(connexion, roads_buff)
 
-            DROP TABLE IF EXISTS fveg_au;
-            CREATE TABLE fveg_au AS
-                SELECT 'Au' AS strate, 'AuI' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'AuI'
-                UNION
-                SELECT 'Au' AS strate, 'AAu' AS fv, (public.ST_Dump(public.ST_CollectionExtract(public.ST_MakeValid(public.ST_SPLIT((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom, public.ST_UNION(lcz.geom)))))).geom AS geom
-                FROM %s as t, contours_lcz AS lcz
-                WHERE fv = 'AAu'
-                UNION
-                SELECT 'Au' AS strate, 'BOAu' AS fv, (public.ST_Dump(public.ST_CollectionExtract(public.ST_MakeValid(public.ST_SPLIT((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom, public.ST_UNION(lcz.geom)))))).geom AS geom
-                FROM %s as t, contours_lcz AS lcz
-                WHERE fv = 'BOAu';
-            """ %(tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean, tab_ref_clean, tab_ref_clean, tab_ref_clean)
+        query = """
+        UPDATE %s
+        SET %s = road FROM (SELECT veg.fid as fid_veg, veg.strate, veg.fv, veg.geom,
+                                CASE
+                                WHEN public.ST_INTERSECTS(veg.geom, roads.geom) THEN 1
+                                ELSE 0
+                                END as road
+                                FROM %s as veg, %s as roads)
+                            WHERE fid = fid_veg ;
+        """ %(tab_ref_clean, touch_road, tab_ref_clean, roads_buff)
 
-        else :
+        if debug >= 3:
+            print(query)
+        executeQuery(connexion, query)
 
-            query = """
-            DROP TABLE IF EXISTS fveg_h;
-            CREATE TABLE fveg_h AS
-                SELECT 'H' AS strate, 'PR' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'PR'
-                UNION
-                SELECT 'H' AS strate, 'C' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'C'
-                UNION
-                SELECT 'H' AS strate, 'PE' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'PE'
 
-                ;
+        '''
+        query = """
+        DROP TABLE IF EXISTS fveg_h;
+        CREATE TABLE fveg_h AS
+            SELECT 'H' AS strate, 'PR' AS fv, geom
+            FROM %s
+            WHERE fv = 'PR'
+            UNION
+            SELECT 'H' AS strate, 'C' AS fv,  geom
+            FROM %s
+            WHERE fv = 'C'
+            UNION
+            SELECT 'H' AS strate, 'PE' AS fv, geom
+            FROM %s
+            WHERE fv = 'PE';
 
-            DROP TABLE IF EXISTS fveg_a;
-            CREATE TABLE fveg_a AS
-                SELECT 'A' AS strate, 'AI' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'AI'
-                UNION
-                SELECT 'A' AS strate, 'AA' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'AA'
-                UNION
-                SELECT 'A' AS strate, 'BOA' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'BOA';
+        DROP TABLE IF EXISTS fveg_a;
+        CREATE TABLE fveg_a AS
+            SELECT 'A' AS strate, 'AI' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+            FROM %s
+            WHERE fv = 'AI'
+            UNION
+            SELECT 'A' AS strate, 'AA' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+            FROM %s
+            WHERE fv = 'AA'
+            UNION
+            SELECT 'A' AS strate, 'BOA' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+            FROM %s
+            WHERE fv = 'BOA';
 
-            DROP TABLE IF EXISTS fveg_au;
-            CREATE TABLE fveg_au AS
-                SELECT 'Au' AS strate, 'AuI' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'AuI'
-                UNION
-                SELECT 'Au' AS strate, 'AAu' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'AAu'
-                UNION
-                SELECT 'Au' AS strate, 'BOAu' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-                FROM %s
-                WHERE fv = 'BOAu';
-            """(tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean, tab_ref_clean, tab_ref_clean, tab_ref_clean)
+        DROP TABLE IF EXISTS fveg_au;
+        CREATE TABLE fveg_au AS
+            SELECT 'Au' AS strate, 'AuI' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+            FROM %s
+            WHERE fv = 'AuI'
+            UNION
+            SELECT 'Au' AS strate, 'AAu' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+            FROM %s
+            WHERE fv = 'AAu'
+            UNION
+            SELECT 'Au' AS strate, 'BOAu' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+            FROM %s
+            WHERE fv = 'BOAu';
+        """%(tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean, tab_ref_clean, tab_ref_clean, tab_ref_clean)
 
         if debug >= 3:
             print(query)
@@ -2173,7 +2245,13 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, dic_th
         if debug >= 3:
             print(query)
         executeQuery(connexion, query)
+
         addUniqId(connexion, tab_ref_clean)
+        '''
+
+        reclassPolygonsMerging(connexion, connexion_dic, tab_ref_clean, tab_ref_final, repertory, save_intermediate_result = save_intermediate_result, debug = debug)
+
+        dropColumn(connexion, tab_ref_final, touch_road)
 
         if not save_intermediate_result :
             dropTable(connexion, 'fv_arbu_touch_arbo')
@@ -2183,22 +2261,28 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, dic_th
             dropTable(connexion, 'fv_arbu_touch_more_2_arbo')
             dropTable(connexion, 'fv_arbo_touch_only_1_arbu')
             dropTable(connexion, 'fv_arbo_touch_more_2_arbu')
+            if dic_thresholds["lcz"] != "" or dic_thresholds["lcz"] != None :
+                dropTable(connexion, "prairie_final_tmp")
+                dropTable(connexion, "pelouse_final_tmp")
+                dropTable(connexion, "boisement_arbustif_final_tmp")
+                dropTable(connexion, "alignement_arbustif_final_tmp")
+                dropTable(connexion, "boisement_arbore_final_tmp")
+                dropTable(connexion, "alignement_arbore_final_tmp")
 
     if not save_intermediate_result :
         dropTable(connexion, 'fveg_h')
         dropTable(connexion, 'fveg_a')
         dropTable(connexion, 'fveg_au')
 
-    return tab_ref_clean
+    return tab_ref_final
 
 ########################################################################
 # FONCTION smallPolygonsMerging()                                       #
 ########################################################################
-def smallPolygonsMerging(connexion, connexion_dic, table, repertory, save_intermediate_result = False, debug = 0):
+def smallPolygonsMerging(connexion, connexion_dic, table, table_out, repertory, THRESHOLD_SMALL_AREA_POLY = 25, save_intermediate_result = False, debug = 0):
 
-    table_out = 'strate_herbace'
-
-    print('mergeSmallPolygons start...')
+    if debug > 0 :
+        print('mergeSmallPolygons start...')
 
     def convert_to_list(value):
         try:
@@ -2246,7 +2330,7 @@ def smallPolygonsMerging(connexion, connexion_dic, table, repertory, save_interm
     gdf_seg = gpd.read_file(vector_in)
 
     FIELD_ORG_ID_LIST = 'org_id'
-    THRESHOLD_SMALL_AREA_POLY = 25
+
 
     gdf_seg[FIELD_ORG_ID_LIST] = gdf_seg[col_fid].apply(convert_to_list)
 
@@ -2278,23 +2362,320 @@ def smallPolygonsMerging(connexion, connexion_dic, table, repertory, save_interm
         removeFile(vector_in)
         removeFile(vector_merge)
 
-    print('mergeSmallPolygons end.')
+    if debug > 0 :
+        print('mergeSmallPolygons end.')
 
     return table_out
 
 
 
 
+def cleanRoads(vector_input, vector_output, fields_roads, list_fields_roads, epsg = 2154) :
+
+
+    gdf_roads = gpd.read_file(vector_input)
+
+    for k in range(len(fields_roads)) :
+        field = fields_roads[k]
+        list_field = list_fields_roads[k]
+        gdf_roads_field = gdf_roads[gdf_roads[field].isin(list_field)]
+        gdf_roads = gdf_roads_field
+
+    gdf_roads.to_file(vector_output, driver='ESRI Shapefile', crs="EPSG:" + str(epsg))
 
 
 
 
+###########################################################################################################################################
+# FONCTION cutPolygonesByLines_Postgis()                                                                                                  #
+###########################################################################################################################################
+def cutPolygonesByLines_Postgis(vector_lines_input, vector_poly_input, vector_poly_output, connection, epsg=2154, project_encoding="UTF-8", server_postgis="localhost", port_number=5432, user_postgis="postgres", password_postgis="postgres", database_postgis="cutbylines", schema_postgis="public", path_time_log="", format_vector='ESRI Shapefile', save_results_intermediate=False, overwrite=True) :
+    """
+    # ROLE:
+    #     Découper des polygones ou multi-polygones par des lignes ou multi-lignes en traitement sous postgis
+    #
+    # ENTREES DE LA FONCTION :
+    #     vector_lines_input: le vecteur de lignes de découpe d'entrée
+    #     vector_poly_input: le vecteur de polygones à découpés d'entrée
+    #     vector_poly_output: le vecteur e polygones de sortie découpés
+    #     epsg : EPSG code de projection
+    #     project_encoding : encodage des fichiers d'entrés
+    #     server_postgis : nom du serveur postgis
+    #     port_number : numéro du port pour le serveur postgis
+    #     user_postgis : le nom de l'utilisateurs postgis
+    #     password_postgis : le mot de passe de l'utilisateur postgis
+    #     database_postgis : le nom de la base postgis à utiliser
+    #     schema_postgis : le nom du schéma à utiliser
+    #     path_time_log : le fichier de log de sortie
+    #     format_vector : format du fichier vecteur. Optionnel, par default : 'ESRI Shapefile'
+    #     save_results_intermediate : fichiers de sorties intermediaires nettoyees, par defaut = False
+    #     overwrite : écrase si un fichier existant a le même nom qu'un fichier de sortie, par defaut a True
+    #
+    # SORTIES DE LA FONCTION :
+    #     na
+    #
+    """
+
+    # Création de la base de données
+    input_lignes_table=  os.path.splitext(os.path.basename(vector_lines_input))[0].lower()
+    input_polygons_table =  os.path.splitext(os.path.basename(vector_poly_input))[0].lower()
+    output_polygones_table =  os.path.splitext(os.path.basename(vector_poly_output))[0].lower()
+
+    # Import du fichier vecteur lines dans la base
+    importVectorByOgr2ogr(database_postgis, vector_lines_input, input_lignes_table, user_name=user_postgis, password=password_postgis, ip_host=server_postgis, num_port=str(port_number), schema_name=schema_postgis, epsg=str(epsg), codage=project_encoding)
+
+    # Import du fichier vecteur polygones dans la base
+    importVectorByOgr2ogr(database_postgis, vector_poly_input, input_polygons_table, user_name=user_postgis, password=password_postgis, ip_host=server_postgis, num_port=str(port_number), schema_name=schema_postgis, epsg=str(epsg), codage=project_encoding)
+
+    # Decoupage des polgones
+    cutPolygonesByLines(connection, input_polygons_table, input_lignes_table, output_polygones_table, geom_field='geom')
+
+
+    # Récupération de la base du fichier vecteur de sortie
+    exportVectorByOgr2ogr(database_postgis, vector_poly_output, output_polygones_table, user_name=user_postgis, password=password_postgis, ip_host=server_postgis, num_port=str(port_number), schema_name=schema_postgis, format_type=format_vector)
+
+
+    return
 
 
 
+########################################################################
+# FONCTION cutPolygonesByLines()                                       #
+########################################################################
+def cutPolygonesByLines(connection, input_polygones_table, input_lines_table, output_polygones_table, geom_field='geom'):
+    """
+    # Rôle : découpage de (multi)polygones par des (multi)lignes
+    # Paramètres en entrée :
+    #   connection : récupère les informations de connexion à la base de données
+    #   input_polygones_table : nom de la table polygones à découper
+    #   input_lines_table : nom de la table lignes de découpe
+    #   output_polygones_table : nom de la table polygones découpés
+    #   geom_field : nom du champ de géométrie (par défaut, 'geom')
+    """
+
+    # Récupération des champs de la table polygones
+    fields_list = getAllColumns(connection, input_polygones_table, print_result=False)
+    fields_txt = ""
+    for field in fields_list:
+        if field != geom_field:
+            fields_txt += "g.%s, " % field
+    fields_txt = fields_txt[:-2]
+
+    addSpatialIndex(connection, input_polygones_table)
+    addSpatialIndex(connection, input_lines_table)
+
+    if len(fields_list) > 1 :
+        query = "DROP TABLE IF EXISTS %s;\n" % output_polygones_table
+        query += "CREATE TABLE %s AS\n" % output_polygones_table
+        query += "    SELECT %s, (public.ST_DUMP(public.ST_CollectionExtract(public.ST_Split(g.%s, r.%s)))).geom AS %s\n" % (fields_txt, geom_field, geom_field, geom_field)
+        query += "    FROM %s AS g, %s AS r\n" % (input_polygones_table, input_lines_table)
+        #query += "    GROUP BY %s;\n" % fields_txt
+        print(query)
+        executeQuery(connection, query)
+
+    else :
+
+        query = "DROP TABLE IF EXISTS %s;\n" % output_polygones_table
+        query += "CREATE TABLE %s AS\n" % output_polygones_table
+        query += "  SELECT (public.ST_DUMP(public.ST_CollectionExtract(public.ST_Split(g.%s, r.%s)))).geom AS %s\n" % (geom_field, geom_field, geom_field)
+        query += "  FROM %s AS g, %s AS r;" % (input_polygones_table, input_lines_table)
+        #query += "    GROUP BY g.%s;\n" %(geom_field)
+        print(query)
+        executeQuery(connection, query)
+
+    return
 
 
 
+###########################################################################################################################################
+# FUNCTION mergeReclassPolygons()                                                                                                           #
+###########################################################################################################################################
+def mergeReclassPolygons(gdf,  fid_column='FID', road_column = 'touch_road', strate_column = 'fv',  org_id_list_column='org_id_l', clean_ring=True, debug = 0):
+    """
+    # ROLE:
+    #   Merging des polygones de même strate s'ils ne touchent pas la route
+    #
+    # PARAMETERS:
+    #     gdf : dataframe des polygones à fusionnés d'entrée.
+    #     fid_column : nom de la colonne contenant l'identifant du polygones (default : 'FID').
+    #     road_column : nom de la première colonne de condition des polygones à fusionner
+    #     strate_column : nom de la deuxième colonne de condition des polygones à fusionner
+    #     org_id_list_column : nom de a colonne contenant la liste des valeur d'id d'origine (default : 'org_id_l').
+    #     clean_ring : nettoyage des anneaux sur les polygones (default : 'True').
+    # RETURNS:
+    #     dataframe des petis polygones mergés.
+    """
+
+    # Récupère les polygones qui ne touchent pas de routes
+    gdf['geometry'] = gdf['geometry'].buffer(0)
+    gdf_reclass_area = gdf[gdf[road_column] == 0]
+
+
+    # List of polygons FID to merge
+    l_reclass_poly = gdf_reclass_area[fid_column].tolist()
+
+    # Iterate over polygons who do not touch roads
+    while len(l_reclass_poly) > 0:
+
+        # Get polygon fields
+        FID_reclass_poly = l_reclass_poly.pop(0)
+        row_reclass_poly = gdf.loc[gdf[fid_column] == FID_reclass_poly]
+        geom_reclass_poly = row_reclass_poly["geometry"].values[0]
+        fv_reclass_poly = row_reclass_poly[strate_column].values[0]
+        orig_id_l_reclass_poly = row_reclass_poly[org_id_list_column].values[0]
+
+        # Get adjacent polygons
+        adj_fid_list = findAdjacentPolygons(gdf, row_reclass_poly, fid_column, org_id_list_column)
+
+        # Case when polygon is isolated (no neighbors)
+        if not adj_fid_list:
+            if debug >= 2:
+                print(cyan + "mergeReclassPolygons() : " + endC + "fid: %s, no adjacent polygons" %(FID_reclass_poly))
+            continue
+
+        adj_fid = -1
+
+        for fid_adj in adj_fid_list :
+            row_adj_poly = gdf.loc[gdf[fid_column] == fid_adj]
+            fv_adj_poly = row_adj_poly[strate_column].values[0]
+            if adj_fid < 0 and fv_reclass_poly == fv_adj_poly :
+                adj_fid = fid_adj
+
+        if adj_fid < 0 :
+            continue
+
+        #adj_fid = adj_fid_list[0]
+        if debug >= 3:
+            print(cyan + "mergeReclassPolygons() : " + endC + "fid: %s, adjacent %s "%(FID_reclass_poly, adj_fid))
+        gdf_adj_select_poly = gdf[gdf[fid_column].isin([adj_fid])].copy()
+
+        # Merge polygons with every of its adjacent polygons
+        gdf_adj_select_poly = gdf_adj_select_poly.copy()
+        merged_geometries = []
+        for geom in gdf_adj_select_poly["geometry"]:
+            merged_geometry = geom.union(geom_reclass_poly)
+            merged_geometries.append(merged_geometry)
+        gdf_adj_select_poly['geom_merged'] = merged_geometries
+        if clean_ring :
+            gdf_adj_select_poly['geom_merged'] = gdf_adj_select_poly['geom_merged'].apply(removeRing)
+
+        # Fusionner les multi-polygons (ne marche pas!!)
+        gdf_adj_select_poly = gdf_adj_select_poly[gdf_adj_select_poly['geom_merged'].apply(lambda geom: geom.geom_type in ['Polygon','MultiPolygon'])]
+
+        if gdf_adj_select_poly.empty :
+            if debug >= 1:
+                print(cyan + "mergeReclassPolygons() : " + endC + "fid: %s, EMPTY_CASE" %(FID_reclass_poly))
+            continue
+
+        new_geom = gdf_adj_select_poly["geom_merged"].values[0]
+        new_org_id_list = gdf_adj_select_poly[org_id_list_column].values[0] + orig_id_l_reclass_poly
+        new_org_id_list = list(set(new_org_id_list))
+
+        # Récupère le FID du polygone merged et updates des champs de la nouvelle geometrie
+        best_fid_geom = gdf_adj_select_poly[fid_column].values[0]
+
+        # Maj fields
+        idx_row_to_change = gdf.loc[gdf[fid_column] == best_fid_geom].index[0]
+        gdf.at[idx_row_to_change, "geometry"] = new_geom
+        gdf.at[idx_row_to_change, org_id_list_column] = new_org_id_list
+
+        # Remove the polygon that have been merged
+        gdf = gdf.drop(gdf.loc[gdf[fid_column] == FID_reclass_poly].index[0])
+        gdf.reset_index(drop=True, inplace=True)
+
+
+    if debug >= 1:
+        print(cyan + "mergeReclassPolygons() : " + endC +"Fin des traitements des petits polygones nouveaux polygons list:", len(gdf))
+
+    return gdf
+
+
+
+########################################################################
+# FONCTION reclassPolygonsMerging()                                       #
+########################################################################
+def reclassPolygonsMerging(connexion, connexion_dic, table, table_out, repertory, save_intermediate_result = False, debug = 0):
+
+    if debug > 0 :
+        print('mergeReclassPolygons start...')
+
+    def convert_to_list(value):
+        try:
+            # Vérifie si la valeur est une chaîne non vide
+            if isinstance(value, str) and value.strip():
+                return list(map(int, value.split(',')))
+            else:
+                return []  # Retourne une liste vide si la valeur est vide ou non valide
+        except ValueError:
+            return []  # Retourne une liste vide si une erreur de conversion se produit
+
+    col_fid = 'new_fid'
+
+    query = """
+    ALTER TABLE %s
+    ADD COLUMN IF NOT EXISTS %s INTEGER ;
+    UPDATE %s
+    SET %s = fid ;
+    """ %(table, col_fid, table, col_fid)
+
+    if debug >= 3 :
+        print(query)
+    executeQuery(connexion, query)
+
+    vector_in = repertory + os.sep + 'before_merge.gpkg'
+    vector_merge = repertory + os.sep + 'after_merge.gpkg'
+
+
+    # Conversion de la table au format vecteur
+    exportVectorByOgr2ogr(connexion_dic["dbname"], vector_in, table, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], format_type='GPKG', ogr2ogr_more_parameters='')
+
+    # Lecture du fichier vecteur avec geopandas
+    gdf_seg = gpd.read_file(vector_in)
+
+    FIELD_ORG_ID_LIST = 'org_id'
+    gdf_seg[FIELD_ORG_ID_LIST] = gdf_seg[col_fid].apply(convert_to_list)
+
+    gdf_out = mergeReclassPolygons(gdf_seg, fid_column=col_fid, org_id_list_column=FIELD_ORG_ID_LIST, clean_ring=False)
+
+    # Sauvegarde des resultats en fichier vecteur
+    gdf_out[FIELD_ORG_ID_LIST] = gdf_out[FIELD_ORG_ID_LIST].apply(str)
+    gdf_out.to_file(vector_merge, driver='GPKG', crs="EPSG:2154")
+
+    # Importation en table dans la base de données
+
+    importVectorByOgr2ogr(connexion_dic["dbname"], vector_merge, table_out, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg='2154', codage='UTF-8')
+
+    addSpatialIndex(connexion, table_out)
+    addIndex(connexion, table_out, 'fid', 'idx_fid_herb_merge')
+
+    # Correction topologique
+
+    query = "UPDATE %s SET geom = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(geom)),3) WHERE NOT public.ST_IsValid(geom);" % (table_out)
+    executeQuery(connexion, query)
+
+    # Suppression des colonnes qui ne sont plus utiles
+
+    dropColumn(connexion, table_out, col_fid)
+    dropColumn(connexion, table_out, FIELD_ORG_ID_LIST)
+
+    if not save_intermediate_result :
+        removeFile(vector_in)
+        removeFile(vector_merge)
+
+    if debug > 0 :
+        print('mergeReclassPolygons end.')
+
+    return table_out
+
+repertory = '/mnt/RAM_disk/mergePoly'
+connexion_datafinal_dic =  {
+        "dbname": "gustest",
+        "user_db": "postgres",
+        "password_db": "postgres",
+        "server_db": "localhost",
+        "port_number": 5433,
+        "schema" : "data_final"
+    }
 
 
 

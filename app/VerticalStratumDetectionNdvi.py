@@ -6,19 +6,22 @@
 #############################################################################
 
 # Import des librairies Python
-import os,sys,glob, time
+import os,sys,glob, time,  multiprocessing
+from osgeo import ogr
 
 # Import des librairies de /libs
 from Lib_display import bold,red,yellow,cyan,endC
 from CrossingVectorRaster import statisticsVectorRaster
-from Lib_raster import rasterizeVector, filterBinaryRaster
-from Lib_file import removeFile
+from Lib_operator import getNumberCPU
+from Lib_raster import rasterizeVector, filterBinaryRaster, rasterizeBinaryVector, polygonizeRaster, cutImageByVector
+from Lib_file import removeFile, removeVectorFile
+from Lib_vector import createPolygonsFromGeometryList, fusionVectors, getEmpriseVector, createEmpriseVector, getProjection
 from Lib_postgis import readTable, executeQuery, addColumn, addUniqId, addIndex, addSpatialIndex, dropTable, dropColumn, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
 
 ###########################################################################################################################################
-# FONCTION vegetationMaskNdvi()                                                                                                               #
+# FONCTION vegetationMask()                                                                                                               #
 ###########################################################################################################################################
-def vegetationMaskNdvi(dic_input, img_output, ndvi_threshold, umc_pixels, overwrite = False, save_intermediate_result = False):
+def vegetationMask(dic_ndvi, img_ref, img_output, dic_ndvi_threshold , overwrite = False, save_intermediate_result = False):
     """
     Rôle : créé un masque de végétation à partir d'une image classifiée
 
@@ -29,11 +32,20 @@ def vegetationMaskNdvi(dic_input, img_output, ndvi_threshold, umc_pixels, overwr
         overwrite : paramètre de ré-écriture, par défaut : False
     """
 
-    ndvi_summer = dic_input["ndvi_summer"]
-    ndvi_winter = dic_input["ndvi_winter"]
+    ndvi_summer = dic_ndvi["ndvi_summer"]
+    ndvi_winter = dic_ndvi["ndvi_winter"]
+
+    ndvi_threshold_summer = dic_ndvi_threshold["threshold_summer"]
+    ndvi_threshold_winter = dic_ndvi_threshold["threshold_winter"]
+    #ndvi_threshold_min_veg_summer = dic_ndvi_threshold["threshold_min_vegetation_summer"]
+    #ndvi_threshold_min_veg_winter = dic_ndvi_threshold["threshold_min_vegetation_winter"]
+    umc_pixels = dic_ndvi_threshold["umc_pixels"]
 
     vegetation = os.path.splitext(img_output)[0] + '_tmp' + os.path.splitext(img_output)[1]
-    vegetation_remplie = os.path.splitext(img_output)[0] + 'gdal_tmp' + os.path.splitext(img_output)[1]
+    #vegetation_remplie = os.path.splitext(img_output)[0] + 'gdal_tmp' + os.path.splitext(img_output)[1]
+    #mask_rpg = os.path.splitext(img_output)[0] + '_rpg_tmp' + os.path.splitext(img_output)[1]
+    mask_ndvi = os.path.splitext(img_output)[0] + '_ndvi_tmp' + os.path.splitext(img_output)[1]
+    #non_vegetation = os.path.splitext(img_output)[0] + '_non_veg_tmp' + os.path.splitext(img_output)[1]
 
     # Verification de la non existence du fichier de sortie
     if overwrite == True and os.path.exists(img_output):
@@ -41,27 +53,54 @@ def vegetationMaskNdvi(dic_input, img_output, ndvi_threshold, umc_pixels, overwr
     elif overwrite == False and os.path.exists(img_output):
         raise NameError(bold + red + "vegetationMaskNdvi() : le fichier %s existe déjà" %(img_output)+ endC)
 
-    # Calcul à l'aide de l'otb
-    exp = '"(im1b1>=' + str(ndvi_threshold) + ' || im2b1>=' + str(ndvi_threshold) + ' ?1:0)"'
-    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(ndvi_summer, ndvi_winter, vegetation, exp)
+    # Calculs à l'aide de l'otb
+
+    # Création du masque avec un seuil sur les deux NDVI
+    exp = '"(im1b1>=' + str(ndvi_threshold_summer) + ' || im2b1>=' + str(ndvi_threshold_winter) + ' ?1:0)"'
+    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(ndvi_summer, ndvi_winter, mask_ndvi, exp)
 
     exitCode = os.system(cmd_mask)
 
     if exitCode != 0:
         print(cmd_mask)
         raise NameError(bold + red + "vegetationMask() : une erreur est apparue lors de la création du masque de végétation (commande otbcli_BandMath)" + endC)
+    '''
+    # Création d'un masque sur le seuil en dessous duquel ce n'est forcément pas de la végétation
+    exp = '"(im1b1>=' + str(ndvi_threshold_min_veg_summer) + ' && im2b1>=' + str(ndvi_threshold_min_veg_winter) + ' ?1:0)"'
+    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(ndvi_summer, ndvi_winter, non_vegetation, exp)
 
+    exitCode = os.system(cmd_mask)
 
-    umc_pixels = 40
+    if exitCode != 0:
+        print(cmd_mask)
+        raise NameError(bold + red + "vegetationMask() : une erreur est apparue lors de la création du masque de végétation (commande otbcli_BandMath)" + endC)
+    '''
 
-    command = "gdal_sieve.py -st %d -8 %s %s" %(umc_pixels,vegetation,vegetation_remplie)
+    # Création du masque du RPG
+    #vegetationMaskRPG(dic_rpg, mask_rpg, img_ref, non_vegetation, overwrite, save_intermediate_result)
+
+    # Somme du masque NDVI et du masque RPG pour compléter la détection de la végétation
+    '''
+    exp = '"(im1b1 + im2b1 >= 1 ? 1 : 0)"'
+    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(mask_ndvi, mask_rpg, vegetation, exp)
+
+    exitCode = os.system(cmd_mask)
+
+    if exitCode != 0:
+        print(cmd_mask)
+        raise NameError("une erreur est apparue lors de la création du masque de végétation (commande otbcli_BandMath)")
+    '''
+
+    #Remplissage des trous dans le masques
+    command = "gdal_sieve.py -st %d -8 %s %s" %(umc_pixels, mask_ndvi, vegetation)
 
     exitCode = os.system(command)
     if exitCode != 0:
         raise NameError("Une erreur est apparue lors de la création du masque de végétation (commande gdal_sieve).")
 
+    # On ne garde les trous remplis que dans la zone de végétation
     exp = '"(im1b1 + im2b1 >= 1 ? 1 : 0)"'
-    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(vegetation, vegetation_remplie, img_output, exp)
+    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(mask_ndvi, vegetation, img_output, exp)
 
     exitCode = os.system(cmd_mask)
 
@@ -71,14 +110,153 @@ def vegetationMaskNdvi(dic_input, img_output, ndvi_threshold, umc_pixels, overwr
 
     if not save_intermediate_result :
         removeFile(vegetation)
-        removeFile(vegetation_remplie)
+        removeFile(mask_ndvi)
 
     return
 
 ###########################################################################################################################################
-# FONCTION segmentationImageVegetetationNdvi()                                                                                                #
+# FONCTION vegetationMaskRPG()                                                                                                            #
 ###########################################################################################################################################
-def segmentationImageVegetetationNdvi(img_ref, dic_ndvi, file_output, param_minsize = 10, ndvi_threshold = 0.35, umc_pixels = 40, format_vector='GPKG', save_intermediate_result = True, overwrite = True):
+def vegetationMaskRPG(dic_rpg, raster_output, img_ref, mask_non_vegetation, overwrite = False, save_intermediate_result = False) :
+    """
+    Rôle : transforme le RPG (et le RPG complété si donné) en un raster binaire
+
+    Paramètre :
+        dic_rpg : dictionnaire contenant le rpg et le rpg complété
+        raster_output : fichier raster de sortie binaire correspondant au RPG
+        img_ref : image de référence Pléiades rvbpir
+        mask_non_vegetation : image binaire avec à 0 les zones que l'on veut conserver en non végétation
+        overwrite : paramètre de ré-écriture des fichiers. Par défaut : False
+        save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaire, par défaut : False
+    """
+
+
+    rpg = dic_rpg["rpg"]
+    rpg_complete = dic_rpg["rpg_complete"]
+
+    raster_rpg = os.path.splitext(raster_output)[0] + '_rasterRPG' + os.path.splitext(raster_output)[1]
+
+    if overwrite == True and os.path.exists(raster_output):
+        os.remove(raster_output)
+    elif overwrite == False and os.path.exists(raster_output):
+        raise NameError(bold + red + "rasterizeRPG() : le fichier %s existe déjà" %(raster_output)+ endC)
+
+
+    if rpg_complete != "" and rpg_complete != None :
+
+        output_rpg = os.path.splitext(raster_output)[0] + '_rpg' + os.path.splitext(raster_output)[1]
+        output_rpg_complete = os.path.splitext(raster_output)[0] + '_rpg_complete' + os.path.splitext(raster_output)[1]
+
+        rasterizeBinaryVector(rpg, img_ref, output_rpg, label=1, codage="uint8", ram_otb=0)
+        rasterizeBinaryVector(rpg_complete, img_ref, output_rpg_complete, label=1, codage="uint8", ram_otb=0)
+
+        exp = '"(im1b1 + im2b1 >= 1 ? 1 : 0)"'
+        cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(output_rpg, output_rpg_complete, raster_rpg, exp)
+
+        exitCode = os.system(cmd_mask)
+
+        if exitCode != 0:
+            print(cmd_mask)
+            raise NameError("une erreur est apparue lors de la création du masque de végétation avec le RPG (commande otbcli_BandMath)")
+
+        if not save_intermediate_result :
+            removeFile(output_rpg)
+            removeFile(output_rpg_complete)
+
+    else :
+        rasterizeBinaryVector(rpg, img_ref, raster_rpg, label=1, codage="uint8", ram_otb=0)
+
+        # On retire les zones de non végétation au cas où le RPG en contient
+
+    exp = '"(im1b1 * im2b1)"'
+    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(raster_rpg, mask_non_vegetation, raster_output, exp)
+
+    exitCode = os.system(cmd_mask)
+
+    if exitCode != 0:
+        print(cmd_mask)
+        raise NameError("une erreur est apparue lors de la création du masque de végétation (commande otbcli_BandMath)")
+
+    if not save_intermediate_result :
+        removeFile(raster_rpg)
+
+
+###########################################################################################################################################
+# FONCTION mnhTreeThreshold()                                                                                                             #
+###########################################################################################################################################
+def mnhTreeThreshold(mnh, mask_veg, mask_output, file_output, threshold = 10, umc_pixels = 2, save_intermediate_result = True, overwrite = True):
+    """
+    Rôle : applique un seuillage sur le MNH pour faire une première détection des arbres, créer un masque et un fichier vecteur
+
+    Paramètre :
+        mnh : image mnh
+        mask_veg : masque de végétation
+        mask_output : masque du seuillage
+        file_output : fichier vecteur correspondant aux arbres détectés
+        threshold : seuil pour détecter les arbres
+        umc_pixels : taille des "trous" à remplir dans le masque
+        save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaire, par défaut : True
+        overwrite : paramètre de ré-écriture des fichiers. Par défaut : False
+    """
+
+    repertory_output = os.path.dirname(mask_output)
+    file_name = os.path.splitext(os.path.basename(mask_output))[0]
+    extension = os.path.splitext(mask_output)[1]
+
+    mask_mnh = repertory_output + os.sep + file_name + "_tmp" + extension
+    mask_mnh_filled = repertory_output + os.sep + file_name + "_filled_tmp" + extension
+
+    # Verification de la non existence du fichier de sortie
+    if overwrite == True and os.path.exists(mask_output):
+        os.remove(mask_output)
+    elif overwrite == False and os.path.exists(mask_output):
+        raise NameError(bold + red + "mnhTreeThreshold() : le fichier %s existe déjà" %(mask_output)+ endC)
+
+    if overwrite == True and os.path.exists(file_output):
+        os.remove(file_output)
+    elif overwrite == False and os.path.exists(file_output):
+        raise NameError(bold + red + "mnhTreeThreshold() : le fichier %s existe déjà" %(file_output)+ endC)
+
+    # Calcul à l'aide de l'otb
+    exp = '"(im1b1>=' + str(threshold) + ' ?1:0)"'
+    cmd_mask = "otbcli_BandMath -il %s -out %s -exp %s" %(mnh, mask_mnh, exp)
+
+    exitCode = os.system(cmd_mask)
+
+
+    #Remplissage des trous dans le masques
+    command = "gdal_sieve.py -st %d -8 %s %s" %(umc_pixels, mask_mnh, mask_mnh_filled)
+
+    exitCode = os.system(command)
+    if exitCode != 0:
+        raise NameError("Une erreur est apparue lors de la création du masque de végétation (commande gdal_sieve).")
+
+
+    if exitCode != 0:
+        print(cmd_mask)
+        raise NameError(bold + red + "mnhTreeThreshold() : une erreur est apparue lors de la création du masque du MNH (commande otbcli_BandMath)" + endC)
+
+    exp = '"(im1b1 * im2b1)"'
+    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(mask_mnh_filled, mask_veg, mask_output, exp)
+
+    exitCode = os.system(cmd_mask)
+
+    if exitCode != 0:
+        print(cmd_mask)
+        raise NameError(bold + red + "mnhTreeThreshold() : une erreur est apparue lors de la création du masque du MNH (commande otbcli_BandMath)" + endC)
+
+    polygonizeRaster(mask_output, file_output, 'arbore', field_name="id", vector_export_format="GPKG")
+
+    if not save_intermediate_result :
+        removeFile(mask_mnh)
+        removeFile(mask_mnh_filled)
+
+
+
+###########################################################################################################################################
+# FONCTION segmentationImageVegetetation()                                                                                                #
+###########################################################################################################################################
+def segmentationImageVegetetation(img_ref, dic_ndvi, file_output, file_mnh, dic_ndvi_threshold, param_minsize = 10, format_vector='GPKG', save_intermediate_result = True, overwrite = True):
     """
     Rôle : segmente l'image en entrée à partir d'une fonction OTB_Segmentation MEANSHIFT
 
@@ -101,9 +279,12 @@ def segmentationImageVegetetationNdvi(img_ref, dic_ndvi, file_output, param_mins
     file_name = os.path.splitext(os.path.basename(img_ref))[0]
     extension = os.path.splitext(img_ref)[1]
 
-    SUFFIX_MASK_VEG = "_mask_veg"
-    mask_veg = repertory_output + os.sep + file_name + SUFFIX_MASK_VEG + extension
+    mask_veg = repertory_output + os.sep + file_name + "_mask_veg" + extension
+    mask_ndvi = repertory_output + os.sep + file_name + "_mask_ndvi" + extension
     img_masked = repertory_output + os.sep + file_name + "_masked" + extension
+    mask_mnh = repertory_output + os.sep + file_name + "_mnh_masked" + extension
+
+    mnh_threshold_tree = 10
 
     if overwrite:
         if os.path.exists(mask_veg):
@@ -112,7 +293,20 @@ def segmentationImageVegetetationNdvi(img_ref, dic_ndvi, file_output, param_mins
             os.remove(file_output)
 
     # Création du masque de végétation
-    vegetationMaskNdvi(dic_ndvi, mask_veg, ndvi_threshold, umc_pixels, overwrite, save_intermediate_result)
+    vegetationMask(dic_ndvi, img_ref, mask_ndvi, dic_ndvi_threshold, overwrite, save_intermediate_result)
+
+    # Création du masque MNH
+    mnhTreeThreshold(dic_ndvi["mnh"], mask_ndvi, mask_mnh, file_mnh, mnh_threshold_tree, save_intermediate_result = True, overwrite = True)
+    # Ajustement du masque de végétation
+
+    exp = '"(im1b1 - im2b1)"'
+    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(mask_ndvi, mask_mnh, mask_veg, exp)
+
+    exitCode = os.system(cmd_mask)
+
+    if exitCode != 0:
+        print(cmd_mask)
+        raise NameError(bold + red + "segmentationImageVegetation() : une erreur est apparue lors de la création du masque de végétation (commande otbcli_BandMath)" + endC)
 
     cmd = "otbcli_BandMathX -il %s %s -out %s -exp 'im1 * im2b1'" %(img_ref, mask_veg, img_masked)
 
@@ -120,13 +314,11 @@ def segmentationImageVegetetationNdvi(img_ref, dic_ndvi, file_output, param_mins
 
     if exitCode != 0:
         print(cmd)
-        raise NameError(bold + red + "YA UN PB" + endC)
+        raise NameError(bold + red + "segmentationVegetation() : une erreur est apparue lors de la création du masque de végétation (commande otbcli_BandMathX)." + endC)
     # Calcul de la segmentation Meanshift
     sgt_cmd = "otbcli_Segmentation -in %s -mode vector -mode.vector.out %s -mode.vector.inmask %s -filter meanshift  -filter.meanshift.minsize %s" %(img_masked, file_output, mask_veg, param_minsize)
 
-    start_time = time.time()
     exitCode = os.system(sgt_cmd)
-    print("La segmentation OTB a pris : %s secondes"%(time.time() - start_time))
 
     if exitCode != 0:
         print(sgt_cmd)
@@ -135,13 +327,15 @@ def segmentationImageVegetetationNdvi(img_ref, dic_ndvi, file_output, param_mins
     if not save_intermediate_result:
         removeFile(mask_veg)
         removeFile(img_masked)
+        removeFile(mask_ndvi)
+        removeFile(mask_mnh)
 
     return
 
 ###########################################################################################################################################
 # FONCTION classificationVerticalStratum()                                                                                                #
 ###########################################################################################################################################
-def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_layers, sgts_input, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = 0):
+def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_layers, sgts_input, sgts_tree, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = 0):
     """
     Rôle : classe les segments en trois strates : arborée, arbustive et herbacée
 
@@ -180,6 +374,8 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     #####################################################################
     ## Création et export en base de la couche des segments végétation ##
     #####################################################################
+
+    '''
     # Nettoyage en base si ré-écriture
     if overwrite == True:
         query ="""
@@ -192,7 +388,7 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         tables_schema = cursor.fetchall()
         for el in tables_schema:
             executeQuery(connexion, el[0])
-
+    '''
     # Fichiers intermédiaires
     repertory_output = os.path.dirname(output_layers["output_stratesv"])
     file_name = os.path.splitext(os.path.basename(sgts_input))[0]
@@ -204,7 +400,20 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     #####################################################################
 
     if debug >= 1:
-        print(bold + "Collecte des valeurs médianes de hauteur et de texture pour chaque segment." + endC)
+        if dic_seuil["height_or_texture"] == "texture":
+            print(bold + "Collecte des valeurs médianes de hauteur et de texture pour chaque segment." + endC)
+        else :
+            print(bold + "Collecte des valeurs médianes de hauteur pour chaque segment." + endC)
+
+    start_time = time.time()
+
+    sgts_tree_out = repertory_output + os.sep + file_name + "MNH_tree" + extension_vecteur
+    list_vector_file_mnh = diviseVectorFile(sgts_tree, 'GPKG')
+    calc_statMedian_multiprocessing(list_vector_file_mnh, raster_dic["MNH"], sgts_tree_out)
+    #calc_statMedian(sgts_tree, raster_dic["MNH"], sgts_tree_out)
+    tablename_tree = "mnhthreshold_trees"
+    importVectorByOgr2ogr(connexion_dic["dbname"], sgts_tree_out, tablename_tree, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
+
 
     ## Collecte données de hauteur pour chaque segment
     file_mnh_out = repertory_output + os.sep + file_name + "MNH" + extension_vecteur
@@ -212,8 +421,13 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     if os.path.exists(file_mnh_out) and overwrite == True:
         os.remove(file_mnh_out)
 
+    list_vector_file = diviseVectorFile(sgts_input, 'GPKG')
+
     # Calcul de la valeur médiane de hauteur pour chaque segment de végétation
-    calc_statMedian(sgts_input, raster_dic["MNH"], file_mnh_out)
+    start_mnh = time.time()
+    #calc_statMedian(sgts_input, raster_dic["MNH"], file_mnh_out)
+    calc_statMedian_multiprocessing(list_vector_file, raster_dic["MNH"], file_mnh_out)
+    time_mnh = time.time() - start_mnh
 
     # Export du fichier vecteur des segments végétation avec une valeur médiane de hauteur dans la BD
     tablename_mnh = "table_sgts_mnh"
@@ -225,28 +439,52 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     if os.path.exists(file_txt_out) and overwrite == True:
         os.remove(file_txt_out)
 
+    start_median = time.time()
     # Calcul de la valeur médiane de texture pour chaque segment de végétation
-    calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
+    tablename_txt = ''
+    if dic_seuil["height_or_texture"] == "texture":
+        #calc_statMedian(sgts_input, raster_dic["TXT"], file_txt_out)
+        calc_statMedian_multiprocessing(list_vector_file, raster_dic["TXT"], file_txt_out)
 
-    # Export du fichier vecteur des segments végétation avec une valeur médiane de texture dans la BD
-    tablename_txt = "table_sgts_txt"
-    importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
+        # Export du fichier vecteur des segments végétation avec une valeur médiane de texture dans la BD
+        tablename_txt = "table_sgts_txt"
+        importVectorByOgr2ogr(connexion_dic["dbname"], file_txt_out, tablename_txt, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
+    time_median = time.time() - start_median
 
     # Supprimer le fichier si on ne veut pas les sauvegarder
+    if len(list_vector_file) > 1 :
+        for file_tmp in list_vector_file :
+            removeVectorFile(file_tmp, 'ESRI Shapefile')
+
+    if len(list_vector_file_mnh) > 1 :
+        for file_tmp_mnh in list_vector_file_mnh :
+            removeVectorFile(file_tmp_mnh, 'ESRI Shapefile')
+
     if not save_intermediate_result :
         os.remove(file_mnh_out)
-        os.remove(file_txt_out)
+        if dic_seuil["height_or_texture"] == "texture":
+            os.remove(file_txt_out)
 
 
     # Merge des colonnes de statistiques en une seule table "segments_vegetation_ini"
+
     tab_sgt_ini = 'segments_vegetation_ini_t0'
     dropTable(connexion, tab_sgt_ini)
-    query = """
-    CREATE TABLE %s AS
-        SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
-        FROM %s AS t1, %s AS t2
-        WHERE t1.dn = t2.dn;
-    """ %(tab_sgt_ini, tablename_txt, tablename_mnh) ########## ------------ TEXTURE -------------- ############
+
+    if dic_seuil["height_or_texture"] == "texture":
+        query = """
+        CREATE TABLE %s AS
+            SELECT t2.dn, t2.geom, t2.median AS mnh, t1.median AS txt
+            FROM %s AS t1, %s AS t2
+            WHERE t1.dn = t2.dn;
+        """ %(tab_sgt_ini, tablename_txt, tablename_mnh)
+
+    else :
+        query = """
+        CREATE TABLE %s AS
+            SELECT t2.dn, t2.geom, t2.median AS mnh
+            FROM  %s AS t2;
+        """ %(tab_sgt_ini, tablename_mnh)
 
     # Exécution de la requête SQL
     if debug >= 1:
@@ -283,11 +521,97 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         print(bold + "Prétraitements : transformation de l'ensemble des multipolygones en simples polygones ET suppression des artefacts au reflet blanc" + endC)
 
     # Conversion en simples polygones
-    query = """
+    tab_ref0 = tab_ref + "_ini"
+
+    if dic_seuil["height_or_texture"] == "texture":
+        query = """
+        CREATE TABLE %s AS
+            SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
+            FROM %s as t
+        """ %(tab_ref0, tab_sgt_ini)
+
+    else :
+        query = """
+        CREATE TABLE %s AS
+            SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh
+            FROM %s as t
+        """ %(tab_ref0, tab_sgt_ini)
+
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    # Ajout d'un identifiant unique
+    #addUniqId(connexion, tab_ref0)
+
+    # Ajout d'un index spatial
+    addSpatialIndex(connexion, tab_ref0)
+
+    #addIndex(connexion, tab_ref0, 'fid', 'idx_fid_'+tab_ref)
+
+    # Ajout de l'attribut "strate"
+    addColumn(connexion, tab_ref0, 'strate', 'varchar(100)')
+
+    time_prepare = time.time() - start_time
+
+    #if not save_intermediate_result:
+    #    dropTable(connexion, tab_sgt_txt_val0)
+
+    #####################################################################
+    ## Première étape : classification générale, à partir de règles de ##
+    ##                  hauteur et de texture                          ##
+    #####################################################################
+
+    start_time = time.time()
+
+    if debug >= 2:
+        print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
+
+    if dic_seuil["height_or_texture"] == "height":
+            query = """
+            UPDATE %s as t SET strate = 'A' WHERE t.mnh  > %s;
+            """ %(tab_ref0, dic_seuil["height_treeshrub_thr"])
+
+            query += """
+            UPDATE %s as t SET strate = 'Au' WHERE t.mnh  <= %s AND t.mnh > %s;
+            """ %(tab_ref0, dic_seuil["height_treeshrub_thr"], dic_seuil["height_shrubgrass_thr"])
+
+            query += """
+            UPDATE %s as t SET strate = 'H' WHERE t.mnh <= %s;
+            """ %(tab_ref0, dic_seuil["height_shrubgrass_thr"])
+
+
+    else :
+        query = """
+        UPDATE %s as t SET strate = 'A' WHERE t.txt < %s AND t.mnh  > %s;
+        """ %(tab_ref0, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
+
+        query += """
+        UPDATE %s as t SET strate = 'Au' WHERE t.txt < %s AND  t.mnh  <= %s;
+        """ %(tab_ref0, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
+
+        query += """
+        UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s;
+        """ %(tab_ref0, dic_seuil["texture_thr"])
+
+    # query += """
+    # UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
+    # """ %(tab_ref, dic_seuil["texture_thr"], dic_seuil["height_shrubgrass_thr"])
+
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+
+    query = '''
+    DROP TABLE IF EXISTS %s ;
     CREATE TABLE %s AS
-        SELECT public.ST_MAKEVALID((public.ST_DUMP(t.geom)).geom::public.geometry(Polygon,2154)) as geom, t.mnh, t.txt
-        FROM %s as t
-    """ %(tab_ref, tab_sgt_ini)
+        SELECT geom, mnh, txt, strate FROM %s
+        UNION
+        SELECT public.ST_MAKEVALID((public.ST_DUMP(geom)).geom::public.geometry(Polygon,2154)) as geom, median as mnh, 0 as txt, 'A' as strate FROM %s
+    '''%(tab_ref, tab_ref, tab_ref0, tablename_tree)
 
     # Exécution de la requête SQL
     if debug >= 3:
@@ -303,60 +627,18 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     addIndex(connexion, tab_ref, 'fid', 'idx_fid_'+tab_ref)
 
     # Ajout de l'attribut "strate"
-    addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
+    # addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
 
-    exportVectorByOgr2ogr(connexion_dic["dbname"], '/mnt/RAM_disk/ProjetGUS/2-DistinctionStratesV/sgts_strate_mnh_test1.gpkg', tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+    if not save_intermediate_result :
+        dropTable(connexion, tablename_tree)
+        dropTable(connexion, tab_ref0)
 
-
-    #if not save_intermediate_result:
-    #    dropTable(connexion, tab_sgt_txt_val0)
-
-    #####################################################################
-    ## Première étape : classification générale, à partir de règles de ##
-    ##                  hauteur et de texture                          ##
-    #####################################################################
-
-    if debug >= 2:
-        print(bold + "Première étape : classification générale, à partir de règles de hauteur et de texture" + endC)
-
-    if dic_seuil["height_or_texture"] == "height":
-            query = """
-            UPDATE %s as t SET strate = 'A' WHERE t.mnh  > %s;
-            """ %(tab_ref, dic_seuil["height_treeshrub_thr"])
-
-            query += """
-            UPDATE %s as t SET strate = 'Au' WHERE t.mnh  <= %s AND t.mnh > %s;
-            """ %(tab_ref, dic_seuil["height_treeshrub_thr"], dic_seuil["height_shrubgrass_thr"])
-
-            query += """
-            UPDATE %s as t SET strate = 'H' WHERE t.mnh <= %s;
-            """ %(tab_ref, dic_seuil["height_shrubgrass_thr"])
-
-
-    else :
-        query = """
-        UPDATE %s as t SET strate = 'A' WHERE t.txt < %s AND t.mnh  > %s;
-        """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
-
-        query += """
-        UPDATE %s as t SET strate = 'Au' WHERE t.txt < %s AND  t.mnh  <= %s;
-        """ %(tab_ref, dic_seuil["texture_thr"],dic_seuil["height_treeshrub_thr"])
-
-        query += """
-        UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s;
-        """ %(tab_ref, dic_seuil["texture_thr"])
-
-    # query += """
-    # UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
-    # """ %(tab_ref, dic_seuil["texture_thr"], dic_seuil["height_shrubgrass_thr"])
-
-    # Exécution de la requête SQL
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
+    output_classif = repertory_output + os.sep + file_name + "_classif" + extension_vecteur
+    exportVectorByOgr2ogr(connexion_dic["dbname"], output_classif, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
     ##############################################################################
     ### ajout EB 01/11/24 : enregistrement fic intermediaires resultats 1ere etape = > a supprimer apres le test
+    '''
     query = """
     DROP TABLE IF EXISTS sgts_strate_arboree;
     CREATE TABLE sgts_strate_arboree AS
@@ -389,6 +671,9 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     executeQuery(connexion, query)
     exportVectorByOgr2ogr(connexion_dic["dbname"], '/mnt/RAM_disk/ProjetGUS/2-DistinctionStratesV/sgts_strate_herbacee_1ere_etape.gpkg', 'sgts_strate_herbace', user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
     dropTable(connexion, 'sgts_strate_herbace')
+    '''
+
+    time_1etape = time.time() - start_time
     ##############################################################################
 
     #####################################################################
@@ -397,6 +682,7 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     if debug >= 2:
         print(bold + "Deuxième étape : reclassification des segments arbustifs" + endC)
 
+    start_time = time.time()
     ###
     #0# Extraction de deux catégories de segments arbustifs :
     ###
@@ -430,6 +716,8 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         print(bold + "Deuxième étape :\n1.1-Reclassification des segments arbustes 'regroupés'" + endC)
 
     reclassGroupSegments(connexion, tab_ref, tab_rgpt_arbu, dic_seuil, save_intermediate_result, debug)
+    output_reclass1 = repertory_output + os.sep + file_name + "_reclass1" + extension_vecteur
+    exportVectorByOgr2ogr(connexion_dic["dbname"], output_reclass1, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
     # il nous reste les segments arbustifs de rgpts qui n'ont pas été reclassés par leur configuration
     # Suppression des tables intermédiaires
@@ -454,6 +742,8 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         print(bold + "Deuxième étape :\n2.1-Reclassification des arbustes 'regroupés' entourés uniquement d'arboré selon un rapport de surface" + endC)
 
     tab_ref = reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil, save_intermediate_result, debug)
+    output_reclass2 = repertory_output + os.sep + file_name + "_reclass2" + extension_vecteur
+    exportVectorByOgr2ogr(connexion_dic["dbname"], output_reclass2, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
 
     if not save_intermediate_result :
@@ -475,9 +765,9 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     executeQuery(connexion, query)
 
     ## Traitement des surfaces herbacé < à 20m2 et entouré de polygones de type arboré ou arbustif,
-    ## si le MNH moyen est < à 1 on ne chanche rien si entre 1m et 3m on passe en arbustif et si > à 3m on passé en arboré
-
-    # Calcul des surfaces herbacé < à 20m2
+    ## si le MNH moyen est < à 1 on ne change rien si entre 1m et 3m on passe en arbustif et si > à 3m on passe en arboré
+    '''
+    # Calcul des surfaces herbacées < à 20m2
     query = """
     UPDATE %s
     SET
@@ -501,11 +791,16 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
                 public.ST_Touches(t.geom, %s.geom)
         );
     """ %(tab_ref, tab_ref, tab_ref, tab_ref, tab_ref)
+    '''
+
+    reclassificationOmbres(connexion, tab_ref, save_intermediate_result, debug)
+
 
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
+    time_2etape = time.time() - start_time
 
     #############################################################
     ## Sauvegarde des résultats en tant que couche vectorielle ##
@@ -558,6 +853,14 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         rasterizeVector(output_layers["output_stratesv"], raster_output,  img_ref, 'fv_r', codage="uint8", ram_otb=0)
         # suppression de la colonne non utile "strate_r"
         dropColumn(connexion, tab_ref, 'strate_r')
+
+    temps_prep = "Temps de l'étape de préparation de la classification verticales : %s secondes, avec le calcul des valeurs médianes de texture qui prend : %s secondes et le calcul des valeurs médianes de hauteur qui prend : %s secondes."%(time_prepare, time_median, time_mnh)
+    temps_etape1 = "Temps de l'étape 1 de la classification verticales : %s secondes"%(time_1etape)
+    temps_etape2 = "Temps de l'étape 2 de la classification verticales : %s secondes"%(time_2etape)
+
+    print(bold + temps_prep + endC)
+    print(bold + temps_etape1 + endC)
+    print(bold + temps_etape2 + endC)
 
     return tab_ref
 
@@ -872,7 +1175,7 @@ def reclassIsolatedSgtsByHeight(connexion, tab_ref, dic_seuil, save_intermediate
         print(query)
     executeQuery(connexion, query)
 
-    # Création d'une table temporaire pour les segments arborés et herbacés, et une pour les arbustres
+    # Création d'une table temporaire pour les segments arborés et herbacés, et une pour les arbustes
 
     tab_herbarbo = "tab_sgmts_herbarbo_tmp"
     query = """
@@ -1760,14 +2063,14 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
     query = """
     DROP TABLE IF EXISTS herbace;
     CREATE TABLE herbace AS
-        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
+        SELECT public.ST_MakeValid(public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom)) AS geom
         FROM (SELECT geom FROM %s WHERE strate='H') AS t1;
     """ %(tab_ref)
 
     query += """
     DROP TABLE IF EXISTS arbore;
     CREATE TABLE arbore AS
-        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
+        SELECT public.ST_MakeValid(public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom)) AS geom
         FROM (SELECT geom FROM %s WHERE strate='A') AS t1;
     """ %(tab_ref)
 
@@ -2015,7 +2318,7 @@ def reclassGroupSegments(connexion, tab_ref, rgpt_arbu, dic_seuil, save_intermed
         print(query)
     executeQuery(connexion, query)
 
-    #  Création de la table contant les segments arbustifs appartennant à des regroupements en contact avec des segments herbacés ET des segments arborés
+    #  Création de la table contenant les segments arbustifs appartennant à des regroupements en contact avec des segments herbacés ET des segments arborés
     query = """
     CREATE TABLE sgt_rgpt_arbu_to_treat AS (SELECT t1.fid, t1.geom, t1.fid_rgpt
                                              FROM arbu_de_rgpt AS t1
@@ -2296,3 +2599,300 @@ def calc_statMedian(vector_input, image_input, vector_output):
     statisticsVectorRaster(image_input, vector_input, vector_output, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
     return
+
+
+
+###########################################################################################################################################
+# FONCTION diviseVectorFile()                                                                                                              #
+###########################################################################################################################################
+
+def diviseVectorFile(vector_input, format_vector) :
+
+    """
+    Rôle : divise en plusieurs fichiers un fichier vecteur
+
+    Paramètres :
+        vector_input : fichier vecteur à diviser
+        format_vector : format du fichier vecteur d'entrée
+        nb_files : nombre de fichiers souhaités en sortie
+
+    Sortie :
+        file_list : liste des fichiers vecteurs (au format ESRI Shapefile) obtenus en découpant le fichier d'entrée
+    """
+    epsg = 2154
+    field = ""
+
+    nb_files = getNumberCPU() - 2
+
+    dir_output = os.path.dirname(vector_input)
+    filename =  os.path.splitext(os.path.basename(vector_input))[0]
+
+    driver = ogr.GetDriverByName(format_vector)
+    data_source_input = driver.Open(vector_input, 0)
+    input_layer = data_source_input.GetLayer()
+    input_layer_definition = input_layer.GetLayerDefn()
+
+    nb_polygons = len(input_layer)
+
+    if nb_polygons > nb_files :
+        # Récupération des champs de input_layer dans une liste
+        attribute_dico = {}
+
+        for i in range(input_layer_definition.GetFieldCount()):
+            field_defn = input_layer_definition.GetFieldDefn(i)
+            name_attribute = field_defn.GetName()
+            attribute_type = field_defn.GetType()
+            attribute_dico[name_attribute] = attribute_type
+
+        index = 0
+        path_list = []
+
+
+        nb_poly = len(input_layer)
+        nb_poly_in_file = nb_poly // nb_files
+        too_much = nb_poly % nb_files
+
+        polygons_attr_geom_dico = {}
+        file_list = []
+
+        for k in range(nb_files) :
+            file_name = dir_output + os.sep + filename + "_" + str(k) + '.shp'
+            file_list.append(file_name)
+
+        file_nb = 0
+
+        # Parcours des entités de input_layer
+        for feature_input in input_layer:
+
+            entite = index
+
+            # Récupération de la géométrie de l'élément du fichier d'entrée
+            geometry = feature_input.GetGeometryRef()
+
+
+            # Création d'un shape par entité de input_layer
+
+            # Récupération des valeur des champs du fichier d'entrée
+            poly_attr_dico = {}
+            for i in range(input_layer_definition.GetFieldCount()):
+                field_defn = input_layer_definition.GetFieldDefn(i)
+                name_attribute = field_defn.GetName()
+                attribute_value = feature_input.GetField(i)
+                poly_attr_dico[name_attribute] = attribute_value
+
+            # Create shape
+            poly_info_list = [geometry.Clone(), poly_attr_dico]
+            polygons_attr_geom_dico[str(entite)] = poly_info_list
+
+            if index % nb_poly_in_file == 0 and index != 0 and (nb_poly - index) > too_much :
+                entite = str(entite).replace("-", "_").replace("â", "a").replace("î", "i").replace("ê", "e").replace("è", "e").replace("é", "e").replace("ç", "c")
+                new_shape = file_list[file_nb]
+                path_list.append(str(new_shape))
+                createPolygonsFromGeometryList(attribute_dico, polygons_attr_geom_dico, new_shape, epsg, 'ESRI Shapefile')
+                polygons_attr_geom_dico = {}
+                file_nb += 1
+                print(new_shape)
+
+            if index == nb_poly -1 :
+                entite = str(entite).replace("-", "_").replace("â", "a").replace("î", "i").replace("ê", "e").replace("è", "e").replace("é", "e").replace("ç", "c")
+                new_shape = file_list[file_nb]
+                path_list.append(str(new_shape))
+                createPolygonsFromGeometryList(attribute_dico, polygons_attr_geom_dico, new_shape, epsg, 'ESRI Shapefile')
+
+            # Mise a jour de l'index
+            index += 1
+
+        # Fermeture du fichier shape entrée
+        data_source_input.Destroy()
+
+        return file_list
+    else :
+        data_source_input.Destroy()
+        return [vector_input]
+
+###########################################################################################################################################
+# FONCTION calc_statMedian_multiprocessing()                                                                                              #
+###########################################################################################################################################
+
+def calc_statMedian_multiprocessing(vector_list, image_input, vector_output) :
+
+    """
+    Rôle : croisement raster/vecteur où on va calculer la médiane du raster sur l'emprise des entités vecteurs en utilisant du multiprocessing pour accélérer les calculs
+
+    Paramètres :
+        vector_list : liste des fichiers vecteurs dont les statistiques sont à calculer
+        image_input : fichier raster
+        vector_output : fichier vecteur en sortie pour lequelle on a calculé les statistiques
+    """
+
+    dir_output = os.path.dirname(vector_list[0])
+
+    col_to_add_list = ["median"]
+    col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range"]
+    class_label_dico = { }
+
+    proc_list = []
+    output_list = []
+    emprise_list = []
+    raster_list = []
+
+    extension_vector_gpkg = '.gpkg'
+    extension_raster = '.tif'
+    extension_vector_shp = '.shp'
+    format_vector_gpkg = 'GPKG'
+    format_vector_shp = 'ESRI Shapefile'
+
+    for name_file in vector_list :
+
+        vector_emprise = dir_output + os.sep + os.path.splitext(os.path.basename(name_file))[0] + "_emprise" + extension_vector_gpkg
+        output_image = dir_output + os.sep + os.path.splitext(os.path.basename(name_file))[0] + "_raster" + extension_raster
+        emprise_list.append(vector_emprise)
+        raster_list.append(output_image)
+
+        xmin,xmax,ymin,ymax = getEmpriseVector(name_file, format_vector_shp)
+        createEmpriseVector(xmin, ymin, xmax, ymax, vector_emprise, projection=2154, format_vector=format_vector_gpkg)
+
+        cutImageByVector(vector_emprise ,image_input, output_image, format_vector=format_vector_gpkg)
+
+        vector_int = dir_output + os.sep + os.path.splitext(os.path.basename(name_file))[0] + "_output" + extension_vector_shp
+        output_list.append(vector_int)
+
+        proc = multiprocessing.Process(target = statisticsVectorRaster, args = (output_image, name_file, vector_int, 1, False, False, True, col_to_delete_list,col_to_add_list, class_label_dico, False, 0, format_vector_shp, "", False, True))
+        proc.start()
+        proc_list.append(proc)
+
+    for proc in proc_list :
+        proc.join()
+
+    vector_final = file_name = dir_output + os.sep + os.path.splitext(os.path.basename(vector_output))[0] + "_int" + extension_vector_shp
+    fusionVectors(output_list, vector_final, format_vector_shp)
+
+    cmd = "ogr2ogr -f GPKG %s %s"%(vector_output, vector_final)
+    os.system(cmd)
+
+    for name_file in output_list :
+        removeVectorFile(name_file, format_vector_shp)
+    for name_file in emprise_list :
+        removeFile(name_file)
+    for name_file in raster_list :
+        removeFile(name_file)
+    removeVectorFile(vector_final, format_vector_shp)
+
+
+###########################################################################################################################################
+# FONCTION reclassificationOmbres()                                                                                                       #
+###########################################################################################################################################
+def reclassificationOmbres(connexion, tab_ref, save_intermediate_result = False, debug = 0) :
+
+    """
+    Rôle : reclassification des segments d'ombres dans les arbres qui ont pu être détectés comme étant de l'herbacé
+
+    Paramètres :
+        connexion : paramètres de connexion à la BD
+        tab_ref : nom de la table contenant les segments classifié en arboré, arbustif et herbacé
+    """
+
+    # Création d'une table ne contenant que les segments herbacés qui ne touchent que de l'arboré et/ou de l'arbustif
+
+    tab_herb_only_arb = "herb_touch_only_arb"
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT *
+        FROM %s
+        WHERE strate = 'H' AND
+        (
+            SELECT COUNT(*) FROM %s AS t
+            WHERE
+                public.ST_Touches(t.geom, %s.geom) AND
+                t.strate IN ('Au', 'A')
+        ) = (
+            SELECT COUNT(*) FROM %s AS t
+            WHERE
+                public.ST_Touches(t.geom, %s.geom)
+        ); """ %(tab_herb_only_arb, tab_herb_only_arb, tab_ref, tab_ref, tab_ref, tab_ref, tab_ref)
+
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    addSpatialIndex(connexion, tab_herb_only_arb)
+
+    # Création d'une table qui calcule le périmètre du segment et la longueur de la frontière des segments voisins qui le touchent pour les segments concernés
+
+    tab_herb_inters_long = "herb_touch_only_arb_inters_long"
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT t1.fid, 'H' as strate, t1.mnh, t1.geom, public.ST_PERIMETER(t1.geom) AS long_bound_arbu, t2.long_bound_inters_arbo AS long_bound_inters
+            FROM (SELECT t3.fid, AVG(t3.mnh), SUM(public.ST_LENGTH(t3.geom_bound_inters_arbo)) AS long_bound_inters_arbo
+                FROM (SELECT t1.fid, t1.strate, t1.mnh, t1.geom, seg.fid AS fid_arbo, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom), public.ST_INTERSECTION(t1.geom, seg.geom)) AS geom_bound_inters_arbo
+                    FROM  %s AS t1, %s as seg
+                    WHERE public.ST_INTERSECTS(t1.geom,seg.geom) and t1.fid != seg.fid ) AS t3
+                    GROUP BY t3.fid) AS t2, %s AS t1
+        WHERE t1.fid = t2.fid;
+    """ %(tab_herb_inters_long, tab_herb_inters_long, tab_herb_only_arb, tab_ref, tab_ref)
+
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    # Création d'une table ne contenant que les segments concernés ayant une surface inférieure à 20m²
+
+    tab_herb_sorted =  "herb_touch_only_arb_inters_long_surf"
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT * from %s WHERE long_bound_arbu = long_bound_inters and public.ST_AREA(geom) < 20;
+    """ %(tab_herb_sorted, tab_herb_sorted, tab_herb_inters_long)
+
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    # Mise à jour de la strate pour les segments concernés
+
+    query = """
+    UPDATE %s
+        SET
+            strate =
+                CASE
+                    WHEN mnh BETWEEN 1 AND 3 THEN 'Au'
+                    WHEN mnh > 3 THEN 'A'
+                    ELSE strate
+                END;
+    """%(tab_herb_sorted)
+
+
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    # Mise à jour de la strate pour les segments concernés dans la table en entrée
+
+    query = """
+    UPDATE %s as seg
+        SET
+            strate = herb.strate
+        FROM %s as herb
+        WHERE
+            seg.fid = herb.fid
+    """%(tab_ref, tab_herb_sorted)
+
+
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    if not save_intermediate_result :
+        dropTable(connexion, tab_herb_only_arb)
+        dropTable(connexion, tab_herb_inters_long)
+        dropTable(connexion, tab_herb_sorted)
+
+    return
+

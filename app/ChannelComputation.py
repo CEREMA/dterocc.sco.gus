@@ -149,6 +149,7 @@ def createSFS(image_pan_input, image_SFS_output, li_choice = [4], codage="float"
         cmd_export = "gdal_translate "
         for el in li_choice :
             cmd_export += " -b " + str(el)
+        cmd_export += " -a_nodata -1"
         cmd_export += " " + l_file_tmp + " " + image_SFS_output
         exitCode = os.system(cmd_export)
         if exitCode != 0:

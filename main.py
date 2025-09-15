@@ -2,6 +2,7 @@
 # Librairies Python
 import sys,os, json, re
 from osgeo import ogr ,osr
+import time
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -12,23 +13,24 @@ from osgeo import ogr ,osr
 # Librairies /libs
 from Lib_display import bold,red,green,cyan,endC
 from Lib_raster import cutImageByVector
-from Lib_postgis import createDatabase, dropDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema, importVectorByOgr2ogr, dropColumn, renameColumn
+from Lib_postgis import createDatabase, dropDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema, importVectorByOgr2ogr, dropColumn, renameColumn, executeQuery
 
 # Applications /apps
 
-
-from app.VerticalStratumDetectionNdvi import classificationVerticalStratum, segmentationImageVegetetationNdvi
+from app.VerticalStratumDetectionNdvi import classificationVerticalStratum, segmentationImageVegetetation
 from app.VegetationFormStratumDetection import cartographyVegetation
 from app.DhmCreation import mnhCreation
 from app.ChannelComputation import neochannelComputation, createNDVI
 from app.DataConcatenation import concatenateData
 from app.GUSRastersAssembly import assemblyRasters, assemblyImages
 from app.IndicatorsComputation import createAndImplementFeatures
+from app.LandscapeDetection import landscapeDetection, urbanLandscapeDetection
 
 if __name__ == "__main__":
 
     debug = 1
     save_intermediate_result = False
+    start_time_gus = time.time()
 
     ##############################
     # RECUPERATION DES VARIABLES #
@@ -93,7 +95,7 @@ if __name__ == "__main__":
     path_img_cut = path_data_prod + os.sep + 'TMP_IMG_CUT'
 
     # Dossier de sauvegarde des résultats d'extraction de la végétation
-    path_extractveg = path_prj + os.sep + '1-ExtractionVegetation'
+    # path_extractveg = path_prj + os.sep + '1-ExtractionVegetation'
 
     # Dossier de sauvegarde des résultats de distinction des strates verticales végétales
     path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'
@@ -105,7 +107,7 @@ if __name__ == "__main__":
     path_datafinal = path_prj + os.sep + '4-Calcul_attributs_descriptifs'
 
     # Dossier de sauvegarde des résultats de paysage
-    path_landscape = path_prj + os.sep + '5-Paysages'
+    path_landscape = path_prj + os.sep + '1-Paysages'
 
 
     ##Création des répertoires s'ils n'existent pas
@@ -129,9 +131,6 @@ if __name__ == "__main__":
 
     if not os.path.exists(path_img_cut):
       os.makedirs(path_img_cut)
-
-    if not os.path.exists(path_extractveg):
-      os.makedirs(path_extractveg)
 
     if not os.path.exists(path_stratesveg):
       os.makedirs(path_stratesveg)
@@ -158,10 +157,20 @@ if __name__ == "__main__":
     connexion_0 = connexion_ini_dic
 
     # Paramètres de segmentation
-    minsize = config["segmentation"]["minsize"]
+    nature_mnh = config["info_mnh"]["pleiades_or_lidar"]
+    if nature_mnh == "lidar" :
+        minsize = 10
+    else :
+        minsize = 12
 
     # Paremètres de seuil de végétation avec le NDVI
-    ndvi_threshold = config["ndvi"]["threshold"]
+    dic_ndvi_threshold = config["ndvi"]
+    ndvi_threshold_summer = config["ndvi"]["threshold_summer"]
+    ndvi_threshold_winter = config["ndvi"]["threshold_winter"]
+    umc_pixels = config["ndvi"]["umc_pixels"]
+
+    # Paramètres pour les routes
+    dic_roads = config["roads"]
 
     # Seuils pour la distinction des strates verticales
     dic_seuils_stratesV = config["vertical_stratum_detection"]
@@ -173,12 +182,18 @@ if __name__ == "__main__":
 
     shrubthresholds = config["vegetation_form_stratum_detection"]["shrub"]
 
-    herbaceousthresholds = config["vegetation_form_stratum_detection"]["herbaceous"]
+    herbaceousthresholds = {
+            "rpg":  config["vegetation_form_stratum_detection"]["herbaceous"]["rpg"],
+            "rpg_complete" : config["vegetation_form_stratum_detection"]["herbaceous"]["rpg_complete"],
+            "paysages_urbains" : ""
+        }
+
 
     dic_thresholds = {
       "tree" : treethresholds,
       "shrub" : shrubthresholds,
-      "herbaceous" : herbaceousthresholds
+      "herbaceous" : herbaceousthresholds,
+      "lcz" : config["data_entry"]["entry_options"]["lcz_information"]
     }
 
     # Paramètres de calcul des attributs
@@ -191,10 +206,10 @@ if __name__ == "__main__":
                              [config["indicators_computation"]["height"]["std_height_feature"]  ,config["indicators_computation"]["height"]["std_height_type"]],
                              [config["indicators_computation"]["height"]["max_height_feature"]  ,config["indicators_computation"]["height"]["max_height_type"]],
                              [config["indicators_computation"]["height"]["min_height_feature"]  ,config["indicators_computation"]["height"]["min_height_type"]]],
-      "coniferousdeciduous_indicators" : [[config["indicators_computation"]["evergreen_deciduous"]["evergreen_feature"]  ,config["indicators_computation"]["evergreen_deciduous"]["evergreen_type"]],
-                                          [config["indicators_computation"]["evergreen_deciduous"]["deciduous_feature"]  ,config["indicators_computation"]["evergreen_deciduous"]["deciduous_type"]]],
-      "evergreendeciduous_indicators" : [[config["indicators_computation"]["coniferous_deciduous"]["coniferous_feature"]  ,config["indicators_computation"]["coniferous_deciduous"]["coniferous_type"]],
+      "coniferousdeciduous_indicators" : [[config["indicators_computation"]["coniferous_deciduous"]["coniferous_feature"]  ,config["indicators_computation"]["coniferous_deciduous"]["coniferous_type"]],
                                          [config["indicators_computation"]["coniferous_deciduous"]["deciduous_feature"]  ,config["indicators_computation"]["coniferous_deciduous"]["deciduous_type"]]],
+      "evergreendeciduous_indicators" : [[config["indicators_computation"]["evergreen_deciduous"]["evergreen_feature"]  ,config["indicators_computation"]["evergreen_deciduous"]["evergreen_type"]],
+                                          [config["indicators_computation"]["evergreen_deciduous"]["deciduous_feature"]  ,config["indicators_computation"]["evergreen_deciduous"]["deciduous_type"]]],
       "typeofground_indicator" : [[config["indicators_computation"]["ground_type"]["groundtype_feature"]  ,config["indicators_computation"]["ground_type"]["groundtype_type"]]],
       "confidence_indices" :[[config["indicators_computation"]["area"]["trust_area_feature"], config["indicators_computation"]["area"]["trust_area_type"]],
                              [config["indicators_computation"]["height"]["trust_height_feature"], config["indicators_computation"]["height"]["trust_height_type"]],
@@ -208,15 +223,19 @@ if __name__ == "__main__":
       "img_mnh" : img_mnh,
       "img_wtr" : img_winter,
       "shp_zone" : shp_zone,
+      "img_ndvi_spg" : "",
+      "img_ndvi_wtr" : "",
       "ldsc_information" :{
         "dirname" : path_landscape,
         "img_landscape" : config["indicators_computation"]["landscape"]["landscape_data"],
+        "ocsge" : config["data_entry"]["entry_options"]["ocsge"]   ,
         "lcz_information" : config["data_entry"]["entry_options"]["lcz_information"]   ,
+        "lcz_urbain" : "",
         "img_ocs" : "",
         "ldsc_class" : config["indicators_computation"]["landscape"]["landscape_dic_classes"]
         },
       "ndvi_difference_everdecid_thr" : config["indicators_computation"]["evergreen_deciduous"]["ndvi_difference_thr"],
-      "superimpose_choice" : True,
+      "superimpose_choice" : False,
       "pir_difference_thr" : config["indicators_computation"]["coniferous_deciduous"]["pir_difference_thr"],
       "ndvi_difference_groundtype_thr" : config["indicators_computation"]["ground_type"]["ndvi_difference_thr"]
     }
@@ -242,11 +261,15 @@ if __name__ == "__main__":
     img_ref_pan_assemble = path_image_assemble + os.sep + 'img_ref_pan.tif'
     img_winter_assemble = path_image_assemble + os.sep + 'img_winter.tif'
     img_pan_assemble_SI =  path_image_assemble + os.sep + 'img_pan_SI.tif'
+    img_ref_assemble_SI =  path_image_assemble + os.sep + 'img_ref_SI.tif'
     img_winter_assemble_SI = path_image_assemble + os.sep + 'img_winter_SI.tif'
 
     img_ref = path_img_cut + os.sep + 'img_ref_cut.tif'
     img_ref_PAN = path_img_cut + os.sep + 'img_ref_pan_cut.tif'
     img_winter = path_img_cut + os.sep + 'img_winter_cut.tif'
+    img_mnh_cut = path_tmp_neochannels + os.sep + 'img_mnh_cut.tif'
+    rpg_cut = path_img_cut + os.sep + 'rpg_cut.gpkg'
+    rpg_complete_cut = path_img_cut + os.sep + 'rpg_complete_cut.gpkg'
 
     dic_ndvi = {
         "ndvi_summer" : img_ndvi,
@@ -263,6 +286,7 @@ if __name__ == "__main__":
 
     # Chemin d'accès vers la couche de segments végétation
     sgts_veg = path_stratesveg + os.sep + 'vect_sgt_vegetation.gpkg'
+    sgts_tree = path_stratesveg + os.sep + 'vect_sgt_mnh_tree.gpkg'
 
     # Chemins d'accès vers les données des strates verticales
     path_stratesv_vegetation = path_stratesveg + os.sep + 'vect_stratesV.gpkg'
@@ -315,11 +339,6 @@ if __name__ == "__main__":
     except:
         print("La BD " + connexion_0["dbname"]  +" n'existe pas, nous la créons.")
         createDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
-    else :
-        print("La BD " + connexion_0["dbname"]  +" existe. Nous en supprimons le contenu.")
-        closeConnection(connexion)
-        dropDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
-        createDatabase(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
 
     # Connexion à la base de données
     connexion = openConnection(connexion_ini_dic["dbname"], user_name=connexion_ini_dic["user_db"], password=connexion_ini_dic["password_db"], ip_host=connexion_ini_dic["server_db"], num_port=connexion_ini_dic["port_number"], schema_name=connexion_ini_dic["schema"])
@@ -333,6 +352,21 @@ if __name__ == "__main__":
       createSchema(connexion, connexion_stratev_dic["schema"])
     if schemaExist(connexion, connexion_datafinal_dic["schema"]) == False:
       createSchema(connexion, connexion_datafinal_dic["schema"])
+
+    closeConnection(connexion)
+
+    connexion = openConnection(connexion_stratev_dic["dbname"], user_name=connexion_stratev_dic["user_db"], password=connexion_stratev_dic["password_db"], ip_host=connexion_stratev_dic["server_db"], num_port=connexion_stratev_dic["port_number"], schema_name=connexion_stratev_dic["schema"])
+
+    query ="""
+    SELECT format('DROP TABLE %s.%s', table_schema, table_name)
+    FROM information_schema.tables
+    WHERE table_schema = '%s';
+    """ %('%I', '%I',connexion_stratev_dic["schema"])
+    cursor = connexion.cursor()
+    cursor.execute(query)
+    tables_schema = cursor.fetchall()
+    for el in tables_schema:
+        executeQuery(connexion, el[0])
 
     closeConnection(connexion)
 
@@ -360,39 +394,20 @@ if __name__ == "__main__":
     img_winter_assemble = assemblyRasters(shp_zone, rep_img_winter, img_winter_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
 
     # Alignement de l'image d'hiver et de l'image pan sur l'image d'été
+    '''
     cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_ref_assemble, img_winter_assemble, img_winter_assemble_SI)
     os.system(cmd_superimpose)
 
     cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_ref_assemble, img_ref_pan_assemble, img_pan_assemble_SI)
     os.system(cmd_superimpose)
 
+    cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_winter_assemble, img_ref_assemble, img_ref_assemble_SI)
+    os.system(cmd_superimpose)
+    '''
     # Découpage des images sur l'emprise
     cutImageByVector(shp_zone ,img_ref_assemble, img_ref)
-    cutImageByVector(shp_zone ,img_pan_assemble_SI, img_ref_PAN)
-    cutImageByVector(shp_zone,img_winter_assemble_SI, img_winter)
-
-    '''
-    if config["steps_to_run"]["img_assembly"]:
-      if debug >= 1:
-        print(cyan + "\nAssemblage des imagettes" + endC)
-
-      img_tiles_repertory = config["repertory_img_assembly"]
-
-      assemblyImages(repertory, img_tiles_repertory, img_ref, no_data_value, epsg, save_results_intermediate = save_intermediate_result, ext_txt = '.txt',  format_raster = 'GTiff')
-
-    # Decoupage de l'image sur la zone d'etude (Gilles)
-    SUFFIX_CUT = "_cut"
-    img_ref_cut = os.path.splitext(img_ref)[0] + SUFFIX_CUT + os.path.splitext(img_ref)[1]
-    cutImageByVector(shp_zone ,img_ref, img_ref_cut)
-    img_ref = img_ref_cut
-    img_ref_PAN_cut = os.path.splitext(img_ref_PAN)[0] + SUFFIX_CUT + os.path.splitext(img_ref_PAN)[1]
-    cutImageByVector(shp_zone ,img_ref_PAN, img_ref_PAN_cut)
-    img_ref_PAN = img_ref_PAN_cut
-    img_winter_cut = os.path.splitext(img_winter)[0] + SUFFIX_CUT + os.path.splitext(img_ref)[1]
-    cutImageByVector(shp_zone ,img_winter, img_winter_cut)
-    img_winter = img_winter_cut
-    '''
-
+    cutImageByVector(shp_zone ,img_ref_pan_assemble, img_ref_PAN)
+    cutImageByVector(shp_zone,img_winter_assemble, img_winter)
 
     # MNH CREATION
     if config["steps_to_run"]["create_DHM"]:
@@ -402,6 +417,7 @@ if __name__ == "__main__":
       mnhCreation(img_mns, img_mnt, img_mnh, shp_zone , img_ref,  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_result=save_intermediate_result)
 
     # CALCUL DES NEOCANAUX
+    # Calcul du NDVI, du SFS et découpage du MNH
     if config["steps_to_run"]["neochannels_computation"]:
       if debug >= 1:
         print(cyan + "\nCalcul des néocanaux" + endC)
@@ -411,12 +427,10 @@ if __name__ == "__main__":
     else :
         createNDVI(img_ref, img_ndvi, channel_order = ["Red","Green","Blue","NIR"], codage="float", debug = debug)
 
-    SUFFIX_CUT = "_CUT"
-    img_mnh_cut = os.path.splitext(img_mnh)[0] + SUFFIX_CUT + os.path.splitext(img_mnh)[1]
-    cutImageByVector(shp_zone, img_mnh, img_mnh_cut)
+    cutImageByVector(shp_zone, img_mnh, img_mnh_cut, no_data_value = -99)
     img_mnh = img_mnh_cut
 
-
+    dic_ndvi["mnh"] = img_mnh
     dic_neochannels["mnh"] = img_mnh
     raster_dic = {
         "MNH" : dic_neochannels["mnh"],
@@ -429,18 +443,76 @@ if __name__ == "__main__":
 
 
     # CONCATENATION DES NEOCANAUX
+    dic_stack = {
+      "rvbpir" : img_ref,
+      "mnh" : img_mnh,
+      "sfs" : img_sfs,
+    }
+
     if config["steps_to_run"]["data_concatenation"]:
       if debug >= 1:
         print(cyan + "\nConcaténation des néocanaux" + endC)
 
-      concatenateData(dic_neochannels, img_stack, img_ref, shp_zone, debug=debug)
+      concatenateData(dic_stack, img_stack, img_ref, shp_zone, debug=debug)
 
     else :
       if config["data_entry"]["entry_options"]["img_data_concatenation"] != "" :
         img_stack = config["data_entry"]["entry_options"]["img_data_concatenation"]
 
-    #ATTENTION : il se peut que, le mnh dusse subir un ré-échantillonnage et recalage par rapport à la donnée de base si il a a été fournit directement par l'opérateur
-    # nous avons donc créé un nouveau fichier mnh superimposé par rapport à l'image de référence (normalement situé dans le dossier temporaire des néochannels)
+    # PAYSAGES
+
+    dic_params["img_ref"] = img_ref
+    dic_params["img_mnh"] = img_mnh
+    dic_params["img_winter"] = img_winter
+    dic_params["img_ndvi_spg"] = img_ndvi
+    dic_params["img_ndvi_wtr"] = img_ndvi_winter
+
+
+    # Ouverture connexion
+    connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
+
+    # Création des paysages
+    if dic_params["ldsc_information"]["img_landscape"] == "":
+        if debug >= 1:
+            print(cyan + "\nCréation des paysages" + endC)
+        result, dic_params = landscapeDetection(connexion, connexion_datafinal_dic ,dic_params, path_landscape, save_intermediate_result = save_intermediate_result,debug = 0)
+
+    # Création des paysages urbains
+    dic_params = urbanLandscapeDetection(connexion, connexion_datafinal_dic, dic_params, path_landscape, save_intermediate_result = False ,debug = 0)
+    dic_thresholds["herbaceous"]["paysages_urbains"] = dic_params["ldsc_information"]["lcz_urbain"]
+
+    # Fermeture connexion
+    closeConnection(connexion)
+
+    # DECOUPAGE DU RPG ET RPG COMPLETE SUR L'EMPRISE
+
+    rpg = herbaceousthresholds["rpg"]
+    rpg_complete = herbaceousthresholds["rpg_complete"]
+
+    command = "ogr2ogr -clipsrc %s %s %s  -nlt POLYGONE -overwrite -f GPKG" %(shp_zone, rpg_cut, rpg)
+    if debug >=2:
+        print(command)
+    exit_code = os.system(command)
+    if exit_code != 0:
+        print(cyan + "Découpage du RPG sur la zone d'étude : " + bold + red + "!!! Une erreur c'est produite au cours du découpage du vecteur : " + rpg + endC, file=sys.stderr)
+    if debug >=2:
+        print(cyan + "Découpage du RPG sur la zone d'étude : " + endC + "Le fichier vecteur " + rpg  + " a ete decoupe resultat : " + rpg_cut + " type geom = POLYGONE")
+
+    herbaceousthresholds["rpg"] = rpg_cut
+
+    if rpg_complete != "" and rpg_complete != None :
+
+        command = "ogr2ogr -clipsrc %s %s %s  -nlt POLYGONE -overwrite -f GPKG" %(shp_zone, rpg_complete_cut, rpg_complete)
+        if debug >=2:
+            print(command)
+        exit_code = os.system(command)
+        if exit_code != 0:
+            print(cyan + "Découpage du RPG sur la zone d'étude : " + bold + red + "!!! Une erreur c'est produite au cours du découpage du vecteur : " + rpg_complete + endC, file=sys.stderr)
+        if debug >=2:
+            print(cyan + "Découpage du RPG sur la zone d'étude : " + endC + "Le fichier vecteur " + rpg_complete  + " a ete decoupe resultat : " + rpg_complete_cut + " type geom = POLYGONE")
+
+        herbaceousthresholds["rpg_complete"] = rpg_complete_cut
+
 
     # 2# DISTINCTION DES STRATES VERTICALES VEGETALES #2#
     if debug >= 1:
@@ -464,8 +536,9 @@ if __name__ == "__main__":
       # 1.Segmentation de l'image
       if debug >= 1:
         print(cyan + "\nSegmentation de l'image de végétation " + endC)
-
-      segmentationImageVegetetationNdvi(img_ref, dic_ndvi, sgts_veg, param_minsize = minsize, ndvi_threshold = ndvi_threshold, format_vector='GPKG', save_intermediate_result = save_intermediate_result, overwrite = True)
+      start_time = time.time()
+      segmentationImageVegetetation(img_stack, dic_ndvi, sgts_veg, sgts_tree, dic_ndvi_threshold, param_minsize = minsize, format_vector='GPKG', save_intermediate_result = save_intermediate_result, overwrite = True)
+      tps_segmentation = time.time() - start_time
 
       # 2.Classification en strates verticales
       if debug >= 1:
@@ -478,7 +551,10 @@ if __name__ == "__main__":
       tab_ref_stratesv = 'segments_vegetation'
       schem_tab_ref_stratesv = 'data_final.segments_vegetation'
 
-      tab_ref_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, img_ref, output_stratesv_layers, sgts_veg, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = save_intermediate_result, overwrite = True, debug = debug)
+      start_time_stratesv = time.time()
+      tab_ref_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, img_ref, output_stratesv_layers, sgts_veg, sgts_tree, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = save_intermediate_result, overwrite = True, debug = debug)
+      print("----- La segmentation a pris : %s secondes -----" %(tps_segmentation))
+      print("----- La classification des strates verticales a pris : %s secondes -----" %(time.time() - start_time_stratesv))
 
       closeConnection(connexion)
 
@@ -490,7 +566,6 @@ if __name__ == "__main__":
       else :
         schem_tab_ref_stratesv = config["vertical_stratum_detection"]["db_table"]
         tab_ref_stratesv = schem_tab_ref_stratesv.split(".")[1]
-
 
     # 3# DETECTION DES FORMES VEGETALES HORIZONTALES #3#
     if debug >= 1:
@@ -513,9 +588,9 @@ if __name__ == "__main__":
 
       # Ouverture connexion
       connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
-
-      tab_ref_fv = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, shp_zone, dic_thresholds, raster_dic, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = True,  debug = debug)
-
+      start_time_carto = time.time()
+      tab_ref_fv = cartographyVegetation(connexion, connexion_datafinal_dic, schem_tab_ref_stratesv, shp_zone, dic_roads, dic_thresholds, raster_dic, output_fv_layers, cleanfv, save_intermediate_result = save_intermediate_result, overwrite = True,  debug = debug)
+      print("----- La détection des formes horizontales : %s secondes -----" %(time.time() - start_time_carto))
       closeConnection(connexion)
       print(bold + green + "\nLa détection des formes végétales horizontales s'est bien déroulée. Le résultat est disponible dans la table %s et dans le(s) fichier(s) %s"%(tab_ref_fv, output_fv_layers) + endC)
 
@@ -557,13 +632,19 @@ if __name__ == "__main__":
 
       # Nettoyage des colonnes (suppression de la colonne cat et renomage de la colonne ogc_fid en fid)
       dropColumn(connexion, tab_ref_fv, "cat")
-      renameColumn(connexion, tab_ref_fv, "ogc_fid", "fid")
+      #renameColumn(connexion, tab_ref_fv, "ogc_fid", "fid")
 
       # Calcul des indices
       #dic_params["ldsc_information"]["img_ocs"] = img_classif_filtered
-      createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = save_intermediate_result, debug = debug)
 
+      print(dic_params["img_ref"])
+      start_time_features = time.time()
+      createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = save_intermediate_result, debug = debug)
+      print("----- Le calcul des attributs a pris : %s secondes -----" %(time.time() - start_time_features))
       print(bold + green + "\nCartographie détaillée de la végétation disponible via le chemin : " + path_datafinal + endC)
 
       closeConnection(connexion)
+
+      print("----- Le code GUS a pris : %s secondes -----" %(time.time() - start_time_gus))
+
     f.close()

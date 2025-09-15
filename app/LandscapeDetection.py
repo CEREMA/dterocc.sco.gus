@@ -32,10 +32,20 @@ def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, save_int
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
     result = False
-    if dic_params["ldsc_information"]["lcz_information"]["lcz_data"] != "":
+
+    if dic_params["ldsc_information"]["ocsge"] != "":
+        ocsge = dic_params["ldsc_information"]["ocsge"]
+        emprise = dic_params["shp_zone"]
+        img_ref = dic_params["img_ref"]
+        ldsc_data = landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img_ref, repertory, save_intermediate_result, debug = debug)
+        dic_params["ldsc_information"]["img_landscape"]  = ldsc_data
+        result = True
+
+    elif dic_params["ldsc_information"]["lcz_information"]["lcz_data"] != "":
         ldsc_data = landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory, save_intermediate_result, debug = debug)
         dic_params["ldsc_information"]["img_landscape"]  = ldsc_data
         result = True
+
 
     elif dic_params["ldsc_information"]["img_ocs"] == "" or os.path.exists(dic_params["ldsc_information"]["img_ocs"]):
        # Attention, pour l'instant cette fonction n'est pas opérationnelle, elle sera modifiée et opérationnelle plus tard --> renvoie uniquement un message
@@ -156,13 +166,14 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
         print(query)
     executeQuery(connexion, query)
 
+
     buffer_route = 5
     buffer_eau = 5
 
     tab_route = "lcz_road"
     tab_eau = "lcz_water"
     tab_int = "lcz_inter"
-    tab_buff = "paysage_lcz_buffer"
+    tab_buff = "paysages_buffer"
 
     query = """
     DROP TABLE IF EXISTS %s ;
@@ -208,10 +219,17 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
     query = """
     DROP TABLE IF EXISTS %s ;
     CREATE TABLE %s AS
-        SELECT public.ST_Difference(int.geom, eau.geom) as geom, int.dn FROM %s AS eau, %s AS int
+        SELECT
+            int.dn,
+            CASE
+            WHEN eau.geom IS NULL THEN int.geom
+            WHEN NOT EXISTS (SELECT 1 FROM your_table) THEN int.geom
+            ELSE public.ST_Difference(int.geom, eau.geom)
+            END as geom
+            FROM %s AS eau, %s AS int
         UNION
-        SELECT geom, dn FROM %s ;
-    """ %(tab_buff, tab_buff, tab_eau, tab_int, tab_eau)
+        SELECT dn, geom FROM %s ;
+    """ %(tab_buff, tab_buff,  tab_eau, tab_int, tab_eau)
 
     if debug >= 3:
         print(query)
@@ -220,7 +238,6 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
 
 
     query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_buff, 'geom', 'geom', 'geom')
-    #query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_int, 'geom', 'geom', 'geom')
     executeQuery(connexion, query)
 
     # Création du chemin d'accès pour la sauvegarde de la couche paysage
@@ -229,8 +246,6 @@ def landscapeDetectionLCZEdition(connexion, connexion_dic, dic_params, repertory
     landscape_tif_file = repertory + os.sep + 'paysages.tif'
 
     # 6# Export du résultat au format GPKG
-    #exportVectorByOgr2ogr(connexion_dic["dbname"], landscape_gpkg_file_buff, tab_int, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-
     exportVectorByOgr2ogr(connexion_dic["dbname"], landscape_gpkg_file_buff, tab_buff, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
 
     # Préparation des noms de fichiers intermédiaires
@@ -512,7 +527,35 @@ def urbanLandscapeDetection(connexion, connexion_dic ,dic_params, repertory, sav
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
 
-    if dic_params["ldsc_information"]["lcz_information"]["lcz_data"] != "":
+    if dic_params["ldsc_information"]["ocsge"] != "":
+
+        tab_pay_final = "paysage_lev1"
+        tab_urbain = "paysages_urbain"
+
+        query = """
+        DROP TABLE IF EXISTS %s;
+        CREATE TABLE %s AS
+            SELECT * FROM %s
+            WHERE dn = 1 ;
+        """ %(tab_urbain, tab_urbain,tab_pay_final)
+
+        if debug >= 3:
+            print(query)
+        executeQuery(connexion, query)
+
+        # Création du chemin d'accès pour la sauvegarde de la couche paysage
+        urban_gpkg_file = repertory + os.sep + 'paysages_urbains.gpkg'
+
+        # 6# Export du résultat au format GPKG
+        exportVectorByOgr2ogr(connexion_dic["dbname"], urban_gpkg_file, tab_urbain, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+
+        dic_params["ldsc_information"]["lcz_urbain"]  = urban_gpkg_file
+
+        if not save_intermediate_result :
+            dropTable(connexion, tab_urbain)
+
+
+    elif dic_params["ldsc_information"]["lcz_information"]["lcz_data"] != "":
 
         lcz_data = dic_params["ldsc_information"]["lcz_information"]["lcz_data"]
         extension = os.path.splitext(lcz_data)[1]
@@ -556,8 +599,6 @@ def urbanLandscapeDetection(connexion, connexion_dic ,dic_params, repertory, sav
             print(query)
         executeQuery(connexion, query)
 
-        boundaryLandscapeDetection(connexion, tab_lcz, debug)
-
         # Création du chemin d'accès pour la sauvegarde de la couche paysage
         urban_gpkg_file = repertory + os.sep + 'paysages_urbains.gpkg'
 
@@ -567,7 +608,7 @@ def urbanLandscapeDetection(connexion, connexion_dic ,dic_params, repertory, sav
         dic_params["ldsc_information"]["lcz_urbain"]  = urban_gpkg_file
 
         if not save_intermediate_result :
-            #removeFile(lcz_cut)
+            removeVectorFile(lcz_cut)
             dropTable(connexion, tab_lcz)
             dropTable(connexion, tab_urbain)
 
@@ -579,40 +620,355 @@ def urbanLandscapeDetection(connexion, connexion_dic ,dic_params, repertory, sav
     return dic_params
 
 
-###########################################################################################################################################
-# FONCTION boundaryLandscapeDetection()                                                                                                           #
-###########################################################################################################################################
-def boundaryLandscapeDetection(connexion, tab_lcz,debug = 0):
 
+###########################################################################################################################################
+# FONCTION landscapeDetectionOCSGEEdition()                                                                                                 #
+###########################################################################################################################################
+
+def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img_ref, repertory, save_intermediate_result = False, debug = 0):
     """
-    Rôle :
+    Rôle : création d'une couche vecteur et raster "paysage" à partir des données OCSGE
 
     Paramètres :
         connexion : correspond à la variable de connexion à la base de données
-        connexion_dic : ictionnaire des paramètres de connexion selon le modèle : {"dbname" : '', "user_db" : '', "password_db" : '', "server_db" : '', "port_number" : '', "schema" : ''}
-        dic_params : dictionnaire des paramètres pour calculer les attributs descriptifs des formes végétales
+        connexion_dic : dictionnaire des paramètres de connexion selon le modèle : {"dbname" : '', "user_db" : '', "password_db" : '', "server_db" : '', "port_number" : '', "schema" : ''}
+        ocsge : couche OCSGE
+        emprise : emprise de la zone d'étude
         repertory : repertoire pour sauvegarder les fichiers temporaires produits
         save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaires. Par défaut : False
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
     """
 
 
-    # Récupération des contours urbains pour le découpage des différentes strates
+    eau = "CS1.2.2"
+    aef1 =  ["US1.1", "US1.2"]
+    aef2 = ["US2", "US3", "US5", "US6.1" ] # ET 'CS2%' ET seuil > 10000
+    aef3 = ["US6.2" , "US6.3", "US6.6"] #ET 'CS2%'
+    amn1 = [ "US1.3", "US1.4", "US1.5"]
+    amn2 = ["US6.2", "US6.3", "US6.6"] # ET PAS 'CS2%'
+    urbain = ["US2", "US3", "US5", "US6.1"] # ET PAS 'CS2%' ET seuil <= 10000
+    voirie = "US4%"
 
-    tab_cut = 'contours_lcz'
+    field_cs = "CODE_CS"
+    field_us = "CODE_US"
+    seuil_1 = "5000"
+    seuil_2 = "20000"
+    cs2 = "CS2%"
+    cs21 = "CS2.1%"
+    cs22 = "CS2.2%"
+
+
+    extension = os.path.splitext(ocsge)[1]
+    ocsge_cut = repertory + os.sep + "ocsge_cut_etude" + extension
+    landscape = repertory + os.sep + "paysage.gpkg"
+    if extension == '.shp':
+        format_vector = 'ESRI Shapefile'
+    else:
+        format_vector = 'GPKG'
+
+    # 1# Découper la couche vecteur OCSGE selon l'emprise de la zone d'étude
+    cutoutVectors(emprise , [ocsge], [ocsge_cut] , overwrite=True, format_vector=format_vector)
+
+    # 2# Import du fichier vecteur OCSGE en base
+    tab_ocsge = "tab_ocsge"
+    importVectorByOgr2ogr(connexion_dic["dbname"], ocsge_cut, tab_ocsge, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+
+    # 3# Création de la table paysage
+    tab_pay = "paysages_ocsge_sort"
 
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-        SELECT public.ST_UNION(public.ST_Boundary(geom)) as geom
-        FROM %s
-    """ %(tab_cut, tab_cut, tab_lcz)
+    """  %(tab_pay, tab_pay)
+
+    # 3.1# Regroupement de tous les OCSGE appartennant au milieu urbanisé
+    query += """
+    SELECT *, 1 AS dn
+    FROM %s
+    WHERE %s in %s AND NOT ((%s LIKE '%s' AND public.ST_AREA(geom) > %s) OR (%s LIKE '%s' AND public.ST_AREA(geom) > %s)) AND %s != '%s'
+    """ %(tab_ocsge, field_us, tuple(urbain), field_cs, cs21, seuil_1, field_cs, cs22, seuil_2, field_cs, eau)
+
+    # 3.2# Regroupement de tous les OCSGE appartennant aux voiries et infrastructures
+    query += """
+    UNION
+    SELECT *, 2 AS dn
+    FROM %s
+    WHERE %s LIKE '%s' AND %s != '%s'
+    """ %(tab_ocsge, field_us, voirie, field_cs, eau)
+
+    # 3.3# Regroupement de tous les OCSGE appartennant aux étendues et cours d'eau
+    query += """
+    UNION
+    SELECT *, 3 AS dn
+    FROM %s
+    WHERE %s = '%s'
+    """ %(tab_ocsge, field_cs, eau)
+
+    # 3.4# Regroupement de tous les OCSGE appartennant aux milieux agricoles et forestiers
+    query += """
+    UNION
+    SELECT *, 4 AS dn
+    FROM %s
+    WHERE %s in %s AND %s != '%s'
+    """ %(tab_ocsge, field_us, tuple(aef1), field_cs, eau)
+
+    query += """
+    UNION
+    SELECT *, 4 AS dn
+    FROM %s
+    WHERE %s in %s AND ((%s LIKE '%s' AND public.ST_AREA(geom) > %s) OR (%s LIKE '%s' AND public.ST_AREA(geom) > %s)) AND %s != '%s'
+    """ %(tab_ocsge, field_us, tuple(aef2), field_cs, cs21, seuil_1, field_cs, cs22, seuil_2, field_cs, eau)
+
+    query += """
+    UNION
+    SELECT *, 4 AS dn
+    FROM %s
+    WHERE %s in %s AND %s LIKE '%s' AND %s != '%s'
+    """ %(tab_ocsge, field_us, tuple(aef3), field_cs, cs2, field_cs, eau)
+
+    # 3.5# Regroupement de tous les OCSGE appartennant aux autres milieux naturels
+    query += """
+    UNION
+    SELECT *, 5 AS dn
+    FROM %s
+    WHERE %s in %s AND %s != '%s'
+    """ %(tab_ocsge, field_us, tuple(amn1), field_cs, eau)
+
+    query += """
+    UNION
+    SELECT *, 5 AS dn
+    FROM %s
+    WHERE %s in %s AND %s NOT LIKE '%s' AND %s != '%s' ;
+    """ %(tab_ocsge, field_us, tuple(amn2), field_cs, cs2, field_cs, eau)
 
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
-    addSpatialIndex(connexion, tab_cut)
+    #Ajouter un ID uniq
+    # Selectionner les segments qui correspondent aux conditions (dn = 1, CS LIKE 'CS2%', touche de l'aef)
+    # Calcul périmètre et longueur qui touche de l'aef pour les segments concernés
+    # Si longueur_touche_aef/périmètre >= 0.5, update dn = 4
+
+    addSpatialIndex(connexion, tab_pay)
+
+    tab_aef = "paysage_aef"
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+    SELECT * FROM %s WHERE dn = 4
+    """ %(tab_aef, tab_aef, tab_pay)
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+    addSpatialIndex(connexion, tab_aef)
+
+
+    tab_urb_touch_aef = "urbain_cs2_touch_aef"
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT DISTINCT t1.* FROM %s as t1, %s AS t2
+        WHERE t1.%s LIKE '%s' AND public.ST_TOUCHES(t1.geom, t2.geom) AND t1.dn = 1;
+    """ %(tab_urb_touch_aef, tab_urb_touch_aef, tab_pay, tab_aef, field_cs, cs2)
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+    addSpatialIndex(connexion, tab_urb_touch_aef)
+
+
+    tab_long_urb = "long_urb_touch_aef"
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT t1.fid, t1.geom, t1.dn, public.ST_PERIMETER(t1.geom) AS long_bound, t3.long_bound_inters_aef AS long_bound_inters
+        FROM (
+             SELECT t2.fid, SUM(public.ST_LENGTH(t2.geom_bound_inters_aef)) AS long_bound_inters_aef
+             FROM (
+                    SELECT t1.fid, t1.geom, aef.fid AS fid_arbo, public.ST_INTERSECTION(public.ST_BOUNDARY(t1.geom),public.ST_INTERSECTION(t1.geom, aef.geom)) AS geom_bound_inters_aef
+                    FROM  %s AS t1, %s AS aef
+                    WHERE public.ST_INTERSECTS(t1.geom,aef.geom) AND t1.fid != aef.fid
+                    ) AS t2
+             GROUP BY t2.fid
+             ) AS t3, %s AS t1
+        WHERE t1.fid = t3.fid;
+    """ %(tab_long_urb, tab_long_urb, tab_urb_touch_aef, tab_aef, tab_urb_touch_aef)
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    query = """
+    ALTER TABLE %s
+        ADD long_bound_perc float ;
+    UPDATE %s
+        SET long_bound_perc = long_bound_inters / long_bound ;
+    """ %(tab_long_urb, tab_long_urb)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    query = """
+    UPDATE %s
+        SET dn = 4
+        WHERE long_bound_perc >= 0.5 ;
+    """%(tab_long_urb)
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    query = """
+    UPDATE %s as pay
+        set dn = inters.dn
+        FROM %s as inters
+        WHERE pay.fid = inters.fid ;
+    """%(tab_pay, tab_long_urb)
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+
+    tab_pay_union = "paysage_lev1_union"
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+    SELECT dn, public.ST_UNION(geom) as geom FROM %s
+    GROUP BY dn ;
+    """ %(tab_pay_union, tab_pay_union, tab_pay)
+
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    buffer_route = 5
+    buffer_eau = 5
+
+    tab_route = "ocsge_road"
+    tab_eau = "ocsge_water"
+    tab_int = "ocsge_inter"
+    tab_buff = "paysage_ocsge_buffer"
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT public.ST_BUFFER(geom, %s) AS geom, dn
+        FROM %s WHERE dn = 2 ;
+    """ %(tab_route, tab_route, buffer_route, tab_pay_union)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    addSpatialIndex(connexion, tab_route)
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT public.ST_BUFFER(geom, %s) AS geom, dn
+        FROM %s WHERE dn = 3 ;
+    """ %(tab_eau, tab_eau, buffer_eau, tab_pay_union)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    addSpatialIndex(connexion, tab_route)
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT public.ST_Difference(ocs.geom, route.geom) as geom, ocs.dn FROM %s AS route, %s AS ocs WHERE ocs.dn = 1 OR ocs.dn = 4 OR ocs.dn = 5
+        UNION
+        SELECT geom, dn FROM %s ;
+    """ %(tab_int, tab_int, tab_route, tab_pay_union, tab_route)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    addSpatialIndex(connexion, tab_int)
+
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+        SELECT
+            int.dn,
+            CASE
+            WHEN eau.geom IS NULL THEN int.geom
+            ELSE public.ST_Difference(int.geom, eau.geom)
+            END as geom
+            FROM %s AS eau, %s AS int
+        UNION
+        SELECT dn, geom FROM %s ;
+    """ %(tab_buff, tab_buff, tab_eau, tab_int, tab_eau)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+    tab_pay_final = "paysage_lev1"
+
+    query = """
+    DROP TABLE IF EXISTS %s ;
+    CREATE TABLE %s AS
+    SELECT dn, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom as geom FROM %s
+    GROUP BY dn ;
+    """ %(tab_pay_final, tab_pay_final, tab_buff)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
+
+    query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_pay_final, 'geom', 'geom', 'geom')
+    executeQuery(connexion, query)
+
+    # Création du chemin d'accès pour la sauvegarde de la couche paysage
+    landscape_gpkg_file_buff = repertory + os.sep + 'paysages_buff_temp.gpkg'
+    landscape_gpkg_file = repertory + os.sep + 'paysages_buff_ocsge.gpkg'
+    landscape_tif_file = repertory + os.sep + 'paysages.tif'
+
+    # 6# Export du résultat au format GPKG
+    exportVectorByOgr2ogr(connexion_dic["dbname"], landscape_gpkg_file_buff, tab_pay_final, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+
+    # Préparation des noms de fichiers intermédiaires
+
+    # 7# Découper la couche vecteur selon l'emprise de la zone d'étude
+    command = "ogr2ogr -clipsrc %s %s %s  -nlt POLYGONE -overwrite -f GPKG" %(emprise, landscape_gpkg_file, landscape_gpkg_file_buff)
+    exit_code = os.system(command)
+
+    if debug >=2:
+        print(command)
+    exit_code = os.system(command)
+    if exit_code != 0:
+        print(cyan + "Découpage des paysages sur la zone de travail : " + bold + red + "!!! Une erreur c'est produite au cours du découpage du vecteur : " + landscape_gpkg_file_buff + endC, file=sys.stderr)
+    if debug >=2:
+        print(cyan + "Découpage des paysages sur la zone de travail : " + endC + "Le fichier vecteur " + landscape_gpkg_file_buff + " a ete decoupe resultat : " + landscape_gpkg_file + " type geom = POLYGONE")
+
+
+    # 7# Conversion au format raster
+    rasterizeVector(landscape_gpkg_file, landscape_tif_file, img_ref, 'dn', codage="uint8", ram_otb=10000)
+
+    # Suppression des fichiers et tables inutiles
+    if not save_intermediate_result :
+        dropTable(connexion, tab_aef)
+        dropTable(connexion, tab_urb_touch_aef)
+        dropTable(connexion, tab_long_urb)
+        dropTable(connexion, tab_pay_union)
+        dropTable(connexion, tab_ocsge)
+        dropTable(connexion, tab_pay)
+        dropTable(connexion, tab_route)
+        dropTable(connexion, tab_eau)
+        dropTable(connexion, tab_int)
+        dropTable(connexion, tab_buff)
+        removeFile(landscape_gpkg_file_buff)
+        removeFile(ocsge_cut)
+
+    return landscape_tif_file
 
 
 

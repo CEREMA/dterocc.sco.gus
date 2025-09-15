@@ -171,7 +171,7 @@ def heightIndicators(connexion, connexion_dic, tab_ref, columnnamelist, img_mnh,
     exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
 
     # Calcul des statistiques de hauteur : min, max, mediane et écart-type
-    col_to_add_list = ["min", "max", "median", "mean","std"]
+    col_to_add_list = ["percentile_10", "percentile_90", "median", "mean","std"]
     col_to_delete_list = ["unique", "range"]
     class_label_dico = {}
     statisticsVectorRaster(img_mnh, filetablevegin, filetablevegout, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
@@ -185,11 +185,11 @@ def heightIndicators(connexion, connexion_dic, tab_ref, columnnamelist, img_mnh,
     for id in range(len(columnnamelist)):
         if "h_max" in columnnamelist[id] :
             query = """
-            UPDATE %s as t1 SET %s = t2.max FROM %s AS t2 WHERE t2.fid = t1.fid;
+            UPDATE %s as t1 SET %s = t2.centile_90 FROM %s AS t2 WHERE t2.fid = t1.fid;
             """ %(tab_ref, columnnamelist[id], tab_refout)
         elif "h_min" in columnnamelist[id] :
             query = """
-            UPDATE %s as t1 SET %s = t2.min FROM %s AS t2 WHERE t2.fid = t1.fid;
+            UPDATE %s as t1 SET %s = t2.centile_10 FROM %s AS t2 WHERE t2.fid = t1.fid;
             """ %(tab_ref,columnnamelist[id], tab_refout)
         elif "h_moy" in columnnamelist[id] :
             query = """
@@ -507,6 +507,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
         debug : niveau de debug pour l'affichage des commentaires. Par défaut : 0
 
     """
+
     # Création du dossier temporaire et des fichiers temporaires
     if repertory == '':
         repertory = os.path.dirname(img_ref) + os.sep + 'TMP_CALC_INDICATEURS_TYPESOL'
@@ -529,8 +530,8 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     os.system(cmd_mask_surfveg)
 
     # Calcul du masque imperméable
-    cmd_mask_surfnonveg = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1<%s)?1:0'" %(img_ndvi_wtr, img_surf_nonveg, seuil)
-    os.system(cmd_mask_surfnonveg)
+    # cmd_mask_surfnonveg = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1<%s)?1:0'" %(img_ndvi_wtr, img_surf_nonveg, seuil)
+    # os.system(cmd_mask_surfnonveg)
 
     # Statistiques zonales sur les polygones de formes végétales concernées : tous les segments appartennant à la strate arborée et arbustive
     col_to_add_list = []
@@ -538,35 +539,34 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     class_label_dico = {0:'non', 1:'oui'}
     statisticsVectorRaster(img_surf_veg, filetablevegin, vect_fv_surfveg_out, band_number=1,enable_stats_all_count = True, enable_stats_columns_str = False, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
-    statisticsVectorRaster(img_surf_nonveg, filetablevegin, vect_fv_surfnonveg_out, band_number=1,enable_stats_all_count = True, enable_stats_columns_str = False, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+    #statisticsVectorRaster(img_surf_nonveg, filetablevegin, vect_fv_surfnonveg_out, band_number=1,enable_stats_all_count = True, enable_stats_columns_str = False, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
     # Import des données dans la BD et concaténation des colonnes
     table_surfveg = 'tab_fv_surfveg'
     importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_surfveg_out, table_surfveg, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
-    table_surfnonveg = 'tab_fv_surfnonveg'
-    importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_surfnonveg_out, table_surfnonveg, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
+    #table_surfnonveg = 'tab_fv_surfnonveg'
+    #importVectorByOgr2ogr(connexion_dic["dbname"], vect_fv_surfnonveg_out, table_surfnonveg, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], epsg=str(2154))
 
     query = """
     DROP TABLE IF EXISTS tab_indic_surfveg_nonveg;
     CREATE TABLE tab_indic_surfveg_nonveg AS
-        SELECT t1.fid AS fid, t1.oui AS surfveg_count, t2.oui AS surfnonveg_count
-        FROM %s AS t1, %s AS t2
-        WHERE t1.fid = t2.fid;
-    """ %(table_surfveg,table_surfnonveg)
+        SELECT t1.fid AS fid, t1.oui AS surfveg_count, t1.non AS surfnonveg_count
+        FROM %s AS t1;
+    """ %(table_surfveg)
 
     # Exécution de la requête SQL
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
 
-    # Update de l'attribut perc_caduque et perc_persistant
+    # Update de l'attribut type_sol
     query = """
-     UPDATE %s AS t SET %s = 'surface vegetalisee' FROM tab_indic_surfveg_nonveg AS t2 WHERE t.fid = t2.fid AND t2.surfveg_count >= 50.0;
+     UPDATE %s AS t SET %s = 'surface vegetalisee' FROM tab_indic_surfveg_nonveg AS t2 WHERE t.fid = t2.fid AND t2.surfveg_count >= 50.0 ;
     """ %(tab_ref, column_indic_name)
 
     query += """
-     UPDATE %s AS t SET %s = 'surface non vegetalisee' FROM tab_indic_surfveg_nonveg AS t2 WHERE t.fid = t2.fid AND t2.surfveg_count < 50.0;
+     UPDATE %s AS t SET %s = 'surface non vegetalisee' FROM tab_indic_surfveg_nonveg AS t2 WHERE t.fid = t2.fid AND t2.surfveg_count < 50.0 ;
     """ %(tab_ref, column_indic_name)
 
     # Exécution de la requête SQL
@@ -577,7 +577,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     # Correction pour les boisements et la strate herbacée --> hypothèse que ce n'est que du sol végétalisé sous-jacent
     # La détection des boisements n'est pas encore optimisée étant donné que les tâches arborées et arbustives sont pour l'instant classées en "boisement"
     query = """
-    UPDATE %s AS t SET %s = 'surface vegetalisee' WHERE t.fv in ('BOA', 'BOAu', 'PR', 'C', 'PE');
+    UPDATE %s AS t SET %s = 'surface vegetalisee' WHERE t.fv in ('BOA', 'BOAu', 'PR', 'C', 'PE') ;
     """ %(tab_ref, column_indic_name)
 
     #query = """
@@ -591,7 +591,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
 
     # Correction pour les couverts persistants --> on ne fournit aucune information
     query = """
-    UPDATE %s SET %s = '' WHERE %s >= 80;
+    UPDATE %s SET %s = '' WHERE %s > 20;
     """ %(tab_ref, column_indic_name, column_indic_persistant)
 
     # Exécution de la requête SQL
@@ -606,7 +606,6 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     # Suppression des tables intermédiaires
     dropTable(connexion, 'tab_indic_surfveg_nonveg')
     dropTable(connexion, table_surfveg)
-    dropTable(connexion, table_surfnonveg)
 
     return
 
