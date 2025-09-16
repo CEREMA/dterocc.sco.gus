@@ -29,7 +29,6 @@ if __name__ == "__main__":
 
     debug = 1
     save_intermediate_result = False
-    start_time_gus = time.time()
 
     ##############################
     # RECUPERATION DES VARIABLES #
@@ -93,8 +92,6 @@ if __name__ == "__main__":
     path_image_assemble = path_data_prod + os.sep + 'TMP_IMG_ASSEMBLE'
     path_img_cut = path_data_prod + os.sep + 'TMP_IMG_CUT'
 
-    # Dossier de sauvegarde des résultats d'extraction de la végétation
-    # path_extractveg = path_prj + os.sep + '1-ExtractionVegetation'
 
     # Dossier de sauvegarde des résultats de distinction des strates verticales végétales
     path_stratesveg = path_prj + os.sep + '2-DistinctionStratesV'
@@ -109,7 +106,7 @@ if __name__ == "__main__":
     path_landscape = path_prj + os.sep + '1-Paysages'
 
 
-    ##Création des répertoires s'ils n'existent pas
+    ## Création des répertoires s'ils n'existent pas
     if  not os.path.exists(path_prj):
       os.makedirs(path_prj)
 
@@ -240,7 +237,7 @@ if __name__ == "__main__":
     }
 
     dic_vegetation_detection = {
-          "vegetation_detection_step" : config["steps_to_run"]["vegetation_extraction"]
+          "vegetation_detection_step" : config["steps_to_run"]["vegetation_extraction"],
           "vegetation_mask" : config["data_entry"]["entry_options"]["mask_vegetation"]
       }
 
@@ -397,17 +394,6 @@ if __name__ == "__main__":
     img_ref_pan_assemble = assemblyRasters(shp_zone, rep_img_ref_PAN, img_ref_pan_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
     img_winter_assemble = assemblyRasters(shp_zone, rep_img_winter, img_winter_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
 
-    # Alignement de l'image d'hiver et de l'image pan sur l'image d'été
-    '''
-    cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_ref_assemble, img_winter_assemble, img_winter_assemble_SI)
-    os.system(cmd_superimpose)
-
-    cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_ref_assemble, img_ref_pan_assemble, img_pan_assemble_SI)
-    os.system(cmd_superimpose)
-
-    cmd_superimpose = 'otbcli_Superimpose -inr %s -inm %s -out %s' %(img_winter_assemble, img_ref_assemble, img_ref_assemble_SI)
-    os.system(cmd_superimpose)
-    '''
     # Découpage des images sur l'emprise
     cutImageByVector(shp_zone ,img_ref_assemble, img_ref)
     cutImageByVector(shp_zone ,img_ref_pan_assemble, img_ref_PAN)
@@ -559,6 +545,7 @@ if __name__ == "__main__":
       tab_ref_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, img_ref, output_stratesv_layers, sgts_veg, sgts_tree, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = save_intermediate_result, overwrite = True, debug = debug)
 
       closeConnection(connexion)
+
 
       print(bold + green + "\nLa distinction des strates vertciales végétales s'est bien déroulée. Le résultat est disponible dans la table %s et dans le(s) fichier(s) %s"%(tab_ref_stratesv, output_stratesv_layers) + endC)
     else :

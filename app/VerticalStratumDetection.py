@@ -23,7 +23,7 @@ from Lib_postgis import readTable, executeQuery, addColumn, addUniqId, addIndex,
 ###########################################################################################################################################
 def vegetationMask(dic_ndvi, img_ref, img_output, dic_ndvi_threshold , overwrite = False, save_intermediate_result = False):
     """
-    Rôle : créé un masque de végétation à partir d'une image classifiée
+    Rôle : créé un masque de végétation à partir d'un seuil NDVI
 
     Paramètres :
         img_input : dictionnaire des images NDVI
@@ -37,8 +37,6 @@ def vegetationMask(dic_ndvi, img_ref, img_output, dic_ndvi_threshold , overwrite
 
     ndvi_threshold_summer = dic_ndvi_threshold["threshold_summer"]
     ndvi_threshold_winter = dic_ndvi_threshold["threshold_winter"]
-    #ndvi_threshold_min_veg_summer = dic_ndvi_threshold["threshold_min_vegetation_summer"]
-    #ndvi_threshold_min_veg_winter = dic_ndvi_threshold["threshold_min_vegetation_winter"]
     umc_pixels = dic_ndvi_threshold["umc_pixels"]
 
     vegetation = os.path.splitext(img_output)[0] + '_tmp' + os.path.splitext(img_output)[1]
@@ -61,34 +59,9 @@ def vegetationMask(dic_ndvi, img_ref, img_output, dic_ndvi_threshold , overwrite
     if exitCode != 0:
         print(cmd_mask)
         raise NameError(bold + red + "vegetationMask() : une erreur est apparue lors de la création du masque de végétation (commande otbcli_BandMath)" + endC)
-    '''
-    # Création d'un masque sur le seuil en dessous duquel ce n'est forcément pas de la végétation
-    exp = '"(im1b1>=' + str(ndvi_threshold_min_veg_summer) + ' && im2b1>=' + str(ndvi_threshold_min_veg_winter) + ' ?1:0)"'
-    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(ndvi_summer, ndvi_winter, non_vegetation, exp)
 
-    exitCode = os.system(cmd_mask)
 
-    if exitCode != 0:
-        print(cmd_mask)
-        raise NameError(bold + red + "vegetationMask() : une erreur est apparue lors de la création du masque de végétation (commande otbcli_BandMath)" + endC)
-    '''
-
-    # Création du masque du RPG
-    #vegetationMaskRPG(dic_rpg, mask_rpg, img_ref, non_vegetation, overwrite, save_intermediate_result)
-
-    # Somme du masque NDVI et du masque RPG pour compléter la détection de la végétation
-    '''
-    exp = '"(im1b1 + im2b1 >= 1 ? 1 : 0)"'
-    cmd_mask = "otbcli_BandMath -il %s %s -out %s -exp %s" %(mask_ndvi, mask_rpg, vegetation, exp)
-
-    exitCode = os.system(cmd_mask)
-
-    if exitCode != 0:
-        print(cmd_mask)
-        raise NameError("une erreur est apparue lors de la création du masque de végétation (commande otbcli_BandMath)")
-    '''
-
-    #Remplissage des trous dans le masques
+    # Remplissage des trous dans le masques
     command = "gdal_sieve.py -st %d -8 %s %s" %(umc_pixels, mask_ndvi, vegetation)
 
     exitCode = os.system(command)
@@ -155,7 +128,7 @@ def mnhTreeThreshold(mnh, mask_veg, mask_output, file_output, threshold = 10, um
     exitCode = os.system(cmd_mask)
 
 
-    #Remplissage des trous dans le masques
+    # Remplissage des trous dans le masques
     command = "gdal_sieve.py -st %d -8 %s %s" %(umc_pixels, mask_mnh, mask_mnh_filled)
 
     exitCode = os.system(command)
@@ -182,6 +155,8 @@ def mnhTreeThreshold(mnh, mask_veg, mask_output, file_output, threshold = 10, um
     if not save_intermediate_result :
         removeFile(mask_mnh)
         removeFile(mask_mnh_filled)
+
+    return
 
 
 
@@ -312,20 +287,7 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     ## Création et export en base de la couche des segments végétation ##
     #####################################################################
 
-    '''
-    # Nettoyage en base si ré-écriture
-    if overwrite == True:
-        query ="""
-        SELECT format('DROP TABLE %s.%s', table_schema, table_name)
-        FROM information_schema.tables
-        WHERE table_schema = '%s';
-        """ %('%I', '%I',connexion_dic["schema"])
-        cursor = connexion.cursor()
-        cursor.execute(query)
-        tables_schema = cursor.fetchall()
-        for el in tables_schema:
-            executeQuery(connexion, el[0])
-    '''
+
     # Fichiers intermédiaires
     repertory_output = os.path.dirname(output_layers["output_stratesv"])
     file_name = os.path.splitext(os.path.basename(sgts_input))[0]
@@ -419,20 +381,6 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         print(query)
     executeQuery(connexion, query)
 
-    # Traitement des artefacts au reflet blanc
-    #tab_sgt_txt_val0 = 'segments_txt_val0'
-    #query = """
-    #CREATE TABLE %s AS
-    #    SELECT *
-    #    FROM %s
-    #    WHERE txt = 0;
-    #DELETE FROM %s WHERE txt = 0;
-    #""" %(tab_sgt_txt_val0, tab_sgt_ini, tab_sgt_ini)
-    # Exécution de la requête SQL
-    #if debug >= 3:
-    #    print(query)
-    #executeQuery(connexion, query)
-
     # Suppression des deux tables txt et mnh
     if tablename_txt != '' :
         dropTable(connexion, tablename_txt)
@@ -473,13 +421,10 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     # Ajout d'un index spatial
     addSpatialIndex(connexion, tab_ref0)
 
-    #addIndex(connexion, tab_ref0, 'fid', 'idx_fid_'+tab_ref)
 
     # Ajout de l'attribut "strate"
     addColumn(connexion, tab_ref0, 'strate', 'varchar(100)')
 
-    #if not save_intermediate_result:
-    #    dropTable(connexion, tab_sgt_txt_val0)
 
     #####################################################################
     ## Première étape : classification générale, à partir de règles de ##
@@ -516,9 +461,6 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         UPDATE %s as t SET strate = 'H' WHERE t.txt  >= %s;
         """ %(tab_ref0, dic_seuil["texture_thr"])
 
-    # query += """
-    # UPDATE %s as t SET strate = 'H' WHERE t.txt < %s AND t.mnh <= %s;
-    # """ %(tab_ref, dic_seuil["texture_thr"], dic_seuil["height_shrubgrass_thr"])
 
     # Exécution de la requête SQL
     if debug >= 3:
@@ -547,8 +489,6 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
 
     addIndex(connexion, tab_ref, 'fid', 'idx_fid_'+tab_ref)
 
-    # Ajout de l'attribut "strate"
-    # addColumn(connexion, tab_ref, 'strate', 'varchar(100)')
 
     if not save_intermediate_result :
         dropTable(connexion, tablename_tree)
@@ -556,45 +496,6 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         removeFile(sgts_tree_out)
         removeFile(file_mnh_out)
 
-
-    ##############################################################################
-    ### ajout EB 01/11/24 : enregistrement fic intermediaires resultats 1ere etape = > a supprimer apres le test
-    '''
-    query = """
-    DROP TABLE IF EXISTS sgts_strate_arboree;
-    CREATE TABLE sgts_strate_arboree AS
-        SELECT *
-        FROM %s
-        WHERE strate = 'A';
-    """ %(tab_ref)
-    executeQuery(connexion, query)
-    exportVectorByOgr2ogr(connexion_dic["dbname"], '/mnt/RAM_disk/ProjetGUS/2-DistinctionStratesV/sgts_strate_arboree_1ere_etape.gpkg', 'sgts_strate_arboree', user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-    dropTable(connexion, 'sgts_strate_arboree')
-
-    query = """
-    DROP TABLE IF EXISTS sgts_strate_arbustive;
-    CREATE TABLE sgts_strate_arbustive AS
-        SELECT *
-        FROM %s
-        WHERE strate = 'Au';
-    """ %(tab_ref)
-    executeQuery(connexion, query)
-    exportVectorByOgr2ogr(connexion_dic["dbname"], '/mnt/RAM_disk/ProjetGUS/2-DistinctionStratesV/sgts_strate_arbustive_1ere_etape.gpkg', 'sgts_strate_arbustive', user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-    dropTable(connexion, 'sgts_strate_arbustive')
-
-    query = """
-    DROP TABLE IF EXISTS sgts_strate_herbace;
-    CREATE TABLE sgts_strate_herbace AS
-        SELECT *
-        FROM %s
-        WHERE strate = 'H';
-    """ %(tab_ref)
-    executeQuery(connexion, query)
-    exportVectorByOgr2ogr(connexion_dic["dbname"], '/mnt/RAM_disk/ProjetGUS/2-DistinctionStratesV/sgts_strate_herbacee_1ere_etape.gpkg', 'sgts_strate_herbace', user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
-    dropTable(connexion, 'sgts_strate_herbace')
-    '''
-
-    ##############################################################################
 
     #####################################################################
     ## Deuxième étape : reclassification des segments arbustifs        ##
@@ -660,10 +561,6 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
 
     tab_ref = reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil, save_intermediate_result, debug)
 
-    if not save_intermediate_result :
-        dropTable(connexion, tab_rgpt_arbu)
-        dropTable(connexion, tab_arbu_de_rgpt)
-        dropTable(connexion, tab_arbu_uniq)
 
     # Ajout de la colonne pour la sauvegarde au format raster
     addColumn(connexion, tab_ref, 'strate_r', 'int')
@@ -686,6 +583,14 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
+
+
+    if not save_intermediate_result :
+        dropTable(connexion, tab_rgpt_arbu)
+        dropTable(connexion, tab_arbu_de_rgpt)
+        dropTable(connexion, tab_arbu_uniq)
+        dropTable(connexion, tab_sgt_ini)
+        removeFile(sgts_tree)
 
     #############################################################
     ## Sauvegarde des résultats en tant que couche vectorielle ##
@@ -738,10 +643,6 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         rasterizeVector(output_layers["output_stratesv"], raster_output,  img_ref, 'fv_r', codage="uint8", ram_otb=0)
         # suppression de la colonne non utile "strate_r"
         dropColumn(connexion, tab_ref, 'strate_r')
-
-    print(bold + temps_prep + endC)
-    print(bold + temps_etape1 + endC)
-    print(bold + temps_etape2 + endC)
 
     return tab_ref
 
@@ -1916,7 +1817,9 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
         dropTable(connexion, 'rgpt_arbu_surf_stats3')
         dropTable(connexion, 'surface_rgpts')
         dropTable(connexion, 'h_moys')
+        dropTable(connexion, 'rgpt_herbarbotouch_longbound')
         dropTable(connexion, 'arbu_rgpt_treat')
+        dropTable(connexion, tab_rgpt_to_treat)
 
 
     return tab_ref
@@ -2663,6 +2566,8 @@ def calc_statMedian_multiprocessing(vector_list, image_input, vector_output) :
     for name_file in raster_list :
         removeFile(name_file)
     removeVectorFile(vector_final, format_vector_shp)
+
+    return
 
 
 ###########################################################################################################################################

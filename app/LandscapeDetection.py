@@ -21,7 +21,7 @@ from Lib_vector import cutoutVectors
 ###########################################################################################################################################
 def landscapeDetection(connexion, connexion_dic ,dic_params, repertory, save_intermediate_result = False,debug = 0):
     """
-    Rôle :
+    Rôle : calcul des paysages
 
     Paramètres :
         connexion : correspond à la variable de connexion à la base de données
@@ -913,7 +913,7 @@ def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img
 
     # Création du chemin d'accès pour la sauvegarde de la couche paysage
     landscape_gpkg_file_buff = repertory + os.sep + 'paysages_buff_temp.gpkg'
-    landscape_gpkg_file = repertory + os.sep + 'paysages_buff_ocsge.gpkg'
+    landscape_gpkg_file = repertory + os.sep + 'paysages.gpkg'
     landscape_tif_file = repertory + os.sep + 'paysages.tif'
 
     # 6# Export du résultat au format GPKG
@@ -950,7 +950,7 @@ def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img
         dropTable(connexion, tab_int)
         dropTable(connexion, tab_buff)
         removeFile(landscape_gpkg_file_buff)
-        removeFile(ocsge_cut)
+        removeVectorFile(ocsge_cut)
 
     return landscape_tif_file
 

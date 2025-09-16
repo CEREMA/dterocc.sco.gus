@@ -166,9 +166,11 @@ Attention, si vous ne voulez pas faire tourner toutes les étapes (`steps_to_run
 - `steps_to_run > vertical_stratum_detection` = False -> fournir le schema et la table de la donnée via la balise `vertical_stratum_detection > db_table`
 - `steps_to_run > vegetation_form_stratum_detection` = False -> fournir le schema et la table de la donnée via la balise `vegetation_form_stratum_detection > db_table`
 
-## Auteur
+## Auteurs
 
 Mathilde Segaud - Cerema Toulouse / DT / OSECC (pôle satellite)
+Maëlle Klein - Cerema Toulouse / DT / OSECC (pôle satellite)
+Gilles Fouvet - Cerema Toulouse / DT / OSECC (pôle satellite)
 
 ## Diagramme de classe
 

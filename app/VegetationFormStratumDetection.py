@@ -12,13 +12,12 @@ import geopandas as gpd
 # Import des librairies de /libs
 from Lib_postgis import topologyCorrections, addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, getAllColumns
 from Lib_display import endC, bold, yellow, cyan, red
-from CrossingVectorRaster import statisticsVectorRaster
 from Lib_file import removeFile, removeVectorFile, deleteDir
 from Lib_raster import rasterizeVector, cutImageByVector
-from Lib_vector import getEmpriseVector, differenceVector
+from Lib_vector import getEmpriseVector, differenceVector, cutVectorAll
 from Lib_grass import initializeGrass, cleanGrass, simplificationGrass
-from Lib_vector import cutVector
-from ScriptsSegmentationMorphologique.PolygonsMerging import mergeSmallPolygons, findAdjacentPolygons
+from CrossingVectorRaster import statisticsVectorRaster
+from PolygonsMerging import mergeSmallPolygons, findAdjacentPolygons
 
 #################################################
 ## Concaténation des trois tables pour obtenir ##
@@ -81,9 +80,9 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
     list_fields_roads = dic_roads["list_for_fields_to_sort_roads"]
     cleanRoads(roads_vector, clean_roads, fields_roads, list_fields_roads)
     roads_cut = repository + os.sep+ "roads_cut.shp"
-    #cutVector(empriseVector, clean_roads, roads_cut)
+    cutVectorAll(empriseVector, clean_roads, roads_cut)
     table_clean_roads = "roads_to_cut"
-    importVectorByOgr2ogr(connexion_dic["dbname"], clean_roads, table_clean_roads, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
+    importVectorByOgr2ogr(connexion_dic["dbname"], roads_cut, table_clean_roads, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"],  epsg=str(2154))
     addSpatialIndex(connexion, table_clean_roads)
 
     tab_roads_union = "roads_clean_union_for_cut"
@@ -151,18 +150,6 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
     # 5# Nettoyage des formes végétales plus poussée ou non, en fonction du choix de l'opérateur (cleanfv)
     tab_name = formStratumCleaning(connexion, connexion_dic, tab_name, tab_name_clean, dic_thresholds, tab_roads, repository, cleanfv, save_intermediate_result, debug)
 
-    # Lissage de la donnée finale
-    #query = """
-    #UPDATE %s
-    #    SET geom = public.ST_SimplifyPreserveTopology(t.geom, 10)
-    #    FROM %s AS t;
-    #""" %(tab_name, tab_name)
-    #SELECT public.ST_CHAIKINSMOOTHING(t.geom) AS geom
-
-    # Exécution de la requête SQL
-    #if debug >= 3:
-    #    print(query)
-    #executeQuery(connexion, query)
 
     # Ajout de la colonne pour la sauvegarde au format raster
     addColumn(connexion, tab_name, 'fv_r', 'int')
@@ -186,6 +173,9 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
 
     if not save_intermediate_result :
         removeVectorFile(clean_roads)
+        removeVectorFile(roads_cut)
+        dropTable(connexion, table_clean_roads)
+        dropTable(connexion, tab_roads_union)
 
     if output_layers["output_fv"] == '':
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur du résultat de classification. Vous n'avez pas fournit de chemin de sauvegarde." + endC)
@@ -216,10 +206,6 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
         # suppression de la colonne non utile "strate_r"
         dropColumn(connexion, tab_name, 'strate_r')
 
-    print("La classification de la strate arborée a duré : %s secondes." %(tps_tree))
-    print("La classification de la strate arbustive a duré : %s secondes." %(tps_arbu))
-    print("La classification de la strate herbacé a duré : %s secondes." %(tps_herb))
-    print("Le lissage a duré : %s secondes." %(tps_smooth))
 
     return tab_name
 
@@ -299,7 +285,6 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, table_roads, th
         SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom AS geom
         FROM %s;
     """ %(tab_arb_temp,tab_arb_temp, tab_arb_ini)
-    #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom) AS geom
 
     # Exécution de la requête SQL
     if debug >= 3:
@@ -544,7 +529,7 @@ def secClassification(connexion, tab_ref, tab_out, thresholds, save_intermediate
     # Création et calcul de l'indicateur de convexité
     createConvexityIndicator(connexion, tab_out, debug = debug)
 
-    #Création et calcul de l'indicateur de compacité
+    # Création et calcul de l'indicateur de compacité
     createCompactnessIndicator(connexion, tab_out, thresholds["buffer_compacity_thr"], debug = debug)
 
     # Création et calcul de l'indicateur d'élongation
@@ -720,7 +705,6 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, table_roads, t
         SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom AS geom
         FROM %s AS t;
     """ %(tab_arbu_temp, tab_arbu_temp, tab_arbu_ini)
-    #SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom) AS geom
 
     # Exécution de la requête SQL
     if debug >= 3:
@@ -767,6 +751,7 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, table_roads, t
     fst_class = firstClassification(connexion, tab_arbu, thresholds,  'arbustif', debug = debug)
     if 'fst_class' not in locals():
         fst_class = tab_arbu
+
     # 4# Travaux sur les "regroupements arbustifs"
     if debug >= 3:
         print(bold + "Classement des segments en 'regroupements arbustifs'" + endC)
@@ -976,7 +961,7 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, empriseVe
         dropColumn(connexion, tab_herbace_cut, 'fid')
         addUniqId(connexion, tab_herbace_cut)
 
-        #mergeSmallPolygons
+        # mergeSmallPolygons
         table_out = 'strate_herbace'
         tab_herbace = smallPolygonsMerging(connexion, connexion_dic, tab_herbace_cut, table_out, working_rep, THRESHOLD_SMALL_AREA_POLY = 55, save_intermediate_result = save_intermediate_result, debug = debug)
 
@@ -1025,7 +1010,6 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, empriseVe
     if not save_intermediate_result :
         dropTable(connexion, tab_herb_ini)
         dropTable(connexion, tab_in)
-        #removeFile(rpg_layer)
         deleteDir(working_rep)
         dropTable(connexion, tab_herbace_tmp)
         dropTable(connexion, tab_herbace_cut)
@@ -1117,10 +1101,10 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, rpg_layer, ldsc_
         executeQuery(connexion, query)
 
         dropTable(connexion, tab_lawn_tmp)
+        if not save_intermediate_result :
+            removeFile(ldsc_urban)
 
-        query = """
-        UPDATE %s AS t SET fv = 'PE' ;
-        """  %(tab_lawn)
+
 
     # Création des tables de prairie et de culture
     tab_crop_tmp = 'tab_crops_tmp'
@@ -1887,13 +1871,7 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, dic_th
             WHERE t1.fid = t2.fid_arbu AND t1.fv IN ('AAu', 'BOAu');
         """ %(tab_ref_clean)
 
-        '''
-        query = """
-        UPDATE %s AS t1 SET strate = 'A'
-            FROM fv_arbu_touch_only_1_arbo AS t2
-            WHERE t1.fid = t2.fid AND t1.fv IN ('AAu', 'BOAu');
-        """ %(tab_ref_clean)
-        '''
+
         if debug >= 3 :
             print(query)
         executeQuery(connexion, query)
@@ -2155,75 +2133,6 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, dic_th
         executeQuery(connexion, query)
 
 
-        '''
-        query = """
-        DROP TABLE IF EXISTS fveg_h;
-        CREATE TABLE fveg_h AS
-            SELECT 'H' AS strate, 'PR' AS fv, geom
-            FROM %s
-            WHERE fv = 'PR'
-            UNION
-            SELECT 'H' AS strate, 'C' AS fv,  geom
-            FROM %s
-            WHERE fv = 'C'
-            UNION
-            SELECT 'H' AS strate, 'PE' AS fv, geom
-            FROM %s
-            WHERE fv = 'PE';
-
-        DROP TABLE IF EXISTS fveg_a;
-        CREATE TABLE fveg_a AS
-            SELECT 'A' AS strate, 'AI' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-            FROM %s
-            WHERE fv = 'AI'
-            UNION
-            SELECT 'A' AS strate, 'AA' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-            FROM %s
-            WHERE fv = 'AA'
-            UNION
-            SELECT 'A' AS strate, 'BOA' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-            FROM %s
-            WHERE fv = 'BOA';
-
-        DROP TABLE IF EXISTS fveg_au;
-        CREATE TABLE fveg_au AS
-            SELECT 'Au' AS strate, 'AuI' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-            FROM %s
-            WHERE fv = 'AuI'
-            UNION
-            SELECT 'Au' AS strate, 'AAu' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-            FROM %s
-            WHERE fv = 'AAu'
-            UNION
-            SELECT 'Au' AS strate, 'BOAu' AS fv, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-            FROM %s
-            WHERE fv = 'BOAu';
-        """%(tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean,tab_ref_clean, tab_ref_clean, tab_ref_clean, tab_ref_clean)
-
-        if debug >= 3:
-            print(query)
-        executeQuery(connexion, query)
-
-        query = """
-        DROP TABLE IF EXISTS %s;
-        CREATE TABLE %s AS
-            SELECT strate, fv, geom
-            FROM fveg_h
-            UNION
-            SELECT strate, fv, geom
-            FROM fveg_a
-            UNION
-            SELECT strate, fv, geom
-            FROM fveg_au;
-        """ %(tab_ref_clean, tab_ref_clean)
-
-        if debug >= 3:
-            print(query)
-        executeQuery(connexion, query)
-
-        addUniqId(connexion, tab_ref_clean)
-        '''
-
         reclassPolygonsMerging(connexion, connexion_dic, tab_ref_clean, tab_ref_final, repertory, save_intermediate_result = save_intermediate_result, debug = debug)
 
         dropColumn(connexion, tab_ref_final, touch_road)
@@ -2236,6 +2145,8 @@ def formStratumCleaning(connexion, connexion_dic, tab_ref, tab_ref_clean, dic_th
             dropTable(connexion, 'fv_arbu_touch_more_2_arbo')
             dropTable(connexion, 'fv_arbo_touch_only_1_arbu')
             dropTable(connexion, 'fv_arbo_touch_more_2_arbu')
+            dropTable(connexion, roads_buff)
+            dropTable(connexion, tab_ref_clean)
             if dic_thresholds["lcz"] != "" or dic_thresholds["lcz"] != None :
                 dropTable(connexion, "prairie_final_tmp")
                 dropTable(connexion, "pelouse_final_tmp")
@@ -2345,8 +2256,20 @@ def smallPolygonsMerging(connexion, connexion_dic, table, table_out, repertory, 
 
 
 
+###########################################################################################################################################
+# FONCTION cleanRoads()                                                                                                                  #
+###########################################################################################################################################
 def cleanRoads(vector_input, vector_output, fields_roads, list_fields_roads, epsg = 2154) :
+    """
+    Role : tri d'un fichier vecteur sur des conditions sur les attributs
 
+    vector_input : fichier vecteur en entrée
+    vector_output : fichier vecteur trié en sortie
+    fields_roads : liste des colonnes
+    list_fields_roads : liste des valeurs à garder
+    epsg : projection
+
+    """
 
     gdf_roads = gpd.read_file(vector_input)
 
@@ -2357,6 +2280,8 @@ def cleanRoads(vector_input, vector_output, fields_roads, list_fields_roads, eps
         gdf_roads = gdf_roads_field
 
     gdf_roads.to_file(vector_output, driver='ESRI Shapefile', crs="EPSG:" + str(epsg))
+
+    return
 
 
 
