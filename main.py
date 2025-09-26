@@ -1,7 +1,3 @@
-### IMPORTS ###
-# Librairies Python
-import sys,os, json, re
-from osgeo import ogr ,osr
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -9,13 +5,17 @@ from osgeo import ogr ,osr
 # Copyright (©) CEREMA/DTerOCC/DT/OSECC  All rights reserved.               #
 #############################################################################
 
+### IMPORTS ###
+# Librairies Python
+import sys,os, json, re
+from osgeo import ogr ,osr
+
 # Librairies /libs
 from Lib_display import bold,red,green,cyan,endC
 from Lib_raster import cutImageByVector
 from Lib_postgis import createDatabase, dropDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema, importVectorByOgr2ogr, dropColumn, renameColumn, executeQuery
 
 # Applications /apps
-
 from app.VerticalStratumDetection import classificationVerticalStratum, segmentationImageVegetetation
 from app.VegetationFormStratumDetection import cartographyVegetation
 from app.DhmCreation import mnhCreation
@@ -33,20 +33,17 @@ if __name__ == "__main__":
     ##############################
     # RECUPERATION DES VARIABLES #
     ##############################
-
-    #with open('config_test_emma.json') as f:
-    #  config = json.load(f)
     file_conf = sys.argv[1]
     print('file_conf :', file_conf)
     f = open(file_conf)
     config = json.load(f)
 
-    rep_img_ref = config["data_entry"]["img_RVBPIR_ref"]
-    rep_img_ref_PAN = config["data_entry"]["img_PAN_ref"]
     shp_zone = config["data_entry"]["studyzone_shp"]
-    rep_img_winter = config["data_entry"]["img_winter"]
-    img_mnt = config["data_entry"]["img_dtm"]
-    img_mns = config["data_entry"]["img_dsm"]
+    image_summer_ref = config["data_entry"]["img_summer_RVBPIR_ref"]
+    image_summer_ref_PAN = config["data_entry"]["img_summer_PAN_ref"]
+    image_winter = config["data_entry"]["img_winter_RVBPIR"]
+    image_mnt = config["data_entry"]["img_dtm"]
+    image_mns = config["data_entry"]["img_dsm"]
     img_ref = ""
     img_winter = ""
 
@@ -56,7 +53,7 @@ if __name__ == "__main__":
     if config["display_comments"]:
       debug = 3
 
-    if rep_img_ref == "" and not config_data["steps_to_run"]["img_assembly"] :
+    if image_summer_ref == "" and not config_data["steps_to_run"]["img_assembly"] :
       print(bold + red + "Attention : aucune donnée n'est fournie pour le bon déroulement des étapes de production de la cartographie !!!" + endC)
 
     ########################################
@@ -317,9 +314,8 @@ if __name__ == "__main__":
     }
 
 
-    #Chemin d'accès vers la donnée finale de cartographie détaillée de la végétation
+    # Chemin d'accès vers la donnée finale de cartographie détaillée de la végétation
     path_finaldata = path_datafinal + os.sep + "cartographie_detaillee_vegetation.gpkg"
-
 
     #######################################################
     #           CRÉATION DE LA BASE DE DONNÉES            #
@@ -389,10 +385,14 @@ if __name__ == "__main__":
 
 
     # IMAGES ASSEMBLY
-
-    img_ref_assemble = assemblyRasters(shp_zone, rep_img_ref, img_ref_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
-    img_ref_pan_assemble = assemblyRasters(shp_zone, rep_img_ref_PAN, img_ref_pan_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
-    img_winter_assemble = assemblyRasters(shp_zone, rep_img_winter, img_winter_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
+    """
+    img_ref_assemble = assemblyRasters(shp_zone, image_summer_ref, img_ref_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
+    img_ref_pan_assemble = assemblyRasters(shp_zone, image_summer_ref_PAN, img_ref_pan_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
+    img_winter_assemble = assemblyRasters(shp_zone, image_winter, img_winter_assemble, format_raster = 'GTiff', format_vector = 'ESRI Shapefile', ext_list = ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC'], rewrite = True, save_results_intermediate = save_intermediate_result)
+    """
+    img_ref_assemble = image_summer_ref
+    img_ref_pan_assemble = image_summer_ref_PAN
+    img_winter_assemble = image_winter
 
     # Découpage des images sur l'emprise
     cutImageByVector(shp_zone ,img_ref_assemble, img_ref)
@@ -404,7 +404,7 @@ if __name__ == "__main__":
       if debug >= 1:
         print(cyan + "\nCréation du MNH" + endC)
 
-      mnhCreation(img_mns, img_mnt, img_mnh, shp_zone , img_ref,  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_result=save_intermediate_result)
+      mnhCreation(image_mns, image_mnt, img_mnh, shp_zone , img_ref,  epsg=2154, nivellement = True, format_raster = 'GTiff', format_vector = 'ESRI Shapefile',  overwrite = True, save_intermediate_result=save_intermediate_result)
 
     # CALCUL DES NEOCANAUX
     # Calcul du NDVI, du SFS et découpage du MNH
@@ -437,6 +437,7 @@ if __name__ == "__main__":
       "rvbpir" : img_ref,
       "mnh" : img_mnh,
       "sfs" : img_sfs,
+      "ndvi" : img_ndvi,
     }
 
     if config["steps_to_run"]["data_concatenation"]:
