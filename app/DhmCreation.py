@@ -57,16 +57,16 @@ def mnhCreation(file_mns, file_mnt, file_out_mnh, empriseVector, img_origine, ep
     extension = os.path.splitext(file_out_mnh)[1]
 
     # Préparation des fichiers temporaires
-    #pour le MNS
+    # Pour le MNS
     file_out_suffix_mns = "_preprocess"
     mns_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_mns + extension
 
-    #pour le MNT
+    # Pour le MNT
     file_name = os.path.splitext(os.path.basename(file_mnt))[0]
     file_out_suffix_mnt = "_preprocess"
     mnt_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_mnt + extension
 
-    #pour le MNH
+    # Pour le MNH
     file_name = os.path.splitext(os.path.basename(file_out_mnh))[0]
     file_out_suffix_mnh_ini = "_ini"
     mnhini_file_tmp = repertory_output + os.sep + file_name + file_out_suffix_mnh_ini + extension
@@ -186,7 +186,7 @@ def mnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 
     if os.path.exists(interpol_file_tmp):
         removeFile(interpol_file_tmp)
 
-    #Interpolation
+    # Interpolation
     cmd_interpol = 'gdal_fillnodata.py -md %s %s %s' %(md_value, file_mns_in, interpol_file_tmp)
 
     exit_code = os.system(cmd_interpol)
@@ -197,7 +197,7 @@ def mnsPrepare(file_mns_in, file_mns_out, epsg, md_value = 100, format_raster = 
         print(cyan + "mnsPrepare : Fin de l'interpolation" + endC)
 
 
-    #Reprojection
+    # Reprojection
     cmd_reproj = 'gdalwarp -t_srs EPSG:'+ str(epsg) +' %s %s' %(interpol_file_tmp, file_mns_out)
     print(cmd_reproj)
     exit_code = os.system(cmd_reproj)
@@ -242,7 +242,7 @@ def mntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100
     if os.path.exists(interpol_file_tmp):
         removeFile(interpol_file_tmp)
 
-    #Interpolation
+    # Interpolation
     cmd_interpol = 'gdal_fillnodata.py -md %s %s %s' %(md_value, file_mnt_in, interpol_file_tmp)
 
     exit_code = os.system(cmd_interpol)
@@ -263,7 +263,7 @@ def mntPrepare(file_mnt_in, file_mnt_out, epsg, file_superimpose, md_value = 100
         if os.path.exists(interpol_file_tmp):
             removeFile(reproj_file_tmp)
 
-        #Reprojection
+        # Reprojection
         cmd_reproj = 'gdalwarp -t_srs EPSG:'+ str(epsg) +' %s %s' %(interpol_file_tmp, reproj_file_tmp)
 
         exit_code = os.system(cmd_reproj)

@@ -8,7 +8,7 @@
 #############################################################################################################################################
 #                                                                                                                                           #
 # SCRIPT DE RECHERCHE ET DE DECOUPAGE D'IMAGE RASTER SELON UN MASQUE VECTEUR                                                                #
-                                                                                                                                       #
+                                                                                                                                            #
 # Import des bibliothèques python
 import os, sys, glob
 from os import chdir
@@ -34,7 +34,7 @@ def assemblyRasters(empriseVector, repRasterAssemblyList, output_rasterAssembly,
     Paramètres :
         empriseVector            : Fichier vecteur de l'emprise de la zone d'étude
         repRasterAssemblyList    : Repertoire de recherche des images
-        output_rasterAssembly           : Fichier de l'image assemblée
+        output_rasterAssembly    : Fichier de l'image assemblée
         format_raster            : Format du fichier image, par défaut : GTiff
         format_vector            : Format du fichier vecteur, par défaut : GPKG
         ext_list                 : Liste des extensions d'images, par défaut : ['tif','TIF','tiff','TIFF','ecw','ECW','jp2','JP2','asc','ASC']
