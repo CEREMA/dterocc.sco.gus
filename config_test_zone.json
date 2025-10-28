@@ -1,0 +1,165 @@
+{
+    "repertory":"/mnt/RAM_disk",
+    "save_intermediate_result" : false,
+    "display_comments" : true,
+    "steps_to_run":{
+        "img_assembly" : false,
+        "create_DHM" : false,
+        "neochannels_computation" : true,
+        "data_concatenation" : true,
+        "vegetation_extraction" : true,
+        "vertical_stratum_detection" : true,
+        "vegetation_form_stratum_detection" : true,
+        "indicators_computation" : true
+    },
+    "data_entry": {
+        "img_RVBPIR_ref": ["/mnt/Data/30_Stages_Encours/2025/2025_GUS_Maelle/02_Donnees/PANSHARP"],
+        "img_PAN_ref":  ["/mnt/Data/30_Stages_Encours/2025/2025_GUS_Maelle/02_Donnees/PAN"],
+        "studyzone_shp":  "/mnt/RAM_disk/zone_test.shp",
+        "img_winter":  ["/mnt/Data/30_Stages_Encours/2025/2025_GUS_Maelle/02_Donnees/HIVER"],
+        "img_dtm":  "/mnt/Data/30_Stages_Encours/2025/2025_GUS_Maelle/02_Donnees/1-DATAS/1-DONNEES_ELEVATION/MNT/RGE_ALTI/",
+        "img_dsm":  "/mnt/Data/30_Stages_Encours/2025/2025_GUS_Maelle/02_Donnees/1-DATAS/1-DONNEES_ELEVATION/MNS/MNS_PLEIADES/CARS/dsm.tif",
+        "entry_options" : {
+            "repertory_img_assembly" : null,
+            "img_dhm": "/mnt/Data/30_Stages_Encours/2025/2025_GUS_Maelle/02_Donnees/1-DATAS/1-DONNEES_ELEVATION/MNH/MNS_PLEIADES/dhm_cars_bulldozer.tif",
+            "img_data_concatenation" : "",
+            "img_ocs": "",
+            "mask_vegetation" : "",
+            "ocsge" : "/mnt/RAM_disk/donnees/OCCUPATION_SOL.shp",
+            "lcz_information" : {
+                "lcz_data" : "",
+                "field" : "lcz",
+                "1" : ["1","2","3","4","5","6","7","8","9"],
+                "2" : ["E"],
+                "3" : ["G"],
+                "4" : ["A", "B", "C", "D", "F"]
+            }
+        }
+    },
+    "database_params": {
+        "dbname": "gustest",
+        "user_db": "postgres",
+        "password_db": "postgres",
+        "server_db": "localhost",
+        "port_number": 5433,
+        "schema" : ""
+    },
+
+    "info_mnh" : {
+        "pleiades_or_lidar" : "pleiades"
+    },
+    "roads" : {
+            "roads_file" : "/mnt/RAM_disk/donnees/TRONCON_DE_ROUTE.shp",
+            "fields_to_sort_roads" : ["nature", "etat", "pos_sol"],
+            "list_for_fields_to_sort_roads" : [["Bretelle", "Rond-point", "Route à 1 chaussée", "Route à 2 chaussées", "Route empierrée", "Type autoroutier"],["En service"],["0"]]
+    },
+    "vertical_stratum_detection": {
+        "db_table" : "data_final.segments_vegetation",
+        "height_or_texture" : "texture",
+        "height_treeshrub_thr": 3,
+        "height_shrubgrass_thr": 1,
+        "texture_thr": 10,
+        "height_max_difference": 1,
+        "shrub_touch_treevsgrass_perc": 25,
+        "shrub_touch_grassvstree_perc": 50,
+        "shrub_sign": 25,
+        "surface_rate": 0.25
+    },
+    "vegetation_form_stratum_detection": {
+        "db_table" : "",
+        "clean" : true,
+        "tree" :{
+            "isolatedtree_max_surface": 100,
+            "isolatedtree_min_surface": 12,
+            "woodtree_sure_surface": 5000,
+            "buffer_compacity_thr": 0.5,
+            "compacity_1_thr": 0.7,
+            "compacity_2_thr": 0.2,
+            "convexity_1_thr": 0.65,
+            "convexity_2_thr": 0.5,
+            "extension_1_thr": 4,
+            "extension_2_thr": 2,
+            "extension_3_thr": 2.5
+        },
+        "shrub":{
+            "isolatedshrub_max_surface": 20,
+            "isolatedshrub_min_surface": 3,
+            "woodshrub_sure_surface": 100,
+            "buffer_compacity_thr": 0.5,
+            "compacity_1_thr": 0.7,
+            "compacity_2_thr": 0.2,
+            "convexity_1_thr": 0.65,
+            "convexity_2_thr": 0.5,
+            "extension_1_thr": 4,
+            "extension_2_thr": 2,
+            "extension_3_thr": 2.5
+        },
+        "herbaceous" :  {
+            "rpg":  "/mnt/RAM_disk/donnees/PARCELLES_GRAPHIQUES.gpkg",
+            "rpg_complete" : "/mnt/RAM_disk/donnees/rpg_complete_2021_d31.shp"
+        }
+    },
+    "indicators_computation": {
+        "area": {
+          "area_feature": "surface",
+          "area_type": "float",
+          "trust_area_feature": "idc_surface",
+          "trust_area_type": "float"
+        },
+        "height": {
+          "mean_height_feature": "h_moy",
+          "mean_height_type": "float",
+          "median_height_feature": "h_med",
+          "median_height_type": "float",
+          "std_height_feature": "h_et",
+          "std_height_type": "float",
+          "max_height_feature": "h_max",
+          "max_height_type": "float",
+          "min_height_feature": "h_min",
+          "min_height_type": "float",
+          "trust_height_feature": "idc_h",
+          "trust_height_type": "float"
+        },
+        "evergreen_deciduous": {
+          "evergreen_feature": "perc_persistant",
+          "evergreen_type": "float",
+          "deciduous_feature": "perc_caduc",
+          "deciduous_type": "float",
+          "ndvi_difference_thr": 0.10,
+          "trust_everdecid_feature": "idc_perscadu",
+          "trust_everdecid_type": "float"
+        },
+        "coniferous_deciduous": {
+          "coniferous_feature": "perc_conifere",
+          "coniferous_type": "float",
+          "deciduous_feature": "perc_feuillu",
+          "deciduous_type": "float",
+          "pir_difference_thr": 1300,
+          "trust_conifdecid_feature": "idc_coniffeuil",
+          "trust_conifdecid_type": "float"
+        },
+        "ground_type": {
+          "groundtype_feature": "type_sol",
+          "groundtype_type": "varchar(100)",
+          "ndvi_difference_thr": 0.3,
+          "trust_groundtype_feature": "idc_typesol",
+          "trust_groundtype_type": "float"
+        },
+        "landscape" :{
+            "landscape_feature" : "paysage",
+            "landscape_type" : "varchar(100)",
+            "landscape_data" : "",
+            "landscape_dic_classes" : {
+                "milieu_urbanise" : 1,
+                "voirie_et_infrastructure" : 2,
+                "etendue_et_cours_eau" : 3,
+                "milieu_agricole_et_forestier" : 4
+                }
+        }
+    },
+    "ndvi" : {
+        "threshold_summer" : 0.33,
+        "threshold_winter" : 0.33,
+        "umc_pixels" : 40
+    }
+}

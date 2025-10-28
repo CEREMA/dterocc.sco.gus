@@ -2367,25 +2367,44 @@ def cutPolygonesByLines(connection, input_polygones_table, input_lines_table, ou
     if len(fields_list) > 1 :
         query = "DROP TABLE IF EXISTS %s;\n" % output_polygones_table
         query += "CREATE TABLE %s AS\n" % output_polygones_table
-        query += "    SELECT %s, (public.ST_DUMP(public.ST_CollectionExtract(public.ST_Split(g.%s, r.%s)))).geom AS %s\n" % (fields_txt, geom_field, geom_field, geom_field)
+        #query += "    SELECT %s, (public.ST_DUMP(public.ST_CollectionExtract(public.ST_Split(g.%s, public.ST_LineMerge(r.%s)), 3))).geom AS %s\n" % (fields_txt, geom_field, geom_field, geom_field)
+        #query += "    FROM %s AS g, %s AS r\n" % (input_polygones_table, input_lines_table)
+        #query += "      GROUP BY %s, g.%s, r.%s;\n" % (fields_txt, geom_field, geom_field)
+        query += "    SELECT %s,\n" % fields_txt
+        query += "           (public.ST_DUMP(\n"
+        query += "               public.ST_CollectionExtract(\n"
+        query += "                   public.ST_Split(\n"
+        query += "                       public.ST_CollectionExtract(g.%s, 3),\n" % geom_field
+        query += "                       public.ST_LineMerge(r.%s)\n" % geom_field
+        query += "                   ), 3\n"
+        query += "               )\n"
+        query += "           )).geom AS %s\n" % geom_field
         query += "    FROM %s AS g, %s AS r\n" % (input_polygones_table, input_lines_table)
-        #query += "    GROUP BY %s;\n" % fields_txt
+        query += "    WHERE public.ST_GeometryType(g.%s) IN ('ST_Polygon', 'ST_MultiPolygon')\n" % geom_field
+        query += "    GROUP BY %s, g.%s, r.%s;\n" % (fields_txt, geom_field, geom_field)
         print(query)
         executeQuery(connection, query)
-
     else :
-
         query = "DROP TABLE IF EXISTS %s;\n" % output_polygones_table
         query += "CREATE TABLE %s AS\n" % output_polygones_table
-        query += "  SELECT (public.ST_DUMP(public.ST_CollectionExtract(public.ST_Split(g.%s, r.%s)))).geom AS %s\n" % (geom_field, geom_field, geom_field)
-        query += "  FROM %s AS g, %s AS r;" % (input_polygones_table, input_lines_table)
-        #query += "    GROUP BY g.%s;\n" %(geom_field)
+        #query += "  SELECT (public.ST_DUMP(public.ST_CollectionExtract(public.ST_Split(g.%s, public.ST_LineMerge(r.%s)), 3))).geom AS %s\n" % (geom_field, geom_field, geom_field)
+        #query += "  FROM %s AS g, %s AS r\n" % (input_polygones_table, input_lines_table)
+        #query += "    GROUP BY g.%s, r.%s;\n" %(geom_field, geom_field)
+        query += "  SELECT (public.ST_DUMP(\n"
+        query += "            public.ST_CollectionExtract(\n"
+        query += "              public.ST_Split(\n"
+        query += "                public.ST_CollectionExtract(g.%s, 3),\n" % geom_field
+        query += "                public.ST_LineMerge(r.%s)\n" % geom_field
+        query += "              ), 3\n"
+        query += "            )\n"
+        query += "          )).geom AS %s\n" % geom_field
+        query += "  FROM %s AS g, %s AS r\n" % (input_polygones_table, input_lines_table)
+        query += "  WHERE public.ST_GeometryType(g.%s) IN ('ST_Polygon', 'ST_MultiPolygon')\n" % geom_field
+        query += "  GROUP BY g.%s, r.%s;\n" % (geom_field, geom_field)
         print(query)
         executeQuery(connection, query)
 
     return
-
-
 
 ###########################################################################################################################################
 # FUNCTION mergeReclassPolygons()                                                                                                           #
