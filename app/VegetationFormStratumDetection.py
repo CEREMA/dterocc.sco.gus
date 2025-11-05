@@ -2224,7 +2224,9 @@ def smallPolygonsMerging(connexion, connexion_dic, table, table_out, repertory, 
 
     # Sauvegarde des resultats en fichier vecteur
     gdf_out[FIELD_ORG_ID_LIST] = gdf_out[FIELD_ORG_ID_LIST].apply(str)
-    gdf_out.to_file(vector_merge, driver='GPKG', crs="EPSG:2154")
+    #gdf_out.to_file(vector_merge, driver='GPKG', crs="EPSG:2154")
+    gdf_out = gdf_out.set_crs(epsg=2154, inplace=False)
+    gdf_out.to_file(vector_merge, driver='GPKG')
 
     # Importation en table dans la base de données
 
@@ -2279,7 +2281,9 @@ def cleanRoads(vector_input, vector_output, fields_roads, list_fields_roads, eps
         gdf_roads_field = gdf_roads[gdf_roads[field].isin(list_field)]
         gdf_roads = gdf_roads_field
 
-    gdf_roads.to_file(vector_output, driver='ESRI Shapefile', crs="EPSG:" + str(epsg))
+    #gdf_roads.to_file(vector_output, driver='ESRI Shapefile', crs="EPSG:" + str(epsg))
+    gdf_roads = gdf_roads.set_crs(epsg=epsg, inplace=False)
+    gdf_roads.to_file(vector_output, driver='ESRI Shapefile')
 
     return
 
@@ -2558,10 +2562,11 @@ def reclassPolygonsMerging(connexion, connexion_dic, table, table_out, repertory
 
     # Sauvegarde des resultats en fichier vecteur
     gdf_out[FIELD_ORG_ID_LIST] = gdf_out[FIELD_ORG_ID_LIST].apply(str)
-    gdf_out.to_file(vector_merge, driver='GPKG', crs="EPSG:2154")
+    #gdf_out.to_file(vector_merge, driver='GPKG', crs="EPSG:2154")
+    gdf_out = gdf_out.set_crs(epsg=2154, inplace=False)
+    gdf_out.to_file(vector_merge, driver='GPKG')
 
     # Importation en table dans la base de données
-
     importVectorByOgr2ogr(connexion_dic["dbname"], vector_merge, table_out, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg='2154', codage='UTF-8')
 
     addSpatialIndex(connexion, table_out)
