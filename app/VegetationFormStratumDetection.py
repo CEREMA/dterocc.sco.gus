@@ -191,7 +191,7 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
         epsg = 2154
         pixel_size_x = 1
         pixel_size_y = 1
-        initializeGrass(repository, xmin, xmax, ymin, ymax, pixel_size_x, pixel_size_y, projection=epsg)
+        initializeGrass(repository, xmin, xmax, ymin, ymax, pixel_size_x, pixel_size_y, epsg)
         simplificationGrass(vector_input_grass, vector_output_grass, threshold=1.0, format_vector='GPKG', overwrite=overwrite)
         cleanGrass(repository)
         output_layers["output_fv"] = vector_output_grass
