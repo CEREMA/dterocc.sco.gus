@@ -9,7 +9,7 @@
 import os,sys, shutil
 
 # Import des librairies de /libs
-from Lib_display import bold, yellow, red, green,endC
+from Lib_display import bold, yellow, cyan, red, green,endC
 from Lib_file import removeFile
 from CrossingVectorRaster import statisticsVectorRaster
 from Lib_postgis import addColumn, dropColumn, dropTable,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, addSpatialIndex, addUniqId
@@ -99,7 +99,8 @@ def createAndImplementFeatures(connexion, connexion_dic, tab_ref, dic_attributs,
         print(yellow + bold + "Attention : Il n'y a pas de sauvegarde en couche vecteur de la cartographie finale de la végétation (détaillée). Vous n'avez pas fournit de chemin de sauvegarde." + endC)
     else :
         # Export au format vecteur
-        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG')
+        layer_name = os.path.splitext(os.path.basename(output_layer))[0]
+        exportVectorByOgr2ogr(connexion_dic["dbname"], output_layer, tab_ref, user_name = connexion_dic["user_db"], password = connexion_dic["password_db"], ip_host = connexion_dic["server_db"], num_port = connexion_dic["port_number"], schema_name = connexion_dic["schema"], format_type='GPKG', ogr2ogr_more_parameters=' -nln %s -overwrite' %layer_name)
 
         # # export au format raster --> pour l'instant l'export au format tif n'est pas opérationnel.
         # # creation du chemin de sauvegarde de la donnée raster
@@ -168,7 +169,9 @@ def heightIndicators(connexion, connexion_dic, tab_ref, columnnamelist, img_mnh,
     filetablevegout = repertory + os.sep + 'couche_vegetation_stats_mnh.gpkg'
 
     # Export de la table vegetation
-    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
+    #layer_name = os.path.splitext(os.path.basename(filetablevegin))[0]
+    layer_name =  "couche_vegetation_stats_mnh"
+    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG', ogr2ogr_more_parameters=' -nln %s -overwrite' %layer_name)
 
     # Calcul des statistiques de hauteur : min, max, mediane et écart-type
     col_to_add_list = ["percentile_10", "percentile_90", "median", "mean","std"]
@@ -176,9 +179,25 @@ def heightIndicators(connexion, connexion_dic, tab_ref, columnnamelist, img_mnh,
     class_label_dico = {}
     statisticsVectorRaster(img_mnh, filetablevegin, filetablevegout, band_number=1,enable_stats_all_count = False, enable_stats_columns_str = False, enable_stats_columns_real = True, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
 
-    tab_refout = 'tab_stats_hauteur_vegetation'
+    # Suprimer la couche inutile et Changer le non de la couche
+    new_layer_name = "vect_fv_stats_surfacevegetalisee"
+    command = "ogrinfo %s -sql 'DROP TABLE IF EXISTS %s'" %(filetablevegout, new_layer_name)
+    if debug >=2:
+        print(command)
+    exit_code = os.system(command)
+    if exit_code != 0:
+        print(cyan + "heightIndicators : " + bold + red + "!!! Une erreur c'est produite au cours de la suppression la couche du vecteur : " + filetablevegout + endC, file=sys.stderr)
+
+    command = "ogr2ogr -overwrite -skipfailures  -f GPKG %s %s -nln %s %s" %(filetablevegout, filetablevegout, new_layer_name, layer_name)
+    if debug >=2:
+        print(command)
+    exit_code = os.system(command)
+    if exit_code != 0:
+        pass
+        #print(cyan + "heightIndicators : " + bold + red + "!!! Une erreur c'est produite au cours du renomage de la couche du vecteur : " + filetablevegout + endC, file=sys.stderr)
 
     # Import de la couche vecteur avec les statistiques en tant que table intermédiaire dans la bd
+    tab_refout = 'tab_stats_hauteur_vegetation'
     importVectorByOgr2ogr(connexion_dic["dbname"], filetablevegout, tab_refout, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
     # Implémentation des attributs
@@ -286,7 +305,9 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
     filetablevegin = repertory + os.sep + 'couche_vegetation_bis.gpkg'
 
     # Export de la table vegetation en couche vecteur
-    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
+    #layer_name = os.path.splitext(os.path.basename(filetablevegin))[0]
+    layer_name = "vect_fv_stats_pers"
+    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG', ogr2ogr_more_parameters=' -nln %s -overwrite' %layer_name)
 
     # Superimpose si souhaité
     if superimpose_choice :
@@ -424,7 +445,9 @@ def coniferousDeciduousIndicators(connexion, connexion_dic, img_ref, tab_ref, se
     # Export de la table vegetation en couche vecteur
     filetablevegin = repertory + os.sep + 'couche_vegetation_bis.gpkg'
 
-    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
+    #layer_name = os.path.splitext(os.path.basename(filetablevegin))[0]
+    layer_name = "vect_fv_stats_conif"
+    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG', ogr2ogr_more_parameters=' -nln %s -overwrite' %layer_name)
 
     # Statistiques zonales sur les polygones de formes végétales concernées : tous les segments appartennant à la strate arborée et arbustive
     col_to_add_list = []
@@ -523,7 +546,9 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
     # Export de la table vegetation en couche vecteur gpkg
     filetablevegin = repertory + os.sep + 'couche_vegetation_bis.gpkg'
 
-    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
+    #layer_name = os.path.splitext(os.path.basename(filetablevegin))[0]
+    layer_name = "vect_fv_stats_surfacevegetalisee"
+    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_ref, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG', ogr2ogr_more_parameters=' -nln %s -overwrite' %layer_name)
 
     # Calcul du masque perméable
     cmd_mask_surfveg = "otbcli_BandMath -il %s -out '%s?&nodata=-99' uint8 -exp '(im1b1>=%s)?1:0'" %(img_ndvi_wtr, img_surf_veg, seuil)
@@ -637,8 +662,10 @@ def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, column_i
 
     # Export de la table vegetation en couche vecteur gpkg
     filetablevegin = repertory + os.sep + 'couche_vegetation_bis.gpkg'
+    #layer_name = os.path.splitext(os.path.basename(filetablevegin))[0]
+    layer_name = "sgts_vegetation_cross_landscape"
 
-    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_fv, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG')
+    exportVectorByOgr2ogr(connexion_dic["dbname"], filetablevegin, tab_fv, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"],schema_name=connexion_dic["schema"], format_type='GPKG', ogr2ogr_more_parameters=' -nln %s -overwrite' %layer_name)
 
     vector_output = repertory + os.sep + 'sgts_vegetation_cross_landscape.gpkg'
 
@@ -647,6 +674,24 @@ def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, column_i
     col_to_delete_list = ["min", "max", "mean", "unique", "sum", "std", "range", "median", "minority" ]
     class_label_dico = {}
     statisticsVectorRaster(img_landscape, filetablevegin, vector_output, band_number=1, enable_stats_all_count = False, enable_stats_columns_str = True, enable_stats_columns_real = False, col_to_delete_list = col_to_delete_list, col_to_add_list = col_to_add_list, class_label_dico = class_label_dico, path_time_log = "", clean_small_polygons = False, format_vector = 'GPKG',  save_results_intermediate= False, overwrite= True)
+
+    # Suprimer la couche inutile et Changer le non de la couche
+    new_layer_name = "sgts_vegetation_cross_landscape"
+    command = "ogrinfo %s -sql 'DROP TABLE IF EXISTS %s'" %(vector_output, new_layer_name)
+    if debug >=2:
+        print(command)
+    exit_code = os.system(command)
+    if exit_code != 0:
+        print(cyan + "landscapeIndicator : " + bold + red + "!!! Une erreur c'est produite au cours de la suppression la couche du vecteur : " + vector_output + endC, file=sys.stderr)
+
+    layer_name = "vect_fv_stats_surfacevegetalisee"
+    command = "ogr2ogr -overwrite -skipfailures -f GPKG %s %s -nln %s %s" %(vector_output, vector_output, new_layer_name, layer_name)
+    if debug >=2:
+        print(command)
+    exit_code = os.system(command)
+    if exit_code != 0:
+        pass
+        #print(cyan + "landscapeIndicator : " + bold + red + "!!! Une erreur c'est produite au cours du renomage de la couche du vecteur : " + vector_output + endC, file=sys.stderr)
 
     # Import en base de la couche vecteur
     tab_cross = 'tab_cross_land'

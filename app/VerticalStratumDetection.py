@@ -725,7 +725,6 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False, debu
     addColumn(connexion, 'tab_interm_arbuste', 'fid_rgpt', 'integer')
 
     # A présent, nous sommes obligés de passer par python pour lancer les requêtes car les requêtes spatiales globales sont TRES couteuses
-
     cursor = connexion.cursor()
     data = readTable(connexion, tab_rgpt_arbu)
     tab_rgpt_sgt =[]
@@ -744,20 +743,19 @@ def pretreatment_arbu(connexion, tab_ref, save_intermediate_result = False, debu
         cursor.execute(query)
         rgpt_count = cursor.fetchall()
 
-        # Update de l'attribut nb_sgt dans la table rgpt_arbuste
-        print("Met à jour la valeur du nombre de segment dans la table rgpt_arbu")
-        query = """
-        UPDATE %s AS rgpt_arbu SET nb_sgt = %s where rgpt_arbu.fid = %s;
-        """ %(tab_rgpt_arbu, rgpt_count[0][1],rgpt_count[0][0])
+        if (rgpt_count != None and rgpt_count != []) :
+            # Update de l'attribut nb_sgt dans la table rgpt_arbuste
+            print("Met à jour la valeur du nombre de segment dans la table rgpt_arbu")
+            query = """
+            UPDATE %s AS rgpt_arbu SET nb_sgt = %s where rgpt_arbu.fid = %s;
+            """ %(tab_rgpt_arbu, rgpt_count[0][1],rgpt_count[0][0])
 
-        # Exécution de la requête SQL
-        if debug >= 3:
-            print(query)
-        executeQuery(connexion, query)
-
+            # Exécution de la requête SQL
+            if debug >= 3:
+                print(query)
+            executeQuery(connexion, query)
 
     # Création d'une table intermédiaire pour la requête suivante
-
     tab_sgtsup = "tab_nb_sgmts_sup_1"
     query = """
     DROP TABLE IF EXISTS %s ;
