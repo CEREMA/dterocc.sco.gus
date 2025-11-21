@@ -1,26 +1,43 @@
 # dterocc.sco.gus
 
-# Projet Green Urban Sat (GUS)
+# Projet SCO Green Urban Sat (GUS)
 
-Ce projet a pour objectif de produire une méthodologie de cartographie détaillée de la végétation urbaine répondant à plusieurs objectifs :
-- réplicable mondialement
-- indépendant de bases de données locales ou nationales
-- support pour l'évaluation de 5 services écosystémiques : régulation du climat local, régulation de la qualité de l'air, bénéfices socio-culturels, continuités écologiques et irrigation.
+Le projet GUS a permis le développement d'une méthodologie de cartographie détaillée de la végétation urbaine, sur le territoire test de la Métropole du Grand Nancy, réplicable nationalement voire mondialement car indépendante des bases de données locales.
+La méthode utilise les images et données de hauteur (MNH) issues de données satellitaires à très haute résolution spatiale (THRS) Pléiades, mais est également adaptable aux données Pléiades Neo et aux futures missions THRS (CO3D notamment).
+Cette cartographie a pour objectif final de servir de support pour l'évaluation de 5 services écosystémiques : régulation du climat local, régulation de la qualité de l'air, bénéfices socio-culturels, continuités écologiques et irrigation.
+Cette partie constitue le coeur du projet Des Hommes et Des Arbres (DHDA) sur la Métropole du Grand Nancy (MGN).
+Les partenaires du projet GUS sont le Cerema (pôle satellitaire de la Dter Occitanie et équipe de recherche TEAM de la Dter Est), TerraNIS, le LIVE, la MGN, et le CNES via le SCO.
+Les partenaires remercient le SCO pour le cofinancement du projet.
 
 ## Principe
 
-Ce dépôt GITHUB présente l'ensemble des scripts python produits afin de générer automatiquement une cartographie détaillée de la végétation, à partir de deux images Pléaides données.
+Ce dépôt GITHUB présente l'ensemble des scripts python permettant de générer automatiquement une cartographie détaillée de la végétation, à partir de deux images d'entrée Pléiades (une image d'été stéréoscopique et une image d'hiver monoscopique).
 
-Cette cartographie se présente sous la forme d'une couche vecteur décrivant la végétation avec une table attributaire se présentant sous la forme suivante :
+Cette cartographie se présente sous la forme d'une couche vectorielle décrivant la végétation en formes végétales (fv) selon 9 classes :
+- Classe arborée :
+    - Arbre Isolé
+    - Alignement d’Arbres
+    - Boisement Arboré
+- Classe arbustive :
+    - Arbuste Isolé
+    - Alignement d’Arbustes
+    - Boisement Arbustif
+- Classe herbacée :
+    - Prairie
+    - Culture
+    - Pelouse
 
-| fid | strate | fv | paysage | surface | h_moy | h_med | h_et | h_min | h_max | perc_persistant | perc_caduc | perc_conifere | perc_feuillu |
-| :------ | :------ | :------ | :------ |:------ | :------ |:------ | :------ |:------ | :------ | :------ | :------ |:------ | :------ |
-| Identifiant unique de la forme végétale (fv) | Strate verticale à laquelle la fv appartient | Label de la fv | Paysage dans lequel s'inscrit la fv | Surface de la fv (m²) | Hauteur moyenne (m) | Hauteur médiane (m) | Écart-type de hauteur (m) | Hauteur minimale (m) | Hauteur maximale (m) | Pourcentage de la fv composée de couvert persistant (%) | Pourcentage de la fv composée de couvert caduc (%) | Pourcentage de la fv composée de conifères (%) | Pourcentage de la fv composée de feuillus (%) |
+La table attributaire se présente sous la forme suivante :
+
+| nom de l'attribut | fid | strate | fv | paysage | surface | h_moy | h_med | h_et | h_min | h_max | perc_persistant | perc_caduc | perc_conifere | perc_feuillu | type_sol |
+| :------ | :------ | :------ | :------ | :------ |:------ | :------ |:------ | :------ |:------ | :------ | :------ | :------ |:------ | :------ | :------ |
+| Description | Identifiant unique de la fv | Strate verticale | Classe fv | Paysage | Surface de la fv (m²) | Hauteur moyenne (m) | Hauteur médiane (m) | Écart-type de hauteur (m) | Hauteur minimale (q10) (m) | Hauteur maximale (q90) (m) | Pourcentage de couvert persistant (%) | Pourcentage de couvert caduc (%) | Pourcentage de conifères (%) | Pourcentage de feuillus (%) | Type de sol |
+| Valeurs | int | A : Arboré Au : Arbustif H : Herbacé | AI : Arbre Isolé AA : Alignement d’Arbres BOA : Boisement Arboré AuI : Arbuste Isolé AAu : Alignement d’Arbustes BOAu : Boisement Arbustif PR : Prairie C : Culture PE : Pelouse | 1 : milieu urbain 2 : bords de voirie 3 : bords de surfaces et de cours d'eau 4 : milieu agricole et forestier  5 : autres milieux naturels | float | float | float | float | float | float | float (0-100) | float (0-100) | float (0-100) | float (0-100) | Surface végétaliséée / non végétalisée |
 
 Les indices de confiance :
 | idc_surface | idc_h | idc_prescadu | idc_coniffeuil | idc_typesol |
 | :------ | :------ |:------ | :------ |:------ |
-| Indice de confiance de la surface | Indice de confiance de la hauteur | Indice de confiance du pourcentage de caduc et persistant | Indice de confiance du pourcentage de caduc et persistant | Indice de confiance sur la valeur de type de sol renseignée |
+| Indice de confiance de la surface | Indice de confiance de la hauteur | Indice de confiance du pourcentage de caduc et persistant | Indice de confiance du pourcentage de feuillu et conifère | Indice de confiance sur le type de sol |
 
 ## Composition du dépôt
 
@@ -40,17 +57,7 @@ Nous garantissons un bon fonctionnement de l'application sous la configuration U
 
 Version Python 3. 10. 12
 
-| Principales librairie |
-| :-------- |
-| os |
-| sys |
-| glob |
-| copy |
-| time |
-| subprocess |
-| math |
-| psycopg2 |
-| numpy |
+Principales librairies : os, sys, glob, copy, time, subprocess, math, psycopg2, numpy
 
 ### Logiciels annexes
 
@@ -68,7 +75,7 @@ Version Python 3. 10. 12
 Le lancement du code se décompose en trois étapes :
 1. le téléchargement du repertoire complet
 2. le remplissage du fichier `config.json`
-3. le lancement des scripts en ouvrant une fenêtre de commande à la racine du dossier (où se situe le fichier main) et en lançant la commande : `python main.py config.json`
+3. le lancement des scripts en ouvrant un terminal à la racine du dossier (où se situe le fichier main) avec la commande : `python main.py config.json`
 
 ## Utilisation du main
 
@@ -153,11 +160,11 @@ Via la balise `steps_to_run`, l'opérateur choisit quelles étapes il veut faire
 
 Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'opérateur peut très bien apporter lui-même certaines données via la balise `data_entry > entry_options`. En gardant bien les mêmes formats que la donnée produite (nom des champs, extension, etc.)
 
-Enfin, il existe la balise `vertical_stratum_detection > height_or_texture` qui permet à l'opérateur de prioriser la hauteur ou la texture dans la classification des segments en strates verticales. Deux possibilités s'offrent donc :
-- priorisation de la hauteur (valeur "height") où seule la donnée de hauteur est utilisée pour la première étape de la classification en strates verticales. NB : nous privilégions ce choix lorsque la donnée d'élévation est précise (ex : LiDAR).
-- priorisation de la texture (valeur "texture") où une sueil appliqué sur la texture assure la distinction végétation herbacée vs végétation arborée et arbustive. La distinction de l'arboré et de l'arbustif se réalisant classiquement avec la donnée de hauteur. NB : nous privilégions ce choix lorsque la donnée d'élévation est peu précise (ex : MNH dérivé de la donnée satellitaire).
+Enfin, la balise `vertical_stratum_detection > height_or_texture` permet de prioriser la hauteur ou la texture dans la classification des segments en strates verticales. Deux possibilités :
+- priorisation de la hauteur (valeur "height") : seule la donnée de hauteur est utilisée pour la première étape de la classification en strates verticales. NB : nous privilégions ce choix lorsque la donnée d'élévation est précise (ex : LiDAR).
+- priorisation de la texture (valeur "texture") : la distinction entre végétation herbacée est ligneuse est effectuée sur la texture. La distinction entre arboré et arbustif est ensuite réalisé avec la donnée de hauteur. Ce choix est à privilégier lorsque la donnée d'élévation est peu précise (MNH satellitaire).
 
-Ensuite, une seconde étape de classification de la strate arbustive permet de nettoyer cette strate qui a tendance à la surestimation.
+Une seconde étape de reclassification des strates est ensuite effectuée par voisinages pour corriger des principales erreurs.
 
 ### Attention
 Attention, si vous ne voulez pas faire tourner toutes les étapes (`steps_to_run`), des informations sont à fournir si vous n'avez pas utilisé les scripts dédiés pour les produire :
@@ -169,21 +176,24 @@ Attention, si vous ne voulez pas faire tourner toutes les étapes (`steps_to_run
 ## Auteurs
 
 Mathilde Segaud - Cerema Toulouse / DT / OSECC (pôle satellite)
+
 Maëlle Klein - Cerema Toulouse / DT / OSECC (pôle satellite)
+
 Gilles Fouvet - Cerema Toulouse / DT / OSECC (pôle satellite)
 
-## Diagramme de classe
+Benjamin Piccinini - Cerema Toulouse / DT / OSECC (pôle satellite)
 
-![Diagramme de structure](https://github.com/CEREMA/dterocc.sco.gus/blob/main/README.md)
-
---
+## Contact
 
 Emma Bousquet
 
 Responsable d'études observation satellitaire
-Direction territoriale Occitanie / DT / OSECC
 
-Tél. : +33 (0)5 62 25 97 03 / Port. : +33 (0)7 64 73 35 20
+Pôle satellitaire - Direction territoriale Occitanie
 
 Complexe scientifique de Rangueil - 1 av. du colonel Roche 31400 TOULOUSE
+
+emma.bousquet@cerema.fr
+
+
 
