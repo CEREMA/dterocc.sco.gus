@@ -9,6 +9,7 @@
 # Librairies Python
 import sys,os, json, re
 from osgeo import ogr ,osr
+import geopandas as gpd
 
 # Librairies /libs
 from Lib_display import bold,red,green,cyan,endC
@@ -626,6 +627,14 @@ if __name__ == "__main__":
       # Calcul des indices
 
       createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = save_intermediate_result, debug = debug)
+
+      # Arrondir les information des colonnes a 2 chiffres apres la virgule pour les colonnes suivante :"h_moy" "h_med" "h_et" "h_max" et "h_min"
+      gdf = gpd.read_file(path_finaldata)
+      cols = ["h_moy", "h_med", "h_et", "h_max", "h_min"]
+      # Arrondir à 2 décimales
+      gdf[cols] = gdf[cols].round(2)
+      # Sauvegarder dans le même fichier (ecrase)
+      gdf.to_file(path_finaldata, driver="GPKG")
 
       closeConnection(connexion)
 
