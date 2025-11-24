@@ -131,12 +131,6 @@ Certaines fonctions sont optionnelles lorsque l'opérateur peut fournir lui-mêm
 | *createAndImplementFeatures()* | Création et calcul des attributs descriptifs des formes végétales produites précedemment | Non |
 | *closeConnection()* | Fermeture de la connection au schéma de la db dans laquelle les traitements spatiaux sont réalisés | Non |
 
-NB : particularités pour le calcul de l'image "paysages" qui n'est pas directement réalisé dans le fichier `main.py` mais dans la fonction *app/IndicatorsComputation/landscapeIndicator()*.
-
-En ne renseignant pas l'image des paysages détectés dans la balise `indicators_computation > landscape > landscape_data`. Le script va produire cette donnée via la fonction *landscapeDetection()* qui peut utiliser deux méthodes en fonction des informations renseignées au niveau des balises :
-1. `data_entry > entry_options > lcz_information > lcz_data`  : si la donnée LCZ est renseignée, la donnée paysages sera dérivée de la donnée LCZ.
-2. `data_entry > entry_options > img_ocs` : la donnée paysages sera dérivée de la donnée satellitaire.
-
 ## Fichier de configuration
 
 Le fichier de configuration `config.json` permet de renseigner les paramètres de la cartographie. La définition de l'ensemble des paramètres à renseigner est précisée dans le fichier `config_defs.json`.
@@ -147,9 +141,9 @@ Le fichier de configuration `config.json` permet de renseigner les paramètres d
 | *save_intermediate_result* | Paramètre de sauvegarde des résultats intermédiaires |
 | *display_comments* | Paramètre d'affichage des commentaires intermédiaires |
 | *steps_to_run* | Etapes à réaliser |
-| *data_entry* | Données d'entrée |
-| *db_params* | Paramètres de création de la base de données PgSql |
-| *vegetation_extraction* | Paramètres pour l'extraction de la végétation |
+| *data_entry* | Données d'entrée (emprise de la zone, images Pléiades, MNS, MNT, etc.) |
+| *database_params* | Paramètres de création de la base de données PgSql |
+| *info_mnh* | Le Modèle Numérique de Surface à considérer |
 | *vertical_stratum_detection* | Paramètres pour la distinction des strates verticales de végétation |
 | *vegetation_form_stratum_detection* | Paramètres de détection des formes végétales |
 | *indicators_computation* | Paramètres de calcul des attributs descriptifs |
