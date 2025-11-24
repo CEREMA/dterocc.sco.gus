@@ -1,3 +1,0 @@
-prairies:1
-cultures:2
-autres:255
