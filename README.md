@@ -2,15 +2,17 @@
 
 # Projet SCO Green Urban Sat (GUS)
 
-Le projet GUS a permis le développement d'une méthodologie de cartographie détaillée de la végétation urbaine, sur le territoire test de la Métropole du Grand Nancy, réplicable nationalement voire mondialement car indépendante des bases de données locales.
+Green Urban Sat (GUS) est une méthodologie de cartographie détaillée de la végétation urbaine, développée sur le territoire test de la Métropole du Grand Nancy, réplicable nationalement voire mondialement car indépendante des bases de données locales.
 
 La méthode utilise les images et données de hauteur (MNH) issues de données satellitaires à très haute résolution spatiale (THRS) Pléiades, mais est également adaptable aux données Pléiades Neo et aux futures missions THRS (CO3D notamment).
 
 Cette cartographie a pour objectif final de servir de support pour l'évaluation de 5 services écosystémiques : régulation du climat local, régulation de la qualité de l'air, bénéfices socio-culturels, continuités écologiques et irrigation.
 Cette partie constitue le coeur du projet Des Hommes et Des Arbres (DHDA) sur la Métropole du Grand Nancy (MGN).
 
-Les partenaires du projet GUS sont le Cerema (pôle satellitaire de la Dter Occitanie et équipe de recherche TEAM de la Dter Est), TerraNIS, le LIVE, la MGN, et le CNES via le SCO.
+La méthode a été développée dans le cadre du projet SCO (Space for Climate Observatory) Green Urban Sat, par le Cerema (pôle satellitaire de la Dter Occitanie et équipe de recherche TEAM de la Dter Est), TerraNIS, le LIVE, la MGN, et le CNES via le SCO.
 Les partenaires remercient le SCO pour le cofinancement du projet.
+
+https://www.spaceclimateobservatory.org/fr/green-urban-sat
 
 ## Contenu et principe du code
 
@@ -44,7 +46,11 @@ Les indices de confiance (non remplis à l'heure actuelle) :
 
 ## Composition du dépôt
 
-Le dépot est composé d'un dossier "app" contenant les scripts python d'applications, d'un fichier principal `main.py` qui fait appel à ces différents scripts, et d'un fichier de configuration `config.json`.
+Le dépot est composé de :
+- un dossier "app" contenant les scripts python d'applications
+- un fichier principal `main.py` qui fait appel à ces différents scripts
+- un fichier de configuration `config.json`.
+
 Les librairies utilisées proviennent de la chaîne de traitement générique du pôle satellitaire du Cerema : https://github.com/CEREMA/dterocc.chaineTraitement.traitementImageSatelliteEtIndicateursDerives/tree/master/Libs
 
 ## Configuration des librairies et du code
@@ -87,12 +93,18 @@ Le main est composé de quatre sous-parties :
 
 | Fonction | Usage | Optionnel |
 | :------- | :----| :---------|
-| *GUSRasterAssembly()* | Assemblage des imagettes Pléiades |  Oui |
+| *assemblyRasters()* | Assemblage des imagettes Pléiades | Oui |
 | *mnhCreation()* | Création d'un Modèle Numérique de Hauteur à partir d'un MNS et d'un MNT | Oui |
-| *channelComputation()* | Calcul des images d'indices radiométriques dérivés de l'image Pléiades de référence| Oui |
+| *neochannelComputation()* | Calcul des images d'indices radiométriques dérivés de l'image Pléiades de référence| Oui |
 | *concatenateData()* | Concaténation des données une seule couche raster | Non |
 
 Certaines fonctions sont optionnelles lorsque l'opérateur peut fournir lui-même la donnée produite par cette fonction.
+
+#### Définition des paysages contextuels
+
+| Fonction | Usage | Optionnel |
+| :------- | :----| :--------|
+| *landscapeDetection()* | Définition des paysages à partir d'un regroupement de classes de l'OCSGE | Oui |
 
 #### Distinction des strates verticales de la végétation
 
