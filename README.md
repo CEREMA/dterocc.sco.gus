@@ -89,7 +89,7 @@ Le main est composé de quatre sous-parties :
 - la création de l'environnement : dossier du projet, chemins de sauvegarde, base de données pgsql/postgis
 - le lancement des étapes de production de la cartographie
 
-#### Pré-traitements
+#### 0. Pré-traitements
 
 | Fonction | Usage | Optionnel |
 | :------- | :----| :---------|
@@ -100,13 +100,13 @@ Le main est composé de quatre sous-parties :
 
 Certaines fonctions sont optionnelles lorsque l'opérateur peut fournir lui-même la donnée produite par cette fonction.
 
-#### Définition des paysages contextuels
+#### 1. Définition des paysages contextuels
 
 | Fonction | Usage | Optionnel |
 | :------- | :----| :--------|
 | *landscapeDetection()* | Définition des paysages à partir d'un regroupement de classes de l'OCSGE | Oui |
 
-#### Distinction des strates verticales de la végétation
+#### 2. Distinction des strates verticales de la végétation
 
 | Fonction | Usage | Optionnel |
 | :------- | :----| :--------|
@@ -115,7 +115,7 @@ Certaines fonctions sont optionnelles lorsque l'opérateur peut fournir lui-mêm
 | *classificationVerticalStratum()* | Classification des segments végétation en strates verticales (arboré, arbustif et herbacé) | Non |
 | *closeConnection()* | Fermeture de la connection au schéma de la db dans laquelle les traitements spatiaux sont réalisés | Non |
 
-#### Détection de formes végétales horizontales
+#### 3. Détection de formes végétales horizontales
 
 | Fonction | Usage | Optionnel |
 | :------- | :----| :---------- |
@@ -123,7 +123,7 @@ Certaines fonctions sont optionnelles lorsque l'opérateur peut fournir lui-mêm
 | *cartographyVegetation()* | Cartographie des formes végétales horizontales de la végétation  | Non |
 | *closeConnection()* | Fermeture de la connection au schéma de la db dans laquelle les traitements spatiaux sont réalisés | Non |
 
-#### Calcul des attributs descriptifs
+#### 4. Calcul des attributs descriptifs
 
 | Fonction | Usage | Optionnel |
 | :------- | :----| :---------- |
