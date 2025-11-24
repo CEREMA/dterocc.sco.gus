@@ -32,7 +32,7 @@ La cartographie GUS se présente sous la forme d'une couche vectorielle décriva
 
 La table attributaire des formes végétales (fv) se présente sous la forme suivante :
 
-| **Attribut** | fid | strate | fv | paysage | surface | h_moy | h_med | h_et | h_min | h_max | perc_persistant | perc_caduc | perc_conifere | perc_feuillu | type_sol |
+| **Attribut** | fid | strate | fv &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | paysage | surface | h_moy | h_med | h_et | h_min | h_max | perc_persistant | perc_caduc | perc_conifere | perc_feuillu | type_sol |
 | :------ | :------ | :------ | :---------------- | :------------------ |:------ | :------ |:------ | :------ |:------ | :------ | :------ | :------ |:------ | :------ | :------ |
 | **Description** | Identifiant unique | Strate verticale | Classe | Paysage contextuel | Surface (m²) | Hauteur moyenne (m) | Hauteur médiane (m) | Écart-type de hauteur (m) | Hauteur minimale (q10) (m) | Hauteur maximale (q90) (m) | Pourcentage de couvert persistant (%) | Pourcentage de couvert caduc (%) | Pourcentage de conifères (%) | Pourcentage de feuillus (%) | Type de sol |
 | **Valeurs** | int | A:Arboré Au:Arbustif H:Herbacé | AI:Arbre Isolé AA:Alignement d’Arbres BOA:Boisement Arboré AuI:Arbuste Isolé AAu:Alignement d’Arbustes BOAu:Boisement Arbustif PR:Prairie C:Culture PE:Pelouse | 1:urbain 2:bord de voirie 3:bord de surfaces en eau 4:agricole et forestier 5:autres milieux naturels | float | float | float | float | float | float | float (0-100) | float (0-100) | float (0-100) | float (0-100) | Surface végétalisée / non végétalisée |
