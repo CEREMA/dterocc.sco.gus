@@ -12,7 +12,7 @@ Cette partie constitue le coeur du projet Des Hommes et Des Arbres (DHDA) sur la
 Les partenaires du projet GUS sont le Cerema (pôle satellitaire de la Dter Occitanie et équipe de recherche TEAM de la Dter Est), TerraNIS, le LIVE, la MGN, et le CNES via le SCO.
 Les partenaires remercient le SCO pour le cofinancement du projet.
 
-## Principe
+## Contenu et principe du code
 
 Ce dépôt GITHUB présente l'ensemble des scripts python permettant de générer automatiquement la cartographie détaillée de la végétation, à partir de deux images d'entrée Pléiades (une image d'été stéréoscopique et une image d'hiver monoscopique).
 
@@ -44,17 +44,12 @@ Les indices de confiance (non remplis à l'heure actuelle) :
 
 ## Composition du dépôt
 
-Le dépot est composé de deux dossiers et d'un fichier `main.py` à la racine :
-
-| Dossier / fichier | Description                |
-| :-------- | :------------------------- |
-| libs | Contient les librairies utilisées dans les applications |
-| app | Contient les fichiers python d'applications appelées dans le main |
-|`main.py` | Script principal du lancement de l'application |
+Le dépot est composé d'un dossier "app" contenant les scripts python d'applications, d'un fichier principal `main.py` qui fait appel à ces différents scripts, et d'un fichier de configuration `config.json`.
+Les librairies utilisées proviennent de la chaîne de traitement générique du pôle satellitaire du Cerema : https://github.com/CEREMA/dterocc.chaineTraitement.traitementImageSatelliteEtIndicateursDerives/tree/master/Libs
 
 ## Configuration des librairies et du code
 
-Nous garantissons un bon fonctionnement de l'application sous la configuration Ubuntu 22. 04. 2 LTS.
+Nous garantissons un bon fonctionnement de l'application sous la configuration Ubuntu 24. 04. 2 LTS.
 
 ### Librairies python
 
@@ -66,35 +61,23 @@ Principales librairies : os, sys, glob, copy, time, subprocess, math, psycopg2, 
 
 | Logiciel | Version                |
 | :-------- | :------------------------- |
-| OTB | 8. 0. 1 |
-| GDAL | 3. 4. 1 |
-| GRASS GIS | 7. 8. 7 |
-| SAGA | 7. 3. 0 |
-| PostgreSQL | 14. 9 |
-
+| OTB | 8. 1. 2 |
+| GDAL | 3. 9. 0 |
+| GRASS GIS | 8. 3. 2 |
+| SAGA | 9. 3. 1 |
+| PostgreSQL | 17. 0 |
+| POSTGIS | 3. 6 |
 
 ## Téléchargement et lancement
 
 Le lancement du code se décompose en trois étapes :
-1. le téléchargement du repertoire complet
-2. le remplissage du fichier `config.json`
-3. le lancement des scripts en ouvrant un terminal à la racine du dossier (où se situe le fichier main) avec la commande : `python main.py config.json`
+1. le téléchargement du repertoire git complet
+2. le remplissage du fichier de configuration `config.json` (voir plus bas)
+3. le lancement du code sur un terminal à la racine du dossier (où se situe le fichier main) avec la commande : `python main.py config.json`
 
-## Utilisation du main
+## Contenu du main
 
-Le main est divisé en deux parties :
-- les imports
-- le lancement des scripts (__name__ == '__main__')
-
-### Les imports
-
-Il y a deux types d'imports :
-- les imports de fonctions Python ou de librairies annexes
-- les imports de fonctions provenants des `.py` de `/app`
-
-### Le lancement des scripts
-
-Cette partie est divisée en quatre sous-parties :
+Le main est composé de quatre sous-parties :
 - le renseignement des données d'entrée
 - la création et l'implémentation des variables à partir des données fournies
 - la création de l'environnement : dossier du projet, chemins de sauvegarde, base de données pgsql/postgis
@@ -106,45 +89,45 @@ Cette partie est divisée en quatre sous-parties :
 | :------- | :----| :---------|
 | *GUSRasterAssembly()* | Assemblage des imagettes Pléiades |  Oui |
 | *mnhCreation()* | Création d'un Modèle Numérique de Hauteur à partir d'un MNS et d'un MNT | Oui |
-| *channelComputation()* | Calcul des images d'indices radiométriques dérivés de l'image Pléaides de référence| Oui |
+| *channelComputation()* | Calcul des images d'indices radiométriques dérivés de l'image Pléiades de référence| Oui |
 | *concatenateData()* | Concaténation des données une seule couche raster | Non |
 
-Certaines fonctions sont optionnelles lorsqu'il y a possibilité que l'opérateur apporte lui-même la donnée produite par cette fonction.
+Certaines fonctions sont optionnelles lorsque l'opérateur peut fournir lui-même la donnée produite par cette fonction.
 
 #### Distinction des strates verticales de la végétation
 
 | Fonction | Usage | Optionnel |
 | :------- | :----| :--------|
-| *openConnection()* | Nécessaire pour la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
+| *openConnection()* | Ouverture de la connection au schéma de la db dans laquelle les traitements spatiaux sont réalisés | Non |
 | *segmentationImageVegetation()* | Création de la couche vecteur des segments de végétation à partir de l'algorithme de segmentation Meanshift | Non |
 | *classificationVerticalStratum()* | Classification des segments végétation en strates verticales (arboré, arbustif et herbacé) | Non |
-| *closeConnection()* | Nécessaire pour fermer la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
+| *closeConnection()* | Fermeture de la connection au schéma de la db dans laquelle les traitements spatiaux sont réalisés | Non |
 
 #### Détection de formes végétales horizontales
 
 | Fonction | Usage | Optionnel |
 | :------- | :----| :---------- |
-| *openConnection()* | Nécessaire pour la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
+| *openConnection()* | Ouverture de la connection au schéma de la db dans laquelle les traitements spatiaux sont réalisés | Non |
 | *cartographyVegetation()* | Cartographie des formes végétales horizontales de la végétation  | Non |
-| *closeConnection()* | Nécessaire pour fermer la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
+| *closeConnection()* | Fermeture de la connection au schéma de la db dans laquelle les traitements spatiaux sont réalisés | Non |
 
 #### Calcul des attributs descriptifs
 
 | Fonction | Usage | Optionnel |
 | :------- | :----| :---------- |
-| *openConnection()* | Nécessaire pour la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
+| *openConnection()* | Ouverture de la connection au schéma de la db dans laquelle les traitements spatiaux sont réalisés | Non |
 | *createAndImplementFeatures()* | Création et calcul des attributs descriptifs des formes végétales produites précedemment | Non |
-| *closeConnection()* | Nécessaire pour fermer la connection au schéma de la db dans laquelle les traitements spatiaux vont êtres réalisés | Non |
+| *closeConnection()* | Fermeture de la connection au schéma de la db dans laquelle les traitements spatiaux sont réalisés | Non |
 
 NB : particularités pour le calcul de l'image "paysages" qui n'est pas directement réalisé dans le fichier `main.py` mais dans la fonction *app/IndicatorsComputation/landscapeIndicator()*.
 
-En ne renseignant pas l'image des paysages détectés dans la balise `indicators_computation > landscape > landscape_data`. Le script va se lancer dans la production de cette même donnée via la fonction *landscapeDetection()* qui aura la possbilité d'utiliser deux méthodes en fonction des informations renseignés au niveau des balises :
-1. `data_entry > entry_options > lcz_information > lcz_data`  : si la donnée LCZ est renseignée, la donnée paysages sera dérivée de cette donnée LCZ.
+En ne renseignant pas l'image des paysages détectés dans la balise `indicators_computation > landscape > landscape_data`. Le script va produire cette donnée via la fonction *landscapeDetection()* qui peut utiliser deux méthodes en fonction des informations renseignées au niveau des balises :
+1. `data_entry > entry_options > lcz_information > lcz_data`  : si la donnée LCZ est renseignée, la donnée paysages sera dérivée de la donnée LCZ.
 2. `data_entry > entry_options > img_ocs` : la donnée paysages sera dérivée de la donnée satellitaire.
 
 ## Fichier de configuration
 
-Nous mettons à disposition un fichier de configuration `config.json` qui permet de renseigner les éléments nécessaires au bon déroulement des étapes de cartographie. Les grandes lignes sont présentées dans le tableau suivant, mais vous trouverez un fichier `config_defs.json` définissant chacun des termes à renseigner dans le dépôt.
+Le fichier de configuration `config.json` permet de renseigner les paramètres de la cartographie. La définition de l'ensemble des paramètres à renseigner est précisée dans le fichier `config_defs.json`.
 
 | Balise | Définition |
 | :-------- | :------------------------- |
