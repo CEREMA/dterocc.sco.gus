@@ -151,25 +151,22 @@ Nous mettons à disposition un fichier de configuration `config.json` qui permet
 | *repertory* | Répertoire de création du dossier du projet |
 | *save_intermediate_result* | Paramètre de sauvegarde des résultats intermédiaires |
 | *display_comments* | Paramètre d'affichage des commentaires intermédiaires |
-| *steps_to_run* | Gestion des étapes de traitements |
-| *data_entry* | Données d'entrée initiales |
+| *steps_to_run* | Etapes à réaliser |
+| *data_entry* | Données d'entrée |
 | *db_params* | Paramètres de création de la base de données PgSql |
 | *vegetation_extraction* | Paramètres pour l'extraction de la végétation |
 | *vertical_stratum_detection* | Paramètres pour la distinction des strates verticales de végétation |
-| *vegetation_form_stratum_detection* | Paramètres de détection des formes végétales horizontales |
+| *vegetation_form_stratum_detection* | Paramètres de détection des formes végétales |
 | *indicators_computation* | Paramètres de calcul des attributs descriptifs |
 
-Via la balise `steps_to_run`, l'opérateur choisit quelles étapes il veut faire tourner. Attention, chaque étape nécessite l'apport de données qui sont à fournir dans les balises suivantes.
+Certaines données d'entrée supplémentaires peuvent être ajoutées via la balise `data_entry > entry_options`. Attention à fournir les mêmes formats que la donnée produite par la chaîne GUS (nom des champs, extension, etc.)
 
-Nous prévoyons un minimum de données à fournir pour lancer le script, mais l'opérateur peut très bien apporter lui-même certaines données via la balise `data_entry > entry_options`. En gardant bien les mêmes formats que la donnée produite (nom des champs, extension, etc.)
-
-Enfin, la balise `vertical_stratum_detection > height_or_texture` permet de prioriser la hauteur ou la texture dans la classification des segments en strates verticales. Deux possibilités :
+La balise `vertical_stratum_detection > height_or_texture` permet de prioriser la hauteur ou la texture dans la classification des segments en strates verticales. Deux possibilités :
 - priorisation de la hauteur (valeur "height") : seule la donnée de hauteur est utilisée pour la première étape de la classification en strates verticales. NB : nous privilégions ce choix lorsque la donnée d'élévation est précise (ex : LiDAR).
 - priorisation de la texture (valeur "texture") : la distinction entre végétation herbacée est ligneuse est effectuée sur la texture. La distinction entre arboré et arbustif est ensuite réalisé avec la donnée de hauteur. Ce choix est à privilégier lorsque la donnée d'élévation est peu précise (MNH satellitaire).
 
 Une seconde étape de reclassification des strates est ensuite effectuée par voisinages pour corriger des principales erreurs.
 
-### Attention
 Attention, si vous ne voulez pas faire tourner toutes les étapes (`steps_to_run`), des informations sont à fournir si vous n'avez pas utilisé les scripts dédiés pour les produire :
 - `steps_to_run > data_concatenation` = False -> fournir l'image concaténée via la balise `data_entry > entry_options > img_data_concatenation`
 - `steps_to_run > vegetation_extraction` = False -> fournir le masque de végétation via la balise `data_entry > entry_options > mask_vegetation`
