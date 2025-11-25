@@ -9,7 +9,7 @@
 import math,os
 
 # Import des librairies de /libs
-from Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections
+from Lib_postgis import addIndex, addSpatialIndex, addUniqId, addColumn, dropTable, dropColumn,executeQuery, exportVectorByOgr2ogr, importVectorByOgr2ogr, closeConnection, topologyCorrections, getData
 from Lib_display import endC, bold, yellow, cyan, red
 from CrossingVectorRaster import statisticsVectorRaster
 from Lib_file import removeFile, removeVectorFile
@@ -871,22 +871,30 @@ def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img
         print(query)
     executeQuery(connexion, query)
 
-    addSpatialIndex(connexion, tab_int)
+    check_water = getData(connexion, tab_eau, "COUNT(*)")[0][0]
 
+    if check_water > 0:
+        addSpatialIndex(connexion, tab_int)
+        query = """
+        DROP TABLE IF EXISTS %s ;
+        CREATE TABLE %s AS
+            SELECT
+                int.dn,
+                CASE
+                WHEN eau.geom IS NULL THEN int.geom
+                ELSE public.ST_Difference(int.geom, eau.geom)
+                END as geom
+                FROM %s AS eau, %s AS int
+            UNION
+            SELECT dn, geom FROM %s ;
+        """ %(tab_buff, tab_buff, tab_eau, tab_int, tab_eau)
 
-    query = """
-    DROP TABLE IF EXISTS %s ;
-    CREATE TABLE %s AS
-        SELECT
-            int.dn,
-            CASE
-            WHEN eau.geom IS NULL THEN int.geom
-            ELSE public.ST_Difference(int.geom, eau.geom)
-            END as geom
-            FROM %s AS eau, %s AS int
-        UNION
-        SELECT dn, geom FROM %s ;
-    """ %(tab_buff, tab_buff, tab_eau, tab_int, tab_eau)
+    else:
+        query = """
+        DROP TABLE IF EXISTS %s ;
+        CREATE TABLE %s AS
+            SELECT dn, geom FROM %s;
+        """ % (tab_buff, tab_buff, tab_int)
 
     if debug >= 3:
         print(query)
