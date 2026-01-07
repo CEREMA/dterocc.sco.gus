@@ -614,7 +614,7 @@ def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img
 
     # Conditions pour que le paysage soit le milieu agricole et forestier
     aef1 =  ["US1.1", "US1.2"]
-    aef2 = ["US2", "US3", "US5", "US6.1" ] # ET 'CS2%' ET seuil > 10000
+    aef2 = ["US2", "US3", "US5", "US235", "US6.1" ] # ET 'CS2%' ET seuil > 10000
     aef3 = ["US6.2" , "US6.3", "US6.6"] #ET 'CS2%'
 
     # Conditions pour que le paysage soit autres milieux naturels
@@ -622,7 +622,7 @@ def landscapeDetectionOCSGEEdition(connexion, connexion_dic, ocsge, emprise, img
     amn2 = ["US6.2", "US6.3", "US6.6"] # ET PAS 'CS2%'
 
     # Condition pour que le paysage soit de l'urbain
-    urbain = ["US2", "US3", "US5", "US6.1"] # ET PAS 'CS2%' ET seuil <= 10000
+    urbain = ["US2", "US3", "US5", "US235", "US6.1"] # ET PAS 'CS2%' ET seuil <= 10000
 
     # Condition pour que le paysage soit de la voirie et infrastructure
     voirie = "US4%"
