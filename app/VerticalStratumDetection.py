@@ -13,6 +13,7 @@ from osgeo import ogr
 from Lib_display import bold,red,yellow,cyan,endC
 from CrossingVectorRaster import statisticsVectorRaster
 from Lib_operator import getNumberCPU
+from Lib_log import timeLine
 from Lib_raster import rasterizeVector, filterBinaryRaster, rasterizeBinaryVector, polygonizeRaster, cutImageByVector
 from Lib_file import removeFile, removeVectorFile
 from Lib_vector import createPolygonsFromGeometryList, fusionVectors, getEmpriseVector, createEmpriseVector, getProjection
@@ -2582,29 +2583,60 @@ def reclassificationShadows(connexion, tab_ref, save_intermediate_result = False
     """
 
     # Création d'une table ne contenant que les segments herbacés qui ne touchent que de l'arboré et/ou de l'arbustif
-
+    addSpatialIndex(connexion, tab_ref)
+    path_time_log = ""
+    starting_event = "reclassificationShadows() : Début du traitement : "
+    ending_event = "reclassificationShadows() : Fin du traitement : "
+    timeLine(path_time_log, starting_event)
     tab_herb_only_arb = "herb_touch_only_arb"
+
+    # query = """
+    # DROP TABLE IF EXISTS %s ;
+    # CREATE TABLE %s AS
+        # SELECT *
+        # FROM %s
+        # WHERE strate = 'H' AND
+        # (
+            # SELECT COUNT(*) FROM %s AS t
+            # WHERE
+                # public.ST_Touches(t.geom, %s.geom) AND
+                # t.strate IN ('Au', 'A')
+        # ) = (
+            # SELECT COUNT(*) FROM %s AS t
+            # WHERE
+                # public.ST_Touches(t.geom, %s.geom)
+        # ); """ %(tab_herb_only_arb, tab_herb_only_arb, tab_ref, tab_ref, tab_ref, tab_ref, tab_ref)
+
+
     query = """
+    SET search_path = data_final, public;
     DROP TABLE IF EXISTS %s ;
     CREATE TABLE %s AS
-        SELECT *
-        FROM %s
-        WHERE strate = 'H' AND
-        (
-            SELECT COUNT(*) FROM %s AS t
-            WHERE
-                public.ST_Touches(t.geom, %s.geom) AND
-                t.strate IN ('Au', 'A')
-        ) = (
-            SELECT COUNT(*) FROM %s AS t
-            WHERE
-                public.ST_Touches(t.geom, %s.geom)
-        ); """ %(tab_herb_only_arb, tab_herb_only_arb, tab_ref, tab_ref, tab_ref, tab_ref, tab_ref)
+    WITH touches AS (
+        SELECT
+            h.fid,
+            COUNT(*) AS nb_touch_total,
+            COUNT(*) FILTER (WHERE t.strate IN ('Au', 'A')) AS nb_touch_arb
+        FROM %s h
+        JOIN %s t
+          ON h.geom && t.geom
+         AND public.ST_Touches(h.geom, t.geom)
+         AND h.fid <> t.fid
+        WHERE h.strate = 'H'
+        GROUP BY h.fid
+    )
+    SELECT h.*
+    FROM %s h
+    JOIN touches t ON h.fid = t.fid
+    WHERE t.nb_touch_total = t.nb_touch_arb;
+    """ %(tab_herb_only_arb, tab_herb_only_arb, tab_ref, tab_ref, tab_ref)
 
     # Exécution de la requête SQL
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
+
+    timeLine(path_time_log, ending_event)
 
     addSpatialIndex(connexion, tab_herb_only_arb)
 
@@ -2684,4 +2716,3 @@ def reclassificationShadows(connexion, tab_ref, save_intermediate_result = False
         dropTable(connexion, tab_herb_sorted)
 
     return
-
