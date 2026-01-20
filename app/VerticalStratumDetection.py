@@ -2584,12 +2584,14 @@ def reclassificationShadows(connexion, tab_ref, save_intermediate_result = False
 
     # Création d'une table ne contenant que les segments herbacés qui ne touchent que de l'arboré et/ou de l'arbustif
     addSpatialIndex(connexion, tab_ref)
-    path_time_log = ""
-    starting_event = "reclassificationShadows() : Début du traitement : "
-    ending_event = "reclassificationShadows() : Fin du traitement : "
-    timeLine(path_time_log, starting_event)
     tab_herb_only_arb = "herb_touch_only_arb"
 
+    #path_time_log = ""
+    #starting_event = "reclassificationShadows() : Début du traitement : "
+    #ending_event = "reclassificationShadows() : Fin du traitement : "
+    #timeLine(path_time_log, starting_event)
+
+    # Ancienne fonction sql sans optimisation du temps!
     # query = """
     # DROP TABLE IF EXISTS %s ;
     # CREATE TABLE %s AS
@@ -2636,7 +2638,7 @@ def reclassificationShadows(connexion, tab_ref, save_intermediate_result = False
         print(query)
     executeQuery(connexion, query)
 
-    timeLine(path_time_log, ending_event)
+    #timeLine(path_time_log, ending_event)
 
     addSpatialIndex(connexion, tab_herb_only_arb)
 

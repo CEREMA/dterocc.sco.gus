@@ -14,6 +14,8 @@ import geopandas as gpd
 # Librairies /libs
 from Lib_display import bold,red,green,cyan,endC
 from Lib_raster import cutImageByVector
+from Lib_file import removeVectorFile
+from Lib_vector import cutoutVectors, bufferVector
 from Lib_postgis import createDatabase, dropDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema, importVectorByOgr2ogr, dropColumn, renameColumn, executeQuery
 
 # Applications /apps
@@ -39,7 +41,13 @@ if __name__ == "__main__":
     f = open(file_conf)
     config = json.load(f)
 
-    shp_zone = config["data_entry"]["studyzone_shp"]
+    shp_zone_org = config["data_entry"]["studyzone_shp"]
+    shp_zone = os.path.splitext(shp_zone_org)[0] + "_buff" +  os.path.splitext(shp_zone_org)[1]
+
+    # Faire un buffer sur la zone d'etude
+    buffer_dist = 10
+    bufferVector(shp_zone_org, shp_zone, buffer_dist, col_name_buf = "", fact_buf=1.0, quadsecs=10, format_vector='ESRI Shapefile')
+
     image_summer_ref = config["data_entry"]["img_summer_RVBPIR_ref"]
     image_summer_ref_PAN = config["data_entry"]["img_summer_PAN_ref"]
     image_winter = config["data_entry"]["img_winter_RVBPIR"]
@@ -316,7 +324,7 @@ if __name__ == "__main__":
 
 
     # Chemin d'accès vers la donnée finale de cartographie détaillée de la végétation
-    path_finaldata = path_datafinal + os.sep + "cartographie_detaillee_vegetation.gpkg"
+    path_finaldata = path_datafinal + os.sep + "cartographie_detaillee_vegetation_buff.gpkg"
 
     #######################################################
     #           CRÉATION DE LA BASE DE DONNÉES            #
@@ -633,9 +641,34 @@ if __name__ == "__main__":
       cols = ["h_moy", "h_med", "h_et", "h_max", "h_min"]
       # Arrondir à 2 décimales
       gdf[cols] = gdf[cols].round(2)
-      # Sauvegarder dans le même fichier (ecrase)
-      gdf.to_file(path_finaldata, driver="GPKG")
 
+      # Nettoyage du fichier
+      gdf = gdf[gdf.geometry.notnull()]
+      gdf = gdf[~gdf.geometry.is_empty]
+      gdf = gdf[gdf.geometry.notnull()]
+      gdf = gdf[~gdf.geometry.is_empty]
+      gdf = gdf[gdf.geometry.geom_type.isin(["Polygon", "MultiPolygon"])]
+      gdf = gdf[gdf.geometry.area > 0]
+
+      # Sauvegarder dans le même fichier (ecrase)
+      format_vector = "GPKG"
+      path_finaldata_org = path_datafinal + os.sep + "cartographie_detaillee_vegetation.gpkg"
+      file_name = os.path.splitext(os.path.basename(path_finaldata_org))[0]
+      removeVectorFile(path_finaldata, format_vector=format_vector)
+      gdf.to_file(path_finaldata, driver="GPKG",layer=file_name)
+
+      # Decouper le fichier final sur l'emprise d'origine sans buffer
+      shp_zone_gpkg = path_datafinal + os.sep + os.path.splitext(os.path.basename(shp_zone_org))[0] + ".gpkg"
+      gdf_cut = gpd.read_file(shp_zone_org)
+      file_name = os.path.splitext(os.path.basename(shp_zone_org))[0]
+      gdf_cut.to_file(shp_zone_gpkg, driver=format_vector,layer=file_name)
+
+      cutoutVectors(shp_zone_gpkg, [path_finaldata], [path_finaldata_org], overwrite=True, format_vector=format_vector)
+      removeVectorFile(shp_zone_gpkg, format_vector=format_vector)
+      removeVectorFile(path_finaldata, format_vector=format_vector)
+      removeVectorFile(shp_zone, format_vector='ESRI Shapefile')
+
+      # Fin fermeture
       closeConnection(connexion)
 
     f.close()
