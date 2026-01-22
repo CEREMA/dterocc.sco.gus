@@ -636,9 +636,9 @@ if __name__ == "__main__":
 
       createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = save_intermediate_result, debug = debug)
 
-      # Arrondir les information des colonnes a 2 chiffres apres la virgule pour les colonnes suivante :"h_moy" "h_med" "h_et" "h_max" et "h_min"
+      # Arrondir les information des colonnes a 2 chiffres apres la virgule pour les colonnes suivante :"h_moy" "h_med" "h_et" "h_max" et "h_min" et "surface"
       gdf = gpd.read_file(path_finaldata)
-      cols = ["h_moy", "h_med", "h_et", "h_max", "h_min"]
+      cols = ["h_moy", "h_med", "h_et", "h_max", "h_min", "surface"]
       # Arrondir à 2 décimales
       gdf[cols] = gdf[cols].round(2)
 
