@@ -637,7 +637,7 @@ def typeOfGroundIndicator(connexion, connexion_dic, img_ref, img_ndvi_wtr, tab_r
 ###########################################################################################################################################
 # FONCTION landscapeIndicator()                                                                                                           #
 ###########################################################################################################################################
-def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, column_indic_name = 'paysage', dic_ldsc_class = {"milieu_urbanise" : 1, "voirie_et_infrastructure" : 2, "etendue_et_cours_eau" : 3, "milieu_agricole_et_forestier" : 4}, repertory = '', save_intermediate_result = False, debug = 0):
+def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, column_indic_name = 'paysage', dic_ldsc_class = {"milieu_urbanise" : 1, "voirie_et_infrastructure" : 2, "etendue_et_cours_eau" : 3, "milieu_agricole_et_forestier" : 4, "autres_milieux_naturels" : 5}, repertory = '', save_intermediate_result = False, debug = 0):
     """
     Rôle : attribut la classe du paysage dans lequel s'inscrit la forme végétale
 
@@ -646,7 +646,7 @@ def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, column_i
         connexion_dic : dictionnaire des paramètres de connexion à la base de données et au schéma correspondant
         img_landscape : couche raster des paysages
         tab_fv : nom de la table contenant les formes végétalisées
-        dic_ldsc_class : dictionnaire des codes attribués aux quatres classes de premier niveau des paysages. Par défaut : {"milieu_urbanise" : 1, "voirie_et_infrastructure" : 2, "etendue_et_cours_eau" : 3, "milieu_agricole_et_forestier" : 4}
+        dic_ldsc_class : dictionnaire des codes attribués aux quatres classes de premier niveau des paysages. Par défaut : {"milieu_urbanise" : 1, "voirie_et_infrastructure" : 2, "etendue_et_cours_eau" : 3, "milieu_agricole_et_forestier" : 4, "autres_milieux_naturels" : 5}
         repertory : repertoire de sauvegarde des fichiers intermédiaires. Par défaut : ''
         save_intermediate_result : choix de sauvegarde des données intermédiaires. Par défaut : False
         debug : niveau de débug pour afficher les message. Par défaut : 0
@@ -697,7 +697,7 @@ def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, column_i
     tab_cross = 'tab_cross_land'
     importVectorByOgr2ogr(connexion_dic["dbname"], vector_output, tab_cross, user_name=connexion_dic["user_db"], password=connexion_dic["password_db"], ip_host=connexion_dic["server_db"], num_port=connexion_dic["port_number"], schema_name=connexion_dic["schema"], epsg=str(2154))
 
-    # Attribution du label 'PR' (prairie) ou 'C' (culture)
+    # Attribution de la classe majoritaire
     query = """
     UPDATE %s AS t1 SET paysage = '1' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.fid;
     """  %(tab_fv, tab_cross, dic_ldsc_class["milieu_urbanise"])
@@ -713,6 +713,10 @@ def landscapeIndicator(connexion, connexion_dic, img_landscape, tab_fv, column_i
     query += """
     UPDATE %s AS t1 SET paysage = '4' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.fid;
     """  %(tab_fv, tab_cross, dic_ldsc_class["milieu_agricole_et_forestier"])
+
+    query += """
+    UPDATE %s AS t1 SET paysage = '5' FROM %s AS t2 WHERE t2.majority = '%s' AND t1.fid = t2.fid;
+    """  %(tab_fv, tab_cross, dic_ldsc_class["autres_milieux_naturels"])
 
     if debug >= 3:
         print(query)
