@@ -15,7 +15,7 @@ import geopandas as gpd
 from Lib_display import bold,red,green,cyan,endC
 from Lib_raster import cutImageByVector
 from Lib_file import removeVectorFile
-from Lib_vector import cutoutVectors, bufferVector
+from Lib_vector import bufferVector
 from Lib_postgis import createDatabase, dropDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema, importVectorByOgr2ogr, dropColumn, renameColumn, executeQuery
 
 # Applications /apps
@@ -633,38 +633,55 @@ if __name__ == "__main__":
       dropColumn(connexion, tab_ref_fv, "cat")
 
       # Calcul des indices
-
       createAndImplementFeatures(connexion, connexion_datafinal_dic, tab_ref_fv, dic_attributs, dic_params, repertory = path_datafinal, output_layer = path_finaldata, save_intermediate_result = save_intermediate_result, debug = debug)
 
       # Arrondir les information des colonnes a 2 chiffres apres la virgule pour les colonnes suivante :"h_moy" "h_med" "h_et" "h_max" et "h_min" et "surface"
-      gdf = gpd.read_file(path_finaldata)
+      gdf_seg_input = gpd.read_file(path_finaldata)
       cols = ["h_moy", "h_med", "h_et", "h_max", "h_min", "surface"]
       # Arrondir à 2 décimales
-      gdf[cols] = gdf[cols].round(2)
+      gdf_seg_input[cols] = gdf_seg_input[cols].round(2)
 
       # Nettoyage du fichier
-      gdf = gdf[gdf.geometry.notnull()]
-      gdf = gdf[~gdf.geometry.is_empty]
-      gdf = gdf[gdf.geometry.notnull()]
-      gdf = gdf[~gdf.geometry.is_empty]
-      gdf = gdf[gdf.geometry.geom_type.isin(["Polygon", "MultiPolygon"])]
-      gdf = gdf[gdf.geometry.area > 0]
+      gdf_seg_input = gdf_seg_input[gdf_seg_input.geometry.notnull()]
+      gdf_seg_input = gdf_seg_input[~gdf_seg_input.geometry.is_empty]
+      gdf_seg_input = gdf_seg_input[gdf_seg_input.geometry.notnull()]
+      gdf_seg_input = gdf_seg_input[~gdf_seg_input.geometry.is_empty]
+      gdf_seg_input = gdf_seg_input[gdf_seg_input.geometry.geom_type.isin(["Polygon", "MultiPolygon"])]
+      gdf_seg_input = gdf_seg_input[gdf_seg_input.geometry.area > 0]
+      gdf_seg_input['geometry'] = gdf_seg_input['geometry'].apply(lambda geom: geom.buffer(0) if not geom.is_valid else geom)
 
-      # Sauvegarder dans le même fichier (ecrase)
-      format_vector = "GPKG"
-      path_finaldata_org = path_datafinal + os.sep + "cartographie_detaillee_vegetation.gpkg"
-      file_name = os.path.splitext(os.path.basename(path_finaldata_org))[0]
-      removeVectorFile(path_finaldata, format_vector=format_vector)
-      gdf.to_file(path_finaldata, driver="GPKG",layer=file_name)
-
-      # Decouper le fichier final sur l'emprise d'origine sans buffer
-      shp_zone_gpkg = path_datafinal + os.sep + os.path.splitext(os.path.basename(shp_zone_org))[0] + ".gpkg"
+      # Decoupage sur l'emprise
       gdf_cut = gpd.read_file(shp_zone_org)
-      file_name = os.path.splitext(os.path.basename(shp_zone_org))[0]
-      gdf_cut.to_file(shp_zone_gpkg, driver=format_vector,layer=file_name)
+      gdf_cuted = gpd.overlay(gdf_seg_input, gdf_cut, how='intersection', keep_geom_type=True)
 
-      cutoutVectors(shp_zone_gpkg, [path_finaldata], [path_finaldata_org], overwrite=True, format_vector=format_vector)
-      removeVectorFile(shp_zone_gpkg, format_vector=format_vector)
+      # Fusion des petit polygones
+      THRESHOLD_SMALL_AREA_POLY = 0.1
+      col_fid = 'new_fid'
+      col_area = 'area'
+      col_org_id_list = 'org_id'
+      col_surface = 'surface'
+
+      gdf_cuted[col_fid] = range(1, len(gdf_cuted) + 1)
+      gdf_cuted[col_org_id_list] = gdf_cuted[col_fid].apply(convert_to_list)
+      gdf_cuted[col_area] = gdf_cuted.geometry.area
+
+      gdf_output = mergeSmallPolygons(gdf_cuted, threshold_small_area_poly=THRESHOLD_SMALL_AREA_POLY, fid_column=col_fid, org_id_list_column=col_org_id_list, area_column=col_area, clean_ring=False)
+      gdf_output = gdf_output[gdf_output[col_area] >=THRESHOLD_SMALL_AREA_POLY]
+      gdf_output[col_surface] = gdf_output.geometry.area.round(2)
+
+      # Suppression des colonnes inutiles
+      colonnsToDel = [col_fid, col_org_id_list, col_area]
+      for colonne in colonnsToDel:
+         del gdf_output[colonne]
+
+      # Sauvegarde du fichier final
+      epsg = 2154
+      format_vector = 'GPKG'
+      path_finaldata_org = path_datafinal + os.sep + "cartographie_detaillee_vegetation.gpkg"
+      gdf_output = gdf_output.set_crs(epsg=epsg, inplace=False)
+      gdf_output.to_file(path_finaldata_org, driver=format_vector)
+
+      # Nettoyage des fichiers inutiles
       removeVectorFile(path_finaldata, format_vector=format_vector)
       removeVectorFile(shp_zone, format_vector='ESRI Shapefile')
 

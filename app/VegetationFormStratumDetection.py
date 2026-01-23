@@ -17,7 +17,7 @@ from Lib_raster import rasterizeVector, cutImageByVector
 from Lib_vector import getEmpriseVector, differenceVector, cutVectorAll
 from Lib_grass import initializeGrass, cleanGrass, simplificationGrass
 from CrossingVectorRaster import statisticsVectorRaster
-from PolygonsMerging import mergeSmallPolygons, findAdjacentPolygons
+from PolygonsMerging import mergeSmallPolygons, findAdjacentPolygons, convert_to_list
 
 #################################################
 ## Concaténation des trois tables pour obtenir ##
@@ -88,7 +88,6 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
     tab_roads_union = "roads_clean_union_for_cut"
     geom_field = "geom"
 
-
     query_roads = """
     DROP TABLE IF EXISTS %s ;
     CREATE TABLE %s AS
@@ -99,7 +98,6 @@ def cartographyVegetation(connexion, connexion_dic, schem_tab_ref, empriseVector
     addSpatialIndex(connexion, tab_roads_union)
 
     tab_roads = tab_roads_union
-
 
     # 1# Formes végétales arborées
     tab_arbore = ''
@@ -2170,16 +2168,6 @@ def smallPolygonsMerging(connexion, connexion_dic, table, table_out, repertory, 
     if debug > 0 :
         print('mergeSmallPolygons start...')
 
-    def convert_to_list(value):
-        try:
-            # Vérifie si la valeur est une chaîne non vide
-            if isinstance(value, str) and value.strip():
-                return list(map(int, value.split(',')))
-            else:
-                return []  # Retourne une liste vide si la valeur est vide ou non valide
-        except ValueError:
-            return []  # Retourne une liste vide si une erreur de conversion se produit
-
     col_fid = 'new_fid'
     col_area = 'area'
 
@@ -2521,16 +2509,6 @@ def reclassPolygonsMerging(connexion, connexion_dic, table, table_out, repertory
 
     if debug > 0 :
         print('mergeReclassPolygons start...')
-
-    def convert_to_list(value):
-        try:
-            # Vérifie si la valeur est une chaîne non vide
-            if isinstance(value, str) and value.strip():
-                return list(map(int, value.split(',')))
-            else:
-                return []  # Retourne une liste vide si la valeur est vide ou non valide
-        except ValueError:
-            return []  # Retourne une liste vide si une erreur de conversion se produit
 
     col_fid = 'new_fid'
 
