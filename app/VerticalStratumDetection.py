@@ -1392,19 +1392,34 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
     # 0# Pour diminuer le temps de calcul, nous créons deux tables intermédiaires de regroupements des segments herbacés et arborés
     ###
 
+    # ~ query = """
+    # ~ DROP TABLE IF EXISTS herbace;
+    # ~ CREATE TABLE herbace AS
+        # ~ SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
+        # ~ FROM (SELECT geom FROM %s WHERE strate='H') AS t1;
+    # ~ """ %(tab_ref)
+
+    # ~ query += """
+    # ~ DROP TABLE IF EXISTS arbore;
+    # ~ CREATE TABLE arbore AS
+        # ~ SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
+        # ~ FROM (SELECT geom FROM %s WHERE strate='A') AS t1;
+    # ~ """ %(tab_ref)
+
     query = """
     DROP TABLE IF EXISTS herbace;
     CREATE TABLE herbace AS
-        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
+        SELECT public.ST_CHAIKINSMOOTHING(public.ST_MakeValid(public.ST_UnaryUnion(geom))) AS geom
         FROM (SELECT geom FROM %s WHERE strate='H') AS t1;
     """ %(tab_ref)
 
     query += """
     DROP TABLE IF EXISTS arbore;
     CREATE TABLE arbore AS
-        SELECT public.ST_CHAIKINSMOOTHING((public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t1.geom)))).geom) AS geom
+        SELECT public.ST_CHAIKINSMOOTHING(public.ST_MakeValid(public.ST_UnaryUnion(geom))) AS geom
         FROM (SELECT geom FROM %s WHERE strate='A') AS t1;
     """ %(tab_ref)
+
 
     # Exécution de la requête SQL
     if debug >= 3:
