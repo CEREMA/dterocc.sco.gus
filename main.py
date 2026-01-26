@@ -27,7 +27,7 @@ from app.DataConcatenation import concatenateData
 from app.GUSRastersAssembly import assemblyRasters
 from app.IndicatorsComputation import createAndImplementFeatures
 from app.LandscapeDetection import landscapeDetection, urbanLandscapeDetection
-
+from PolygonsMerging import mergeSmallPolygons, convert_to_list
 if __name__ == "__main__":
 
     debug = 1
