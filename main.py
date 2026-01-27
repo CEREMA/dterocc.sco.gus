@@ -674,6 +674,10 @@ if __name__ == "__main__":
       for colonne in colonnsToDel:
          del gdf_output[colonne]
 
+      colonnsToKeep = ["fid","strate","fv","fv_r","paysage","surface","h_moy","h_med","h_et","h_max","h_min","perc_conifere","perc_feuillu","perc_persistant","perc_caduc","type_sol","idc_surface","idc_h","idc_perscadu","idc_coniffeuil","idc_typesol","geometry"]
+      colonns_keep = [c for c in colonnsToKeep if c in gdf_output.columns]
+      gdf_output = gdf_output[colonns_keep]
+
       # Sauvegarde du fichier final
       epsg = 2154
       format_vector = 'GPKG'
