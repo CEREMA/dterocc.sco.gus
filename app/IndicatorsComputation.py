@@ -285,7 +285,7 @@ def evergreenDeciduousIndicators(connexion, connexion_dic, img_ref,img_ndvi_spg,
         img_ndvi_spg : image ndvi printemps/été
         img_ndvi_wtr : image ndvi hiver
         tab_ref : nom de la  table contenant les polygones de végétation détaillés de type nomduschema.nomdelatable
-        seuil : valeur du seuil de PIR pour distinguer les conifères des feuillus. Par défaut : 0.10
+        seuil : valeur du seuil de NDVI pour distinguer les persistants des caduques. Par défaut : 0.10
         columns_indics_name : liste des noms de colonne des indicateurs à implémenter. Par défaut :['perc_persistant', 'perc_caduque']
         superimpose_choice : choix d'appliquer un superimpose sur une des deux images ndvi produites pour qu'elles se superposent parfaitement. Par défaut : False
         repertory : répertoire de sauvegarde des fichiers intermédiaires. Par défaut : ''
