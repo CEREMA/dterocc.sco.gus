@@ -641,7 +641,7 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         repertory_output = os.path.dirname(output_layers["output_stratesv"])
         filename =  os.path.splitext(os.path.basename(output_layers["output_stratesv"]))[0]
         raster_output = repertory_output + os.sep + filename  + '.tif'
-        rasterizeVector(output_layers["output_stratesv"], raster_output,  img_ref, 'fv_r', codage="uint8", ram_otb=0)
+        rasterizeVector(output_layers["output_stratesv"], raster_output,  img_ref, 'strate_r', codage="uint8", ram_otb=0)
         # suppression de la colonne non utile "strate_r"
         dropColumn(connexion, tab_ref, 'strate_r')
 
