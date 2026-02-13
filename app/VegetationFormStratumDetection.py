@@ -1285,7 +1285,7 @@ def prepareRPG(connexion, connexion_dic, rpg_dic, empriseVector, output_layer, w
         CREATE TABLE %s AS
             -- SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
             SELECT (public.ST_DUMP(public.ST_UnaryUnion(public.ST_Collect(t.geom)))).geom AS geom
-            FROM %s
+            FROM %s AS t
         """ %(tab_rpg_sort, tab_rpg_sort, tab_tmp)
 
 
