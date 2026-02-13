@@ -276,12 +276,17 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, table_roads, th
 
     tab_arb_temp = 'arbore_temp'
 
-
+    # -- SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom AS geom
+    # -- FROM %s;
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom AS geom
-        FROM %s;
+        SELECT (public.ST_DUMP(public.ST_UnaryUnion(public.ST_Collect(t.geom)))).geom AS geom
+        FROM (
+            SELECT geom
+            FROM  %s
+            WHERE geom IS NOT NULL
+        ) AS t;
     """ %(tab_arb_temp,tab_arb_temp, tab_arb_ini)
 
     # Exécution de la requête SQL
@@ -697,11 +702,17 @@ def detectInShrubStratum(connexion, connexion_dic, schem_tab_ref, table_roads, t
 
     tab_arbu_temp = 'arbustif_temp'
 
+    # -- SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom AS geom
+    # -- FROM %s AS t;
     query = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom AS geom
-        FROM %s AS t;
+        SELECT (public.ST_DUMP(public.ST_UnaryUnion(public.ST_Collect(t.geom)))).geom AS geom
+        FROM (
+            SELECT geom
+            FROM  %s
+            WHERE geom IS NOT NULL
+        ) AS t;
     """ %(tab_arbu_temp, tab_arbu_temp, tab_arbu_ini)
 
     # Exécution de la requête SQL
@@ -844,7 +855,6 @@ def createLayerShrub(connexion, tab_out, tab_firstclass, tab_secclass, debug = 0
 
     return tab_out
 
-
 ##################################################
 ## Classification des FV de la strate herbacée  ##
 ##################################################
@@ -894,11 +904,17 @@ def detectInHerbaceousStratum(connexion, connexion_dic, schem_tab_ref, empriseVe
     # 2# Regroupement et lissage des segments herbacés
     tab_in = 'herbace'
 
+    # -- SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom AS geom
+    # -- FROM %s AS t;
     query = """
     DROP TABLE IF EXISTS %s ;
     CREATE TABLE %s AS
-        SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(t.geom)))).geom AS geom
-        FROM %s AS t;
+        SELECT (public.ST_DUMP(public.ST_UnaryUnion(public.ST_Collect(t.geom)))).geom AS geom
+        FROM (
+            SELECT geom
+            FROM  %s
+            WHERE geom IS NOT NULL
+        ) AS t;
     """ %(tab_in, tab_in, tab_herb_ini)
 
     # Exécution de la requête SQL
@@ -1087,11 +1103,12 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, rpg_layer, ldsc_
 
         tab_lawn = 'tab_lawn'
 
+        # -- SELECT 'PE' as fv, 'H' as strate, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(public.ST_MakeValid(geom))))).geom AS geom
         query = """
         DROP TABLE IF EXISTS %s ;
         CREATE TABLE %s AS
-            SELECT 'PE' as fv, 'H' as strate, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(public.ST_MakeValid(geom))))).geom AS geom
-            FROM %s ;
+        SELECT 'PE' AS fv, 'H' AS strate, (public.ST_DUMP(public.ST_MULTI(public.ST_UnaryUnion(public.ST_Collect(public.ST_MakeValid(geom)))))).geom AS geom
+        FROM %s ;
         """ %(tab_lawn, tab_lawn, tab_lawn_tmp)
 
         if debug >= 3:
@@ -1118,7 +1135,8 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, rpg_layer, ldsc_
     query = """
     DROP TABLE IF EXISTS %s ;
     CREATE TABLE %s AS
-        SELECT 'C' as fv, 'H' as strate, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(public.ST_MakeValid(geom))))).geom AS geom
+        -- SELECT 'C' as fv, 'H' as strate, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(public.ST_MakeValid(geom))))).geom AS geom
+        SELECT 'C' as fv, 'H' as strate, (public.ST_DUMP(public.ST_MULTI(public.ST_UnaryUnion(public.ST_Collect(public.ST_MakeValid(geom)))))).geom AS geom
         FROM %s ;
     """ %(tab_crop, tab_crop, tab_crop_tmp)
 
@@ -1129,7 +1147,8 @@ def classificationGrassOrCrop(connexion, connexion_dic, tab_in, rpg_layer, ldsc_
     query = """
     DROP TABLE IF EXISTS %s ;
     CREATE TABLE %s AS
-        SELECT 'PR' as fv, 'H' strate, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(public.ST_MakeValid(geom))))).geom AS geom
+        --- SELECT 'PR' as fv, 'H' strate, (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(public.ST_MakeValid(geom))))).geom AS geom
+        SELECT 'PR' as fv, 'H' strate, (public.ST_DUMP(public.ST_MULTI(public.ST_UnaryUnion(public.ST_Collect(public.ST_MakeValid(geom)))))).geom AS geom
         FROM %s ;
     """ %(tab_grass, tab_grass, tab_grass_tmp)
 
@@ -1264,7 +1283,8 @@ def prepareRPG(connexion, connexion_dic, rpg_dic, empriseVector, output_layer, w
         query = """
         DROP TABLE IF EXISTS %s;
         CREATE TABLE %s AS
-            SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+            -- SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+            SELECT (public.ST_DUMP(public.ST_UnaryUnion(public.ST_Collect(t.geom)))).geom AS geom
             FROM %s
         """ %(tab_rpg_sort, tab_rpg_sort, tab_tmp)
 
@@ -1273,8 +1293,9 @@ def prepareRPG(connexion, connexion_dic, rpg_dic, empriseVector, output_layer, w
         query = """
         DROP TABLE IF EXISTS %s;
         CREATE TABLE %s AS
-            SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
-            FROM (SELECT public.ST_MakeValid(geom) as geom FROM %s WHERE code_group NOT LIKE '18')
+            -- SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(geom)))).geom AS geom
+            SELECT (public.ST_DUMP(public.ST_UnaryUnion(public.ST_Collect(t.geom)))).geom AS geom
+            FROM (SELECT public.ST_MakeValid(geom) as geom FROM %s WHERE code_group NOT LIKE '18') AS t;
         """ %(tab_rpg_sort, tab_rpg_sort, tab_rpg)
 
     if debug >= 3:

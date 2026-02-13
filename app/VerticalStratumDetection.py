@@ -248,7 +248,7 @@ def segmentationImageVegetetation(img_ref, dic_ndvi, file_output, file_mnh, dic_
 ###########################################################################################################################################
 # FONCTION classificationVerticalStratum()                                                                                                #
 ###########################################################################################################################################
-def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_layers, sgts_input, sgts_tree, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = 0):
+def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_layers, sgts_input, sgts_tree, raster_dic, tab_ref = 'segments_vegetation',dic_seuil = {"db_table" : " ", "height_or_texture" : "texture", "height_treeshrub_thr": 3, "height_shrubgrass_thr": 1, "texture_thr": 10, "height_max_difference": 1, "shrub_touch_treevsgrass_perc": 25, "shrub_touch_grassvstree_perc": 50, "shrub_sign": 25, "surface_rate": 0.25}, format_type = 'GPKG', save_intermediate_result = True, overwrite = False, debug = 0):
     """
     Rôle : classe les segments en trois strates : arborée, arbustive et herbacée
 
@@ -261,7 +261,7 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
         sgts_input : fichier vecteur de segmentation
         raster_dic : dictionnaire associant le type de donnée récupéré avec le fichier raster contenant les informations, par exemple : {"mnh" : filename}
         tab_ref : nom de la table principale. Par défaut : 'segments_vegetation'
-        dic_seuil : dictionnaire des seuils de hauteur, de texture, de surface. Le format {"seuil_h1" : 3, "seuil_h2" : 1, "seuil_h3" : 2, "seuil_txt" : 11, "seuil_touch_arbo_vs_herba" : 15, "seuil_ratio_surf" : 25, "seuil_arbu_repres" : 20}
+        dic_seuil : dictionnaire des seuils de hauteur, de texture, de surface.
         format_type : format de la donnée vecteur en entrée, par défaut : GPKG
         save_intermediate_result : paramètre de sauvegarde des fichiers intermédiaire. Par défaut : False
         overwrite : paramètre de ré-écriture des tables. Par défaut False
@@ -490,13 +490,11 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
 
     addIndex(connexion, tab_ref, 'fid', 'idx_fid_'+tab_ref)
 
-
     if not save_intermediate_result :
         dropTable(connexion, tablename_tree)
         dropTable(connexion, tab_ref0)
         removeFile(sgts_tree_out)
         removeFile(file_mnh_out)
-
 
     #####################################################################
     ## Deuxième étape : reclassification des segments arbustifs        ##
@@ -562,6 +560,9 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
 
     tab_ref = reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, tab_arbu_de_rgpt,  dic_seuil, save_intermediate_result, debug)
 
+    ## Traitement des surfaces herbacé < à 20m2 et entouré de polygones de type arboré ou arbustif,
+    ## si le MNH moyen est < à 1 on ne change rien si entre 1m et 3m on passe en arbustif et si > à 3m on passe en arboré
+    reclassificationShadows(connexion, tab_ref, save_intermediate_result, debug)
 
     # Ajout de la colonne pour la sauvegarde au format raster
     addColumn(connexion, tab_ref, 'strate_r', 'int')
@@ -575,16 +576,6 @@ def classificationVerticalStratum(connexion, connexion_dic, img_ref, output_laye
     if debug >= 3:
         print(query)
     executeQuery(connexion, query)
-
-    ## Traitement des surfaces herbacé < à 20m2 et entouré de polygones de type arboré ou arbustif,
-    ## si le MNH moyen est < à 1 on ne change rien si entre 1m et 3m on passe en arbustif et si > à 3m on passe en arboré
-    reclassificationShadows(connexion, tab_ref, save_intermediate_result, debug)
-
-
-    if debug >= 3:
-        print(query)
-    executeQuery(connexion, query)
-
 
     if not save_intermediate_result :
         dropTable(connexion, tab_rgpt_arbu)
@@ -1382,7 +1373,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
     Paramètres :
         connexion : variable correspondant à la connexion à la base de données
         tab_ref : nom de la table contenant tous les segments végétation d'origine
-        rgpt_arbu : nom de la table contenant les regroupements arbustifs
+        tab_rgpt_arbu : nom de la table contenant les regroupements arbustifs
         arbu_de_rgpt : nom de la table contenant les segments arbustifs appartennants à des regroupements
         save_intermediate_result : choix sauvegarde ou non des résultats intermédiaires. Par défaut : False
         debug : niveau de debug pour l'affichage des commentaires
@@ -1543,8 +1534,7 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
         print(query)
     executeQuery(connexion, query)
 
-
-   # Mise à jour du statut "strate" du segment arbustif rentrant dans les conditions
+    # Mise à jour du statut "strate" du segment arbustif rentrant dans les conditions
     query = """
     UPDATE %s AS t1 SET strate = 'A'
             FROM (SELECT t1.fid
@@ -1821,6 +1811,15 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
         print(query)
     executeQuery(connexion, query)
 
+    # Correction problème de Au passer à NULL
+    query = """
+    UPDATE %s AS t1 SET strate = 'Au' WHERE t1.strate IS NULL;
+    """ % (tab_ref)
+
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query)
+
     if not save_intermediate_result :
         dropTable(connexion, 'herbace')
         dropTable(connexion, 'arbore')
@@ -1834,7 +1833,6 @@ def reclassGroupSgtsByAreaRatio(connexion, tab_ref, tab_rgpt_arbu, arbu_de_rgpt,
         dropTable(connexion, 'rgpt_herbarbotouch_longbound')
         dropTable(connexion, 'arbu_rgpt_treat')
         dropTable(connexion, tab_rgpt_to_treat)
-
 
     return tab_ref
 

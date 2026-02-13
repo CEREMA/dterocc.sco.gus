@@ -13,8 +13,8 @@ import geopandas as gpd
 
 # Librairies /libs
 from Lib_display import bold,red,green,cyan,endC
-from Lib_raster import cutImageByVector
-from Lib_file import removeVectorFile
+from Lib_raster import cutImageByVector, changeDataValueToOtherValue
+from Lib_file import removeVectorFile, removeFile
 from Lib_vector import bufferVector
 from Lib_postgis import createDatabase, dropDatabase, openConnection, createExtension, closeConnection, dataBaseExist, schemaExist, createSchema, importVectorByOgr2ogr, dropColumn, renameColumn, executeQuery
 
@@ -262,6 +262,7 @@ if __name__ == "__main__":
 
     img_ndvi = path_tmp_neochannels + os.sep + 'img_ref_NDVI.tif'
     img_sfs = path_tmp_neochannels + os.sep + 'img_ref_SFS.tif'
+    img_sfs_tmp = path_tmp_neochannels + os.sep + 'img_ref_SFS_tmp.tif'
     img_ndvi_winter = path_tmp_neochannels + os.sep + 'img_winter_NDVI.tif'
 
     img_ref_assemble = path_image_assemble + os.sep + 'img_ref.tif'
@@ -274,6 +275,7 @@ if __name__ == "__main__":
     img_ref = path_img_cut + os.sep + 'img_ref_cut.tif'
     img_ref_PAN = path_img_cut + os.sep + 'img_ref_pan_cut.tif'
     img_winter = path_img_cut + os.sep + 'img_winter_cut.tif'
+    img_mnh_tmp = path_tmp_neochannels + os.sep + 'img_mnh_tmp.tif'
     img_mnh_cut = path_tmp_neochannels + os.sep + 'img_mnh_cut.tif'
     rpg_cut = path_img_cut + os.sep + 'rpg_cut.gpkg'
     rpg_complete_cut = path_img_cut + os.sep + 'rpg_complete_cut.gpkg'
@@ -426,7 +428,15 @@ if __name__ == "__main__":
     else :
         createNDVI(img_ref, img_ndvi, channel_order = ["Red","Green","Blue","NIR"], codage="float", debug = debug)
 
-    cutImageByVector(shp_zone, img_mnh, img_mnh_cut, no_data_value = -99)
+    # Remplacement des valeurs à 0 (non nodata) par des valeur epsilone=0.000001
+    clean_zero_value = 0.000001
+    changeDataValueToOtherValue(img_sfs, img_sfs_tmp, 0, clean_zero_value, format_raster = 'GTiff')
+    cutImageByVector(shp_zone, img_sfs_tmp, img_sfs, no_data_value = -99)
+    removeFile(img_sfs_tmp)
+
+    changeDataValueToOtherValue(img_mnh, img_mnh_tmp, 0, clean_zero_value, format_raster = 'GTiff')
+    cutImageByVector(shp_zone, img_mnh_tmp, img_mnh_cut, no_data_value = -99)
+    removeFile(img_mnh_tmp)
     img_mnh = img_mnh_cut
 
     dic_ndvi["mnh"] = img_mnh
@@ -437,9 +447,7 @@ if __name__ == "__main__":
     }
 
     # CALCUL NDVI
-
     createNDVI(img_winter, img_ndvi_winter, channel_order = ["Red","Green","Blue","NIR"], codage="float", debug = debug)
-
 
     # CONCATENATION DES NEOCANAUX
     dic_stack = {
@@ -460,13 +468,11 @@ if __name__ == "__main__":
         img_stack = config["data_entry"]["entry_options"]["img_data_concatenation"]
 
     # PAYSAGES
-
     dic_params["img_ref"] = img_ref
     dic_params["img_mnh"] = img_mnh
     dic_params["img_winter"] = img_winter
     dic_params["img_ndvi_spg"] = img_ndvi
     dic_params["img_ndvi_wtr"] = img_ndvi_winter
-
 
     # Ouverture connexion
     connexion = openConnection(connexion_datafinal_dic["dbname"], user_name = connexion_datafinal_dic["user_db"], password=connexion_datafinal_dic["password_db"], ip_host = connexion_datafinal_dic["server_db"], num_port=connexion_datafinal_dic["port_number"], schema_name = connexion_datafinal_dic["schema"])
@@ -485,7 +491,6 @@ if __name__ == "__main__":
     closeConnection(connexion)
 
     # DECOUPAGE DU RPG ET RPG COMPLETE SUR L'EMPRISE
-
     rpg = herbaceousthresholds["rpg"]
     rpg_complete = herbaceousthresholds["rpg_complete"]
 
@@ -555,7 +560,6 @@ if __name__ == "__main__":
       tab_ref_stratesv = classificationVerticalStratum(connexion, connexion_stratev_dic, img_ref, output_stratesv_layers, sgts_veg, sgts_tree, raster_dic, tab_ref = tab_ref_stratesv, dic_seuil = dic_seuils_stratesV, format_type = 'GPKG', save_intermediate_result = save_intermediate_result, overwrite = True, debug = debug)
 
       closeConnection(connexion)
-
 
       print(bold + green + "\nLa distinction des strates vertciales végétales s'est bien déroulée. Le résultat est disponible dans la table %s et dans le(s) fichier(s) %s"%(tab_ref_stratesv, output_stratesv_layers) + endC)
     else :
