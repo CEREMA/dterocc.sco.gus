@@ -276,24 +276,99 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, table_roads, th
 
     tab_arb_temp = 'arbore_temp'
 
-    # -- SELECT (public.ST_DUMP(public.ST_MULTI(public.ST_UNION(arbore_ini.geom)))).geom AS geom
-    # -- FROM %s;
-    query = """
-    DROP TABLE IF EXISTS %s;
-    CREATE TABLE %s AS
-        SELECT (public.ST_DUMP(public.ST_UnaryUnion(public.ST_Collect(t.geom)))).geom AS geom
-        FROM (
-            SELECT geom
-            FROM  %s
-            WHERE geom IS NOT NULL
-        ) AS t;
-    """ %(tab_arb_temp,tab_arb_temp, tab_arb_ini)
+    # query = """
+    # DROP TABLE IF EXISTS %s;
+    # CREATE TABLE %s AS
+    # WITH grille AS (
+        # -- ST_SquareGrid retourne des records, on extrait la géométrie .geom
+        # SELECT (public.ST_SquareGrid(500, bounds.env)).geom AS cell
+        # FROM (
+            # SELECT public.ST_Envelope(public.ST_Collect(geom)) AS env
+            # FROM %s
+            # WHERE geom IS NOT NULL
+        # ) AS bounds
+    # ),
+    # par_tuile AS (
+        # SELECT (public.ST_Dump(
+            # public.ST_UnaryUnion(public.ST_Collect(a.geom))
+        # )).geom AS geom
+        # FROM %s a
+        # JOIN grille g ON public.ST_Intersects(a.geom, g.cell)
+        # WHERE a.geom IS NOT NULL
+        # GROUP BY g.cell
+    # )
+    # SELECT (public.ST_Dump(
+        # public.ST_UnaryUnion(public.ST_Collect(geom))
+    # )).geom AS geom
+    # FROM par_tuile
+    # WHERE geom IS NOT NULL;
+    # """ %(tab_arb_temp,tab_arb_temp, tab_arb_ini, tab_arb_ini)
 
+    # Exécution de la requête SQL
+    # if debug >= 3:
+        # print(query)
+    # executeQuery(connexion, query)
+
+    # Étape 1 : créer la grille et traiter tuile par tuile
+    query_grille = """
+    DROP TABLE IF EXISTS grille_temp;
+    CREATE TABLE grille_temp AS
+    SELECT ROW_NUMBER() OVER () AS gid,
+           (public.ST_SquareGrid(500, bounds.env)).geom AS cell
+    FROM (
+        SELECT public.ST_Envelope(public.ST_Collect(geom)) AS env
+        FROM %s
+        WHERE geom IS NOT NULL
+    ) AS bounds;
+
+    CREATE INDEX ON grille_temp USING GIST(cell);
+    """ % (tab_arb_ini)
     # Exécution de la requête SQL
     if debug >= 3:
         print(query)
-    executeQuery(connexion, query)
+    executeQuery(connexion, query_grille)
 
+    # Étape 2 : traitement par tuile avec table intermédiaire
+    query_par_tuile = """
+    DROP TABLE IF EXISTS arbore_par_tuile;
+    CREATE TABLE arbore_par_tuile AS
+    SELECT g.gid,
+           (public.ST_Dump(
+               public.ST_UnaryUnion(public.ST_Collect(a.geom))
+           )).geom AS geom
+    FROM %s a
+    JOIN grille_temp g ON public.ST_Intersects(a.geom, g.cell)
+    WHERE a.geom IS NOT NULL
+    GROUP BY g.gid;
+
+    CREATE INDEX ON arbore_par_tuile USING GIST(geom);
+    """ % (tab_arb_ini)
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query_par_tuile)
+
+    # Étape 3 : fusion des bordures entre tuiles voisines uniquement
+    query_final = """
+    DROP TABLE IF EXISTS %s;
+    CREATE TABLE %s AS
+    SELECT (public.ST_Dump(
+        public.ST_UnaryUnion(public.ST_Collect(geom))
+    )).geom AS geom
+    FROM (
+        -- Regrouper uniquement les géométries qui se touchent entre tuiles
+        SELECT DISTINCT ON (geom) geom
+        FROM arbore_par_tuile
+    ) AS dedup
+    WHERE geom IS NOT NULL;
+
+    DROP TABLE IF EXISTS grille_temp;
+    DROP TABLE IF EXISTS arbore_par_tuile;
+    """ % (tab_arb_temp, tab_arb_temp)
+    # Exécution de la requête SQL
+    if debug >= 3:
+        print(query)
+    executeQuery(connexion, query_final)
 
     # Correction topologique
     query = "UPDATE %s SET %s = public.ST_CollectionExtract(public.ST_ForceCollection(public.ST_MakeValid(%s)),3) WHERE NOT public.ST_IsValid(%s);" % (tab_arb_temp, 'geom', 'geom', 'geom')

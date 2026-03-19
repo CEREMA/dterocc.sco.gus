@@ -2623,9 +2623,32 @@ def reclassificationShadows(connexion, tab_ref, save_intermediate_result = False
         # ); """ %(tab_herb_only_arb, tab_herb_only_arb, tab_ref, tab_ref, tab_ref, tab_ref, tab_ref)
 
 
+    # ~ query = """
+    # ~ SET search_path = data_final, public;
+    # ~ DROP TABLE IF EXISTS %s ;
+    # ~ CREATE TABLE %s AS
+    # ~ WITH touches AS (
+        # ~ SELECT
+            # ~ h.fid,
+            # ~ COUNT(*) AS nb_touch_total,
+            # ~ COUNT(*) FILTER (WHERE t.strate IN ('Au', 'A')) AS nb_touch_arb
+        # ~ FROM %s h
+        # ~ JOIN %s t
+          # ~ ON h.geom && t.geom
+         # ~ AND public.ST_Touches(h.geom, t.geom)
+         # ~ AND h.fid <> t.fid
+        # ~ WHERE h.strate = 'H'
+        # ~ GROUP BY h.fid
+    # ~ )
+    # ~ SELECT h.*
+    # ~ FROM %s h
+    # ~ JOIN touches t ON h.fid = t.fid
+    # ~ WHERE t.nb_touch_total = t.nb_touch_arb;
+    # ~ """ %(tab_herb_only_arb, tab_herb_only_arb, tab_ref, tab_ref, tab_ref)
+
     query = """
     SET search_path = data_final, public;
-    DROP TABLE IF EXISTS %s ;
+    DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
     WITH touches AS (
         SELECT
@@ -2639,12 +2662,12 @@ def reclassificationShadows(connexion, tab_ref, save_intermediate_result = False
          AND h.fid <> t.fid
         WHERE h.strate = 'H'
         GROUP BY h.fid
+        HAVING COUNT(*) = COUNT(*) FILTER (WHERE t.strate IN ('Au', 'A'))
     )
     SELECT h.*
     FROM %s h
-    JOIN touches t ON h.fid = t.fid
-    WHERE t.nb_touch_total = t.nb_touch_arb;
-    """ %(tab_herb_only_arb, tab_herb_only_arb, tab_ref, tab_ref, tab_ref)
+    JOIN touches t ON h.fid = t.fid;
+    """ % (tab_herb_only_arb, tab_herb_only_arb, tab_ref, tab_ref, tab_ref)
 
     # Exécution de la requête SQL
     if debug >= 3:
