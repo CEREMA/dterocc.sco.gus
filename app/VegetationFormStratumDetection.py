@@ -309,26 +309,48 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, table_roads, th
         # print(query)
     # executeQuery(connexion, query)
 
-    # Étape 1 : créer la grille et traiter tuile par tuile
+    # Étape 0 : récupérer l'envelope via ST_Extent (sans ST_Collect → pas de dépassement mémoire)
+    query_extent = """
+    SELECT
+        public.ST_XMin(ext) AS xmin, public.ST_YMin(ext) AS ymin,
+        public.ST_XMax(ext) AS xmax, public.ST_YMax(ext) AS ymax
+    FROM (SELECT public.ST_Extent(geom) AS ext FROM %s WHERE geom IS NOT NULL) AS e;
+    """ % tab_arb_ini
+
+    cursor = connexion.cursor()
+    cursor.execute(query_extent)
+    xmin, ymin, xmax, ymax = cursor.fetchone()
+    cursor.close()
+
+    tile_size = 500
+
+    # Étape 1 : créer la grille avec ST_MakeEnvelope (sans ST_Collect)
     query_grille = """
     DROP TABLE IF EXISTS grille_temp;
     CREATE TABLE grille_temp AS
     SELECT ROW_NUMBER() OVER () AS gid,
-           (public.ST_SquareGrid(500, bounds.env)).geom AS cell
-    FROM (
-        SELECT public.ST_Envelope(public.ST_Collect(geom)) AS env
-        FROM %s
-        WHERE geom IS NOT NULL
-    ) AS bounds;
+           public.ST_MakeEnvelope(
+               %s + col * %s,
+               %s + row * %s,
+               %s + (col+1) * %s,
+               %s + (row+1) * %s,
+               2154
+           ) AS cell
+    FROM generate_series(0, %s) AS col,
+         generate_series(0, %s) AS row;
 
     CREATE INDEX ON grille_temp USING GIST(cell);
-    """ % (tab_arb_ini)
-    # Exécution de la requête SQL
+    """ % (
+        xmin, tile_size, ymin, tile_size,
+        xmin, tile_size, ymin, tile_size,
+        int((xmax - xmin) / tile_size),
+        int((ymax - ymin) / tile_size)
+    )
     if debug >= 3:
-        print(query)
+        print(query_grille)
     executeQuery(connexion, query_grille)
 
-    # Étape 2 : traitement par tuile avec table intermédiaire
+    # Étape 2 : fusion par tuile
     query_par_tuile = """
     DROP TABLE IF EXISTS arbore_par_tuile;
     CREATE TABLE arbore_par_tuile AS
@@ -342,32 +364,30 @@ def detectInTreeStratum(connexion, connexion_dic, schem_tab_ref, table_roads, th
     GROUP BY g.gid;
 
     CREATE INDEX ON arbore_par_tuile USING GIST(geom);
-    """ % (tab_arb_ini)
-    # Exécution de la requête SQL
+    """ % tab_arb_ini
     if debug >= 3:
-        print(query)
+        print(query_par_tuile)
     executeQuery(connexion, query_par_tuile)
 
-    # Étape 3 : fusion des bordures entre tuiles voisines uniquement
+    # Étape 3 : clip à la tuile + dédoublonnage des bordures
     query_final = """
     DROP TABLE IF EXISTS %s;
     CREATE TABLE %s AS
-    SELECT (public.ST_Dump(
-        public.ST_UnaryUnion(public.ST_Collect(geom))
-    )).geom AS geom
+    SELECT (public.ST_Dump(geom)).geom AS geom
     FROM (
-        -- Regrouper uniquement les géométries qui se touchent entre tuiles
-        SELECT DISTINCT ON (geom) geom
-        FROM arbore_par_tuile
-    ) AS dedup
+        SELECT public.ST_Intersection(p.geom, g.cell) AS geom
+        FROM arbore_par_tuile p
+        JOIN grille_temp g ON p.gid = g.gid
+        WHERE public.ST_IsValid(p.geom)
+          AND NOT public.ST_IsEmpty(public.ST_Intersection(p.geom, g.cell))
+    ) AS clipped
     WHERE geom IS NOT NULL;
 
     DROP TABLE IF EXISTS grille_temp;
     DROP TABLE IF EXISTS arbore_par_tuile;
     """ % (tab_arb_temp, tab_arb_temp)
-    # Exécution de la requête SQL
     if debug >= 3:
-        print(query)
+        print(query_final)
     executeQuery(connexion, query_final)
 
     # Correction topologique
